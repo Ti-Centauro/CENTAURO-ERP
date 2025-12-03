@@ -12,6 +12,7 @@ export const deleteClient = (id) => api.delete(`/commercial/clients/${id}`);
 
 export const getContracts = () => api.get('/commercial/contracts');
 export const createContract = (data) => api.post('/commercial/contracts', data);
+export const updateContract = (id, data) => api.put(`/commercial/contracts/${id}`, data);
 export const deleteContract = (id) => api.delete(`/commercial/contracts/${id}`);
 
 export const getProjects = () => api.get('/commercial/projects');

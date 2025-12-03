@@ -174,7 +174,7 @@ const Tickets = () => {
       </header>
 
       {showForm && (
-        <div className="tickets-form-modal" onClick={() => setShowForm(false)}>
+        <div className="tickets-form-modal">
           <div className="tickets-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Ticket' : 'Criar Ticket'}</h3>

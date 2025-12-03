@@ -1,6 +1,11 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, Enum
 from sqlalchemy.orm import relationship
 from app.database import Base
+import enum
+
+class ContractType(str, enum.Enum):
+    LPU = "LPU"
+    RECORRENTE = "RECORRENTE"
 
 class Client(Base):
     __tablename__ = "clients"
@@ -24,6 +29,16 @@ class Contract(Base):
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"))
     description = Column(String)
+    contract_number = Column(String, nullable=True)
+    signature_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    value = Column(Numeric(10, 2), nullable=True) # Valor Global (LPU)
+    
+    # New Fields
+    contract_type = Column(Enum(ContractType), default=ContractType.LPU)
+    monthly_value = Column(Numeric(10, 2), nullable=True)
+    due_day = Column(Integer, nullable=True)
+    readjustment_index = Column(String, nullable=True)
 
     client = relationship("Client", back_populates="contracts")
     projects = relationship("Project", back_populates="contract")

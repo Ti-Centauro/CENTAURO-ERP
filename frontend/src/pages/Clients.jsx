@@ -171,7 +171,7 @@ const Clients = () => {
       </header>
 
       {showForm && (
-        <div className="clients-form-modal" onClick={() => setShowForm(false)}>
+        <div className="clients-form-modal">
           <div className="clients-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Cliente' : 'Cadastrar Cliente'}</h3>

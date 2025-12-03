@@ -6,15 +6,41 @@ import sys
 import os
 import random
 import traceback
+from datetime import date, timedelta, datetime
 
 # Adiciona o diretório atual ao path para importar app
 sys.path.append(os.getcwd())
 
 from app.database import AsyncSessionLocal
 from app.models.roles import Role
-from app.models.operational import Collaborator, Certification
+from app.models.operational import Collaborator, Certification, CertificationType
 from app.models.commercial import Client, Contract, Project, ProjectBilling
-from sqlalchemy import select
+from app.models.assets import Fleet, FuelType, Insurance, Tool, ToolStatus
+from app.models.tickets import Ticket, TicketStatus, TicketPriority
+from app.models.purchases import PurchaseRequest, PurchaseItem
+from sqlalchemy import select, delete
+
+async def clear_data(db):
+    """Limpa todos os dados do banco para um seed limpo"""
+    print("🧹 Limpando dados existentes...")
+    
+    # Ordem importa devido a Foreign Keys
+    await db.execute(delete(PurchaseItem))
+    await db.execute(delete(PurchaseRequest))
+    await db.execute(delete(Ticket))
+    await db.execute(delete(ProjectBilling))
+    await db.execute(delete(Project))
+    await db.execute(delete(Contract))
+    await db.execute(delete(Certification))
+    await db.execute(delete(Tool))
+    await db.execute(delete(Collaborator))
+    await db.execute(delete(Fleet))
+    await db.execute(delete(Insurance))
+    await db.execute(delete(Client))
+    await db.execute(delete(Role))
+    
+    await db.commit()
+    print("✨ Dados limpos!")
 
 async def seed_roles(db):
     """Cria os cargos padrão"""
@@ -27,100 +53,22 @@ async def seed_roles(db):
         {"name": "Supervisor", "description": "Supervisor de equipe"},
     ]
     
-    print("🔍 Verificando cargos...")
-    created_count = 0
+    print("🔍 Criando cargos...")
     roles_map = {} # Map name -> id
     
     for role_data in roles_data:
-        # Check if role already exists
-        result = await db.execute(select(Role).where(Role.name == role_data["name"]))
-        existing = result.scalar_one_or_none()
-        
-        if not existing:
-            role = Role(**role_data)
-            db.add(role)
-            await db.flush() # Para pegar o ID
-            roles_map[role.name] = role.id
-            created_count += 1
-            print(f"   ➕ Criando cargo: {role_data['name']}")
-        else:
-            roles_map[existing.name] = existing.id
-            print(f"   ℹ️ Cargo já existe: {role_data['name']}")
+        role = Role(**role_data)
+        db.add(role)
+        await db.flush()
+        roles_map[role.name] = role.id
     
-    if created_count > 0:
-        print(f"✅ {created_count} novos cargos criados.")
-    
+    print(f"✅ {len(roles_data)} cargos criados.")
     return roles_map
-
-async def seed_collaborators(db, roles_map):
-    """Cria 30 colaboradores fictícios"""
-    print("🔍 Verificando colaboradores...")
-    
-    # Check existing count
-    result = await db.execute(select(Collaborator))
-    existing_count = len(result.scalars().all())
-    
-    if existing_count >= 30:
-        print(f"✅ Já existem {existing_count} colaboradores. Pulando criação.")
-        return
-
-    first_names = ["Lucas", "Ana", "Pedro", "Maria", "João", "Julia", "Carlos", "Fernanda", "Rafael", "Bruna", 
-                   "Gustavo", "Camila", "Felipe", "Amanda", "Rodrigo", "Larissa", "Bruno", "Mariana", "Diego", "Letícia"]
-    last_names = ["Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes",
-                  "Costa", "Ribeiro", "Martins", "Carvalho", "Almeida", "Lopes", "Soares", "Fernandes", "Vieira", "Barbosa"]
-    
-    roles_list = list(roles_map.keys())
-    
-    new_collabs = []
-    
-    for i in range(30):
-        name = f"{random.choice(first_names)} {random.choice(last_names)}"
-        role_name = random.choice(roles_list)
-        role_id = roles_map[role_name]
-        
-        # Gerar dados fictícios
-        cpf_base = f"{random.randint(100, 999)}.{random.randint(100, 999)}.{random.randint(100, 999)}"
-        cpf = f"{cpf_base}-{random.randint(10, 99)}"
-        
-        rg = f"{random.randint(10, 99)}.{random.randint(100, 999)}.{random.randint(100, 999)}-{random.randint(0, 9)}"
-        
-        email = f"{name.lower().replace(' ', '.')}@centauro.com.br"
-        phone = f"(11) 9{random.randint(1000, 9999)}-{random.randint(1000, 9999)}"
-        
-        salary_base = random.randint(200000, 1200000)
-        salary = f"{salary_base / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        
-        collab = Collaborator(
-            name=name,
-            role=role_name,
-            role_id=role_id,
-            cpf=cpf,
-            rg=rg,
-            email=email,
-            phone=phone,
-            salary=salary,
-            cnh_number=f"{random.randint(100000000, 999999999)}",
-            cnh_category=random.choice(["A", "B", "AB", "C", "D", "E"]),
-            cnh_validity=date.today() + timedelta(days=random.randint(-30, 1000))
-        )
-        db.add(collab)
-        new_collabs.append(name)
-    
-    print(f"✅ Criando 30 colaboradores fictícios...")
-    return len(new_collabs)
 
 async def seed_clients(db):
     """Cria 10 clientes fictícios"""
-    print("🔍 Verificando clientes...")
+    print("🔍 Criando clientes...")
     
-    # Check existing count
-    result = await db.execute(select(Client))
-    existing_count = len(result.scalars().all())
-    
-    if existing_count >= 10:
-        print(f"✅ Já existem {existing_count} clientes. Pulando criação.")
-        return
-
     company_suffixes = ["Ltda", "S.A.", "Soluções", "Tecnologia", "Engenharia", "Comércio", "Serviços", "Logística", "Consultoria", "Sistemas"]
     company_names = ["Alpha", "Beta", "Gamma", "Delta", "Omega", "Sigma", "Titan", "Atlas", "Orion", "Nova", 
                      "Global", "Nacional", "Brasil", "Paulista", "Sul", "Norte", "Leste", "Oeste", "Central", "União"]
@@ -142,41 +90,26 @@ async def seed_clients(db):
         phone = f"(11) 3{random.randint(100, 999)}-{random.randint(1000, 9999)}"
         address = f"{random.choice(streets)}, {random.randint(100, 2000)} - São Paulo, SP"
         
-        # Check if client_number already exists to avoid unique constraint error
-        result = await db.execute(select(Client).where(Client.client_number == client_number))
-        existing = result.scalar_one_or_none()
-        
-        if not existing:
-            client = Client(
-                client_number=client_number,
-                name=name,
-                cnpj=cnpj,
-                contact_person=contact_person,
-                email=email,
-                phone=phone,
-                address=address
-            )
-            db.add(client)
-            new_clients.append(name)
+        client = Client(
+            client_number=client_number,
+            name=name,
+            cnpj=cnpj,
+            contact_person=contact_person,
+            email=email,
+            phone=phone,
+            address=address
+        )
+        db.add(client)
+        new_clients.append(client)
     
-    print(f"✅ Criando {len(new_clients)} clientes fictícios...")
-
-from app.models.assets import Fleet, FuelType, Insurance
-from datetime import date, timedelta
+    await db.flush()
+    print(f"✅ {len(new_clients)} clientes criados.")
+    return new_clients
 
 async def seed_insurances(db):
     """Cria 3 seguros fictícios"""
-    print("🔍 Verificando seguros...")
+    print("🔍 Criando seguros...")
     
-    result = await db.execute(select(Insurance))
-    existing_count = len(result.scalars().all())
-    
-    if existing_count >= 3:
-        print(f"✅ Já existem {existing_count} seguros. Pulando criação.")
-        # Return existing ids for fleet seeding
-        result = await db.execute(select(Insurance))
-        return result.scalars().all()
-
     insurances_data = [
         {
             "insurance_company": "Porto Seguro", "policy_number": "123456789", 
@@ -201,38 +134,14 @@ async def seed_insurances(db):
         db.add(insurance)
         created_insurances.append(insurance)
     
-    await db.flush() # Get IDs
-    print(f"✅ Criando {len(created_insurances)} seguros fictícios...")
+    await db.flush()
+    print(f"✅ {len(created_insurances)} seguros criados.")
     return created_insurances
-
-async def seed_certifications(db, collaborators):
-    print("📜 Criando certificações...")
-    certifications_data = [
-        {"name": "NR-10", "type": "NR", "validity": date(2025, 12, 31), "collaborator_id": collaborators[0].id},
-        {"name": "ASO Admissional", "type": "ASO", "validity": date(2024, 6, 30), "collaborator_id": collaborators[0].id},
-        {"name": "Treinamento em Altura", "type": "TRAINING", "validity": date(2025, 5, 20), "collaborator_id": collaborators[1].id},
-        {"name": "NR-35", "type": "NR", "validity": date(2024, 1, 15), "collaborator_id": collaborators[1].id}, # Expired/Expiring
-    ]
-    
-    for cert_data in certifications_data:
-        cert = Certification(**cert_data)
-        db.add(cert)
-    
-    await db.commit()
-    print(f"✅ {len(certifications_data)} certificações criadas!")
 
 async def seed_fleet(db, insurances):
     """Cria 5 veículos fictícios"""
-    print("🔍 Verificando frota...")
+    print("🔍 Criando frota...")
     
-    # Check existing count
-    result = await db.execute(select(Fleet))
-    existing_count = len(result.scalars().all())
-    
-    if existing_count >= 5:
-        print(f"✅ Já existem {existing_count} veículos. Pulando criação.")
-        return
-
     vehicles = [
         {
             "license_plate": "ABC-1234", "model": "Hilux", "brand": "Toyota", "year": 2023, 
@@ -261,178 +170,334 @@ async def seed_fleet(db, insurances):
         }
     ]
     
-    new_vehicles = []
-    
     for v_data in vehicles:
-        # Check if plate exists
-        result = await db.execute(select(Fleet).where(Fleet.license_plate == v_data["license_plate"]))
-        existing = result.scalar_one_or_none()
-        
-        if not existing:
-            vehicle = Fleet(**v_data)
-            db.add(vehicle)
-            new_vehicles.append(v_data["license_plate"])
+        vehicle = Fleet(**v_data)
+        db.add(vehicle)
     
-    print(f"✅ Criando {len(new_vehicles)} veículos fictícios...")
+    await db.flush()
+    print(f"✅ {len(vehicles)} veículos criados.")
 
-async def seed_contracts(db, clients):
-    """Cria contratos fictícios para os clientes"""
-    print("🔍 Verificando contratos...")
+async def seed_collaborators(db, roles_map):
+    """Cria 10 colaboradores com certificações"""
+    print("🔍 Criando 10 colaboradores...")
     
-    result = await db.execute(select(Contract))
-    existing_count = len(result.scalars().all())
+    first_names = ["Lucas", "Ana", "Pedro", "Maria", "João", "Julia", "Carlos", "Fernanda", "Rafael", "Bruna"]
+    last_names = ["Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes"]
     
-    if existing_count >= 5:
-        print(f"✅ Já existem {existing_count} contratos. Pulando criação.")
-        result = await db.execute(select(Contract))
-        return result.scalars().all()
+    roles_list = list(roles_map.keys())
+    new_collabs = []
     
-    # Pegar primeiros 5 clientes
-    limited_clients = clients[:5] if len(clients) >= 5 else clients
+    for i in range(10):
+        name = f"{first_names[i]} {last_names[i]}"
+        role_name = random.choice(roles_list)
+        role_id = roles_map[role_name]
+        
+        cpf_base = f"{random.randint(100, 999)}.{random.randint(100, 999)}.{random.randint(100, 999)}"
+        cpf = f"{cpf_base}-{random.randint(10, 99)}"
+        rg = f"{random.randint(10, 99)}.{random.randint(100, 999)}.{random.randint(100, 999)}-{random.randint(0, 9)}"
+        email = f"{name.lower().replace(' ', '.')}@centauro.com.br"
+        phone = f"(11) 9{random.randint(1000, 9999)}-{random.randint(1000, 9999)}"
+        salary_base = random.randint(200000, 1200000)
+        salary = f"{salary_base / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        
+        collab = Collaborator(
+            name=name,
+            role=role_name,
+            role_id=role_id,
+            cpf=cpf,
+            rg=rg,
+            email=email,
+            phone=phone,
+            salary=salary,
+            cnh_number=f"{random.randint(100000000, 999999999)}",
+            cnh_category=random.choice(["A", "B", "AB", "C", "D", "E"]),
+            cnh_validity=date.today() + timedelta(days=random.randint(100, 1000))
+        )
+        db.add(collab)
+        new_collabs.append(collab)
     
-    contract_descriptions = [
-        "Contrato de prestação de serviços de engenharia elétrica",
-        "Contrato de manutenção preventiva de instalações",
-        "Contrato de projeto e execução de obras civis",
-        "Contrato de consultoria técnica especializada",
-        "Contrato de fornecimento e instalação de equipamentos"
+    await db.flush()
+    
+    # Certifications (NR, ASO, Training)
+    print("📜 Adicionando certificações...")
+    cert_types = [CertificationType.NR, CertificationType.ASO, CertificationType.TRAINING]
+    cert_names = {
+        CertificationType.NR: ["NR-10", "NR-35", "NR-12", "NR-06"],
+        CertificationType.ASO: ["ASO Admissional", "ASO Periódico", "ASO Mudança de Função"],
+        CertificationType.TRAINING: ["Trabalho em Altura", "Primeiros Socorros", "Direção Defensiva", "Eletricidade Básica"]
+    }
+    
+    for collab in new_collabs:
+        # Add 1-3 certifications per collaborator
+        num_certs = random.randint(1, 3)
+        for _ in range(num_certs):
+            c_type = random.choice(cert_types)
+            c_name = random.choice(cert_names[c_type])
+            validity = date.today() + timedelta(days=random.randint(-30, 730)) # Some expired, some valid
+            
+            cert = Certification(
+                name=c_name,
+                type=c_type,
+                validity=validity,
+                collaborator_id=collab.id
+            )
+            db.add(cert)
+            
+    print(f"✅ Colaboradores e certificações criados.")
+    return new_collabs
+
+async def seed_tools(db):
+    """Cria 5 ferramentas"""
+    print("🔍 Criando 5 ferramentas...")
+    
+    tools_data = [
+        {"name": "Furadeira de Impacto", "serial_number": "FUR-001", "current_holder": "Almoxarifado", "status": ToolStatus.AVAILABLE},
+        {"name": "Parafusadeira", "serial_number": "PAR-002", "current_holder": "João Silva", "status": ToolStatus.IN_USE},
+        {"name": "Multímetro Digital", "serial_number": "MUL-003", "current_holder": "Maria Santos", "status": ToolStatus.IN_USE},
+        {"name": "Alicate Amperímetro", "serial_number": "ALI-004", "current_holder": "Almoxarifado", "status": ToolStatus.MAINTENANCE},
+        {"name": "Jogo de Chaves", "serial_number": "JOG-005", "current_holder": "Almoxarifado", "status": ToolStatus.AVAILABLE},
     ]
     
+    for tool_data in tools_data:
+        tool = Tool(**tool_data)
+        db.add(tool)
+    
+    await db.flush()
+    print("✅ Ferramentas criadas.")
+
+async def seed_contracts(db, clients):
+    """Cria 5 contratos com TAG logic e novos campos"""
+    print("🔍 Criando 5 contratos...")
+    
     created_contracts = []
-    for i, client in enumerate(limited_clients):
+    # Use first 5 clients
+    selected_clients = clients[:5]
+    
+    yy = date.today().strftime("%y")
+    mm = date.today().strftime("%m")
+    
+    descriptions = [
+        "Manutenção Elétrica Industrial",
+        "Consultoria de Eficiência Energética",
+        "Instalação de Painéis Solares",
+        "Adequação NR-10",
+        "Projeto de Automação Predial"
+    ]
+    
+    # Mix of types and statuses
+    # 0: LPU, Ativo
+    # 1: RECORRENTE, Ativo
+    # 2: LPU, Vencido
+    # 3: RECORRENTE, Vencido
+    # 4: LPU, Ativo
+    
+    for i, client in enumerate(selected_clients):
+        seq = f"{i+1:02d}"
+        client_num = client.client_number
+        tag = f"CEC_{yy}{mm}_{seq}_{client_num}"
+        
+        contract_type = "RECORRENTE" if i % 2 != 0 else "LPU"
+        
+        # Date logic
+        if i in [2, 3]: # Vencidos
+            signature_date = date.today() - timedelta(days=400)
+            end_date = date.today() - timedelta(days=30) # Expired 30 days ago
+        else: # Ativos
+            signature_date = date.today() - timedelta(days=random.randint(10, 100))
+            end_date = date.today() + timedelta(days=random.randint(200, 700))
+            
+        # Financials
+        value = None
+        monthly_value = None
+        due_day = None
+        readjustment_index = None
+        
+        if contract_type == "LPU":
+            value = random.randint(50000, 500000)
+        else:
+            monthly_value = random.randint(2000, 15000)
+            due_day = random.randint(1, 28)
+            readjustment_index = "IPCA"
+        
         contract = Contract(
             client_id=client.id,
-            description=contract_descriptions[i % len(contract_descriptions)]
+            description=descriptions[i],
+            contract_number=tag,
+            signature_date=signature_date,
+            end_date=end_date,
+            contract_type=contract_type,
+            value=value,
+            monthly_value=monthly_value,
+            due_day=due_day,
+            readjustment_index=readjustment_index
         )
         db.add(contract)
         created_contracts.append(contract)
     
-    await db.flush()  # Get IDs
-    print(f"✅ Criando {len(created_contracts)} contratos fictícios...")
+    await db.flush()
+    print("✅ Contratos criados.")
     return created_contracts
 
 async def seed_projects(db, clients, contracts):
-    """Cria projetos fictícios com billings"""
-    print("🔍 Verificando projetos...")
-    
-    result = await db.execute(select(Project))
-    existing_count = len(result.scalars().all())
-    
-    if existing_count >= 10:
-        print(f"✅ Já existem {existing_count} projetos. Pulando criação.")
-        return
-    
-    from decimal import Decimal
-    
-    project_names = [
-        "Retrofit Elétrico Edifício Comercial",
-        "Instalação SPDA Industrial",
-        "Modernização Subestação 15kV",
-        "Projeto Fotovoltaico Residencial",
-        "Automação Sistema de Iluminação",
-        "Manutenção Preventiva Anual",
-        "Upgrade Sistema de Climatização",
-        "Instalação Grupo Gerador 500kVA",
-        "Regularização Elétrica Prédio",
-        "Construção Quadro Geral BT"
-    ]
-    
-    coordinators = ["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Costa", "Pedro Almeida"]
+    """Cria 10 projetos (2 avulsos, 8 vinculados)"""
+    print("🔍 Criando 10 projetos...")
     
     created_projects = []
+    yy = date.today().strftime("%y")
+    mm = date.today().strftime("%m")
     
-    for i, name in enumerate(project_names):
-        # Alternar entre clientes
-        client = clients[i % len(clients)]
-        # Alguns projetos têm contrato, outros não
-        contract = contracts[i % len(contracts)] if i % 3 != 0 and contracts else None
+    # 1. Standalone Projects (2)
+    print("   Creating 2 Standalone Projects...")
+    for i in range(2):
+        client = clients[i] # Use first 2 clients
+        seq = f"{i+1:02d}"
+        client_num = client.client_number
+        tag = f"CEP_{yy}{mm}_{seq}_{client_num}"
         
-        # Valores aleatórios mas realistas
-        service_value = Decimal(random.randint(50000, 500000)) / 100  # R$ 500 a R$ 5.000
-        material_value = Decimal(random.randint(20000, 300000)) / 100  # R$ 200 a R$ 3.000
-        budget = service_value + material_value
-        
-        # Datas
-        start_offset = random.randint(-180, -30)  # Iniciou entre 1-6 meses atrás
-        duration = random.randint(30, 180)  # Duração de 1 a 6 meses
-        
-        start_date = date.today() + timedelta(days=start_offset)
-        end_date = start_date + timedelta(days=duration)
+        # Project 2 will be expired
+        if i == 1:
+            start_date = date.today() - timedelta(days=200)
+            end_date = date.today() - timedelta(days=10) # Expired
+        else:
+            start_date = date.today()
+            end_date = date.today() + timedelta(days=180)
         
         project = Project(
-            tag=f"PRJ-{2024}-{i+1:03d}",
+            name=f"Projeto Avulso {i+1}",
+            tag=tag,
             project_number=i+1,
-            name=name,
-            scope=f"Escopo detalhado do projeto {name}. Inclui projeto, fornecimento e instalação.",
-            coordinator=coordinators[i % len(coordinators)],
-            contract_id=contract.id if contract else None,
             client_id=client.id,
-            team_size=random.randint(2, 8),
-            service_value=service_value,
-            material_value=material_value,
-            budget=budget,
+            coordinator="Coordenador Geral",
+            scope="Escopo do projeto avulso...",
             start_date=start_date,
             end_date=end_date,
-            estimated_start_date=start_date - timedelta(days=7),
-            estimated_end_date=end_date + timedelta(days=7)
+            status="Em Andamento", # Will be auto-finalized if expired
+            service_value=random.randint(10000, 50000),
+            material_value=random.randint(1000, 5000),
+            budget=random.randint(15000, 60000)
         )
         db.add(project)
-        await db.flush()  # Para pegar o ID do projeto
+        created_projects.append(project)
         
-        # Criar billings para alguns projetos
-        if i % 2 == 0:  # 50% dos projetos têm billings
-            num_billings = random.randint(1, 4)
-            billing_value = budget / num_billings
-            
-            for b in range(num_billings):
-                billing_date = start_date + timedelta(days=30 * b)
-                billing = ProjectBilling(
-                    project_id=project.id,
-                    value=billing_value,
-                    date=billing_date,
-                    invoice_number=f"NF-{random.randint(1000, 9999)}",
-                    description=f"Faturamento parcela {b+1}/{num_billings}"
-                )
-                db.add(billing)
-        
-        created_projects.append(name)
+    # 2. Linked Projects (8)
+    print("   Creating 8 Linked Projects...")
+    # Distribute 8 projects among 5 contracts
+    distribution = [2, 2, 2, 1, 1]
     
-    print(f"✅ Criando {len(created_projects)} projetos fictícios com billings...")
+    proj_count = 0
+    for i, count in enumerate(distribution):
+        contract = contracts[i]
+        for j in range(count):
+            proj_count += 1
+            seq = f"{j+1:02d}"
+            tag = f"{contract.contract_number}_P{seq}"
+            
+            # Inherit dates from contract roughly, but some expired
+            if contract.end_date < date.today():
+                # Contract expired, project likely expired too
+                start_date = contract.signature_date + timedelta(days=10)
+                end_date = contract.end_date - timedelta(days=5)
+            else:
+                start_date = date.today()
+                end_date = date.today() + timedelta(days=120)
+            
+            project = Project(
+                name=f"Projeto Vinculado {proj_count}",
+                tag=tag,
+                project_number=proj_count,
+                client_id=contract.client_id,
+                contract_id=contract.id,
+                coordinator="Coordenador de Contrato",
+                scope=f"Escopo do projeto vinculado ao contrato {contract.contract_number}...",
+                start_date=start_date,
+                end_date=end_date,
+                status="Em Andamento",
+                service_value=random.randint(10000, 50000),
+                material_value=random.randint(1000, 5000),
+                budget=random.randint(15000, 60000)
+            )
+            db.add(project)
+            created_projects.append(project)
+            
+    await db.flush()
+    print("✅ Projetos criados.")
+    return created_projects
 
+async def seed_tickets(db, contracts, collaborators):
+    """Cria 4 tickets"""
+    print("🔍 Criando 4 tickets...")
+    
+    tickets_data = [
+        {"title": "Falha no ar condicionado", "priority": TicketPriority.HIGH, "status": TicketStatus.OPEN},
+        {"title": "Lâmpada queimada sala de reunião", "priority": TicketPriority.LOW, "status": TicketStatus.RESOLVED},
+        {"title": "Vazamento no banheiro", "priority": TicketPriority.MEDIUM, "status": TicketStatus.IN_PROGRESS},
+        {"title": "Porta emperrada", "priority": TicketPriority.LOW, "status": TicketStatus.OPEN},
+    ]
+    
+    for i, data in enumerate(tickets_data):
+        ticket = Ticket(
+            **data,
+            contract_id=contracts[i % len(contracts)].id,
+            responsible_id=collaborators[i % len(collaborators)].id
+        )
+        db.add(ticket)
+        
+    await db.flush()
+    print("✅ Tickets criados.")
+
+async def seed_purchases(db, projects):
+    """Cria solicitações de compra vinculadas a projetos"""
+    print("🔍 Criando solicitações de compra...")
+    
+    for i, project in enumerate(projects[:5]): # Add purchases to first 5 projects
+        request = PurchaseRequest(
+            project_id=project.id,
+            description=f"Materiais para {project.name}",
+            requester="Engenheiro Responsável",
+            status="pending"
+        )
+        db.add(request)
+        await db.flush()
+        
+        # Add items
+        items = [
+            {"description": "Cabo 2.5mm", "quantity": 100, "unit": "m", "unit_price": 2.50},
+            {"description": "Disjuntor 16A", "quantity": 10, "unit": "un", "unit_price": 15.00},
+            {"description": "Fita Isolante", "quantity": 5, "unit": "un", "unit_price": 5.00}
+        ]
+        
+        for item_data in items:
+            item = PurchaseItem(
+                request_id=request.id,
+                **item_data,
+                total_price=item_data["quantity"] * item_data["unit_price"]
+            )
+            db.add(item)
+            
+    await db.flush()
+    print("✅ Solicitações de compra criadas.")
 
 async def main():
-    print("🌱 Iniciando seed de dados...")
+    print("🌱 Iniciando seed de dados (REFAZENDO TUDO)...")
     try:
         async with AsyncSessionLocal() as db:
+            await clear_data(db)
+            
             roles_map = await seed_roles(db)
-            await seed_collaborators(db, roles_map)
-            await seed_clients(db)
-            
-            # Fetch collaborators for certifications
-            result = await db.execute(select(Collaborator))
-            collaborators = result.scalars().all()
-            
-            if collaborators:
-                await seed_certifications(db, collaborators)
-            
+            clients = await seed_clients(db)
             insurances = await seed_insurances(db)
             await seed_fleet(db, insurances)
+            collaborators = await seed_collaborators(db, roles_map)
+            await seed_tools(db)
             
-            # Fetch clients for contracts and projects
-            result = await db.execute(select(Client))
-            clients = result.scalars().all()
+            contracts = await seed_contracts(db, clients)
+            projects = await seed_projects(db, clients, contracts)
             
-            if clients:
-                contracts = await seed_contracts(db, clients)
-                if contracts:
-                    await seed_projects(db, clients, contracts)
-                else:
-                    print("⚠️ Nenhum contrato disponível, projetos não serão criados.")
-            else:
-                print("⚠️ Nenhum cliente disponível, contratos e projetos não serão criados.")
+            await seed_tickets(db, contracts, collaborators)
+            await seed_purchases(db, projects)
             
             await db.commit()
-            print("✨ Concluído com sucesso!")
+            print("✨ Seed concluído com sucesso!")
             
     except Exception as e:
         print(f"❌ Erro ao popular banco de dados: {e}")

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, FileText } from 'lucide-react';
-import { getContracts, createContract, deleteContract, getClients } from '../services/api';
+import { Plus, Trash2, FileText, Upload } from 'lucide-react';
+import { getContracts, createContract, updateContract, deleteContract, getClients } from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 import './Contracts.css';
 
@@ -14,7 +14,18 @@ const Contracts = () => {
   const [formData, setFormData] = useState({
     client_id: '',
     description: '',
+    contract_number: '',
+    signature_date: '',
+    end_date: '',
+    value: '',
+    contract_type: 'LPU',
+    monthly_value: '',
+    due_day: '',
+    readjustment_index: '',
   });
+
+  // State for editing
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -55,52 +66,43 @@ const Contracts = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Note: Assuming there's an updateContract function, but it wasn't imported.
-      // If it doesn't exist in API, I might need to add it or just use create for now if edit isn't fully supported by backend.
-      // However, the task implies editing is possible. I'll check imports.
-      // The original file only imported: getContracts, createContract, deleteContract, getClients.
-      // I need to check if updateContract exists in api.js or if I should just simulate it or if I missed it.
-      // For now, I will assume createContract handles both or I need to add updateContract.
-      // Let's look at the imports in the original file:
-      // import { getContracts, createContract, deleteContract, getClients } from '../services/api';
-      // It seems updateContract is missing. I will check api.js in a separate step if needed, but for now I'll stick to the pattern.
-      // Wait, I can't call updateContract if it's not imported.
-      // I'll add it to imports if I can, but I don't have visibility on api.js right now.
-      // I'll assume for this refactor that I should just structure it for edit, and maybe use createContract for now or add a TODO.
-      // actually, I'll check if I can import it.
-
-      // Re-reading the prompt: "Standardizing Edit/Delete Logic".
-      // If updateContract is missing, I should probably add it to the import if it exists.
-      // I'll assume it exists and add it to the import list in the next step or just use createContract for now.
-      // Actually, I'll just use createContract for both for now to avoid breaking if update doesn't exist, 
-      // OR better, I'll check api.js first? No, I'll just implement the UI changes and if update is missing I'll fix it.
-
-      // Wait, I can't blindly call updateContract. 
-      // I'll check the imports in the file content I read earlier.
-      // Line 3: import { getContracts, createContract, deleteContract, getClients } from '../services/api';
-      // updateContract is NOT imported.
-
-      // I will assume for now that I can't easily add the backend logic if it's missing, 
-      // but I can at least set up the UI.
-      // I'll use a placeholder or just create for now, but I should probably check if I can import it.
-      // I'll check api.js after this if needed. 
-      // For now, I'll just implement the UI structure.
-
-      await createContract({
+      const payload = {
         ...formData,
         client_id: parseInt(formData.client_id),
-      });
+        value: formData.contract_type === 'LPU' && formData.value ? parseFloat(formData.value) : null,
+        monthly_value: formData.contract_type === 'RECORRENTE' && formData.monthly_value ? parseFloat(formData.monthly_value) : null,
+        due_day: formData.contract_type === 'RECORRENTE' && formData.due_day ? parseInt(formData.due_day) : null,
+        readjustment_index: formData.contract_type === 'RECORRENTE' ? formData.readjustment_index : null,
+      };
+
+      if (editingId) {
+        await updateContract(editingId, payload);
+      } else {
+        await createContract(payload);
+      }
       setShowForm(false);
-      setFormData({
-        client_id: '',
-        description: '',
-      });
-      setEditingId(null); // Reset editing ID
+      resetForm();
+      setEditingId(null);
       loadContracts();
     } catch (error) {
       console.error('Error creating contract:', error);
-      alert('Erro ao criar contrato: ' + error.response?.data?.detail);
+      alert('Erro ao criar contrato: ' + (error.response?.data?.detail || error.message));
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      client_id: '',
+      description: '',
+      contract_number: '',
+      signature_date: '',
+      end_date: '',
+      value: '',
+      contract_type: 'LPU',
+      monthly_value: '',
+      due_day: '',
+      readjustment_index: '',
+    });
   };
 
   const handleDelete = (id) => {
@@ -112,6 +114,14 @@ const Contracts = () => {
     setFormData({
       client_id: contract.client_id,
       description: contract.description,
+      contract_number: contract.contract_number || '',
+      signature_date: contract.signature_date || '',
+      end_date: contract.end_date || '',
+      value: contract.value || '',
+      contract_type: contract.contract_type || 'LPU',
+      monthly_value: contract.monthly_value || '',
+      due_day: contract.due_day || '',
+      readjustment_index: contract.readjustment_index || '',
     });
     setEditingId(contract.id);
     setShowForm(true);
@@ -137,19 +147,16 @@ const Contracts = () => {
     });
   };
 
-  // State for editing
-  const [editingId, setEditingId] = useState(null);
-
   return (
     <div className="contracts">
       <header className="contracts-header">
         <div>
           <h1>Gestão de Contratos</h1>
-          <p>Contratos guardar chuva vinculados a clientes</p>
+          <p>Contratos guarda-chuva vinculados a clientes</p>
         </div>
         <button className="btn btn-primary" onClick={() => {
           setEditingId(null);
-          setFormData({ client_id: '', description: '' });
+          resetForm();
           setShowForm(true);
         }}>
           <Plus size={20} />
@@ -158,8 +165,8 @@ const Contracts = () => {
       </header>
 
       {showForm && (
-        <div className="contract-form-modal" onClick={() => setShowForm(false)}>
-          <div className="contract-form card" onClick={(e) => e.stopPropagation()}>
+        <div className="contract-form-modal">
+          <div className="contract-form card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Contrato' : 'Criar Contrato'}</h3>
               {editingId && (
@@ -174,38 +181,199 @@ const Contracts = () => {
               )}
             </div>
             <form onSubmit={handleSubmit}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="label">Cliente *</label>
-                  <select
-                    name="client_id"
-                    className="input"
-                    value={formData.client_id}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Selecione um cliente</option>
-                    {clients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                {/* Coluna Esquerda */}
+                <div className="form-column">
+                  <div className="form-group">
+                    <label className="label">TAG (Automático)</label>
+                    <input
+                      type="text"
+                      name="contract_number"
+                      className="input"
+                      value={formData.contract_number || 'Gerado Automaticamente'}
+                      readOnly
+                      disabled
+                      style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed', fontWeight: 'bold' }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="label">Cliente *</label>
+                    <select
+                      name="client_id"
+                      className="input"
+                      value={formData.client_id}
+                      onChange={handleChange}
+                      required
+                      disabled={!!editingId}
+                      style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
+                    >
+                      <option value="">Selecione um cliente</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="label">Título/Descrição *</label>
+                    <input
+                      type="text"
+                      name="description"
+                      className="input"
+                      value={formData.description}
+                      onChange={handleChange}
+                      required
+                      placeholder="ex: Contrato Ternium 2024"
+                      readOnly={!!editingId}
+                      disabled={!!editingId}
+                      style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="label">Tipo de Contrato *</label>
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: editingId ? 'not-allowed' : 'pointer', opacity: editingId ? 0.6 : 1 }}>
+                        <input
+                          type="radio"
+                          name="contract_type"
+                          value="LPU"
+                          checked={formData.contract_type === 'LPU'}
+                          onChange={handleChange}
+                          disabled={!!editingId}
+                        />
+                        LPU / Guarda-Chuva
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: editingId ? 'not-allowed' : 'pointer', opacity: editingId ? 0.6 : 1 }}>
+                        <input
+                          type="radio"
+                          name="contract_type"
+                          value="RECORRENTE"
+                          checked={formData.contract_type === 'RECORRENTE'}
+                          onChange={handleChange}
+                          disabled={!!editingId}
+                        />
+                        Recorrente
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="label">Status</label>
+                    <div className="status-badge active" style={{ display: 'inline-block', padding: '0.25rem 0.75rem', borderRadius: '999px', backgroundColor: '#dcfce7', color: '#166534', fontSize: '0.875rem' }}>
+                      Ativo
+                    </div>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label className="label">Descrição/Título *</label>
-                  <input
-                    type="text"
-                    name="description"
-                    className="input"
-                    value={formData.description}
-                    onChange={handleChange}
-                    required
-                    placeholder="ex: Contrato Ternium 2024"
-                  />
+
+                {/* Coluna Direita */}
+                <div className="form-column">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label className="label">Data de Assinatura</label>
+                      <input
+                        type="date"
+                        name="signature_date"
+                        className="input"
+                        value={formData.signature_date}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="label">Data de Término</label>
+                      <input
+                        type="date"
+                        name="end_date"
+                        className="input"
+                        value={formData.end_date}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Campos Financeiros Condicionais */}
+                  {formData.contract_type === 'LPU' ? (
+                    <div className="form-group">
+                      <label className="label">Valor Global (Teto/Cap) (R$)</label>
+                      <input
+                        type="number"
+                        name="value"
+                        className="input"
+                        value={formData.value}
+                        onChange={handleChange}
+                        step="0.01"
+                        placeholder="0,00"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label className="label">Valor Mensal (R$)</label>
+                        <input
+                          type="number"
+                          name="monthly_value"
+                          className="input"
+                          value={formData.monthly_value}
+                          onChange={handleChange}
+                          step="0.01"
+                          placeholder="0,00"
+                        />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label className="label">Dia de Vencimento</label>
+                          <input
+                            type="number"
+                            name="due_day"
+                            className="input"
+                            value={formData.due_day}
+                            onChange={handleChange}
+                            min="1"
+                            max="31"
+                            placeholder="ex: 5"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="label">Índice de Reajuste</label>
+                          <input
+                            type="text"
+                            name="readjustment_index"
+                            className="input"
+                            value={formData.readjustment_index}
+                            onChange={handleChange}
+                            placeholder="ex: IPCA"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="form-group">
+                    <label className="label">Anexo do Contrato</label>
+                    <div style={{
+                      border: '2px dashed #cbd5e1',
+                      borderRadius: '0.5rem',
+                      padding: '2rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      backgroundColor: '#f8fafc'
+                    }}>
+                      <Upload size={24} style={{ marginBottom: '0.5rem' }} />
+                      <span>Clique para fazer upload</span>
+                      <span style={{ fontSize: '0.75rem' }}>PDF, DOCX ou Imagens</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="form-actions">
+
+              <div className="form-actions" style={{ marginTop: '2rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
@@ -238,9 +406,36 @@ const Contracts = () => {
                 <div className="contract-icon">
                   <FileText size={20} />
                 </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {contract.contract_type && (
+                    <span className={`contract-type-badge ${contract.contract_type.toLowerCase()}`}
+                      style={{
+                        fontSize: '0.7rem',
+                        padding: '0.1rem 0.4rem',
+                        borderRadius: '4px',
+                        backgroundColor: contract.contract_type === 'LPU' ? '#e0f2fe' : '#f3e8ff',
+                        color: contract.contract_type === 'LPU' ? '#0369a1' : '#7e22ce',
+                        fontWeight: '600'
+                      }}>
+                      {contract.contract_type}
+                    </span>
+                  )}
+                  <span className={`contract-status-badge ${contract.status === 'Vencido' ? 'expired' : 'active'}`}
+                    style={{
+                      fontSize: '0.7rem',
+                      padding: '0.1rem 0.4rem',
+                      borderRadius: '4px',
+                      backgroundColor: contract.status === 'Vencido' ? '#fee2e2' : '#dcfce7',
+                      color: contract.status === 'Vencido' ? '#991b1b' : '#166534',
+                      fontWeight: '600'
+                    }}>
+                    {contract.status || 'Ativo'}
+                  </span>
+                </div>
               </div>
               <h3 className="contract-title">{contract.description}</h3>
               <p className="contract-id">ID: {contract.id}</p>
+              {contract.contract_number && <p className="contract-number">{contract.contract_number}</p>}
             </div>
           ))
         )}

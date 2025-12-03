@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Users, Wrench, Truck, ShoppingCart, Plus, Trash2, Calendar, DollarSign, Edit } from 'lucide-react';
+import { X, Users, Wrench, Truck, ShoppingCart, Plus, Trash2, Calendar, DollarSign, Edit, Package } from 'lucide-react';
 import {
   getProjectCollaborators, addProjectCollaborator, removeProjectCollaborator,
   getProjectTools, addProjectTool, removeProjectTool,
@@ -8,6 +8,7 @@ import {
   getCollaborators, getTools, getFleet, getClients,
   getProject, createProjectBilling, deleteProjectBilling
 } from '../services/api';
+import RequestDetailsModal from './RequestDetailsModal';
 import './ProjectModal.css';
 
 const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
@@ -19,7 +20,7 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
   const [projectCollaborators, setProjectCollaborators] = useState([]);
   const [projectTools, setProjectTools] = useState([]);
   const [projectVehicles, setProjectVehicles] = useState([]);
-  const [purchases, setPurchases] = useState([]);
+  const [purchases, setPurchases] = useState([]); // This will now hold Requests
   const [billings, setBillings] = useState([]);
   const [projectDetails, setProjectDetails] = useState(project);
 
@@ -33,9 +34,10 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
   const [showCollabForm, setShowCollabForm] = useState(false);
   const [showToolForm, setShowToolForm] = useState(false);
   const [showVehicleForm, setShowVehicleForm] = useState(false);
-  const [showPurchaseForm, setShowPurchaseForm] = useState(false);
   const [showBillingForm, setShowBillingForm] = useState(false);
-  const [editingPurchaseId, setEditingPurchaseId] = useState(null);
+
+  // Request Modal State
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
   const [collabFormData, setCollabFormData] = useState({
     collaborator_id: '',
@@ -57,18 +59,6 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
     end_date: ''
   });
 
-  const [purchaseFormData, setPurchaseFormData] = useState({
-    description: '',
-    quantity: 1,
-    unit_price: 0,
-    total_price: 0,
-    supplier: '',
-    status: 'pending',
-    expected_date: '',
-    requester: '',
-    notes: ''
-  });
-
   const [billingFormData, setBillingFormData] = useState({
     value: '',
     date: '',
@@ -79,13 +69,16 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        // Only close if no stacked modal is open
+        if (!selectedRequest) {
+          onClose();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, selectedRequest]);
 
   useEffect(() => {
     if (project) {
@@ -221,67 +214,27 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
     }
   };
 
-  const handleSavePurchase = async (e) => {
-    e.preventDefault();
+  const handleCreateRequest = async () => {
     try {
-      const dataToSend = {
-        ...purchaseFormData,
+      const newRequest = {
         project_id: project.id,
-        quantity: parseInt(purchaseFormData.quantity),
-        unit_price: parseFloat(purchaseFormData.unit_price),
-        total_price: parseFloat(purchaseFormData.total_price)
-      };
-
-      if (editingPurchaseId) {
-        await updatePurchase(editingPurchaseId, dataToSend);
-      } else {
-        await createPurchase(dataToSend);
-      }
-      setShowPurchaseForm(false);
-      setEditingPurchaseId(null);
-      setPurchaseFormData({
-        description: '',
-        quantity: 1,
-        unit_price: 0,
-        total_price: 0,
-        supplier: '',
+        description: 'Nova Solicitação',
         status: 'pending',
-        expected_date: '',
-        requester: '',
-        notes: ''
-      });
-      loadAllData();
+        items: []
+      };
+      const response = await createPurchase(newRequest);
+      await loadAllData();
+      // Open the newly created request
+      setSelectedRequest(response.data);
     } catch (error) {
-      console.error('Error saving purchase:', error);
-      alert('Erro ao salvar solicitação');
+      console.error('Error creating request:', error);
+      alert('Erro ao criar solicitação');
     }
   };
 
-  const handleDeletePurchase = async (id) => {
-    if (window.confirm('Excluir esta solicitação de compra?')) {
-      try {
-        await deletePurchase(id);
-        loadAllData();
-      } catch (error) {
-        console.error('Error deleting purchase:', error);
-      }
-    }
-  };
-
-  const handleEditPurchase = (purchase) => {
-    setPurchaseFormData({
-      description: purchase.description,
-      quantity: purchase.quantity,
-      unit_price: purchase.unit_price,
-      total_price: purchase.total_price,
-      supplier: purchase.supplier || '',
-      status: purchase.status,
-      expected_date: purchase.expected_date || '',
-      requester: purchase.requester || '',
-      notes: purchase.notes || ''
-    });
-    setEditingPurchaseId(purchase.id);
-    setShowPurchaseForm(true);
+  const calculateRequestTotal = (items) => {
+    if (!items) return 0;
+    return items.reduce((sum, item) => sum + (item.total_price || 0), 0);
   };
 
   const handleAddBilling = async (e) => {
@@ -344,24 +297,8 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
     return client ? client.name : 'N/A';
   };
 
-  const statusColors = {
-    pending: '#f59e0b',
-    approved: '#3b82f6',
-    rejected: '#ef4444',
-    ordered: '#8b5cf6',
-    received: '#10b981'
-  };
-
-  const statusLabels = {
-    pending: 'Pendente',
-    approved: 'Aprovado',
-    rejected: 'Rejeitado',
-    ordered: 'Pedido',
-    received: 'Recebido'
-  };
-
   return (
-    <div className="project-modal-overlay" onClick={onClose}>
+    <div className="project-modal-overlay">
       <div className="project-modal" onClick={(e) => e.stopPropagation()}>
         <div className="project-modal-header">
           <h2>{project.name}</h2>
@@ -679,147 +616,47 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
               <div className="tab-content">
                 <div className="tab-header">
                   <h3>Solicitações de Compra</h3>
-                  <button className="btn btn-primary btn-sm" onClick={() => {
-                    setEditingPurchaseId(null);
-                    setPurchaseFormData({
-                      description: '',
-                      quantity: 1,
-                      unit_price: 0,
-                      total_price: 0,
-                      supplier: '',
-                      status: 'pending',
-                      expected_date: '',
-                      requester: '',
-                      notes: ''
-                    });
-                    setShowPurchaseForm(!showPurchaseForm);
-                  }}>
+                  <button className="btn btn-primary btn-sm" onClick={handleCreateRequest}>
                     <Plus size={16} /> Nova Solicitação
                   </button>
                 </div>
 
-                {showPurchaseForm && (
-                  <form className="purchase-form" onSubmit={handleSavePurchase}>
-                    <div className="form-row">
-                      <input
-                        type="text"
-                        placeholder="Descrição *"
-                        value={purchaseFormData.description}
-                        onChange={(e) => setPurchaseFormData({ ...purchaseFormData, description: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="form-row">
-                      <input
-                        type="number"
-                        placeholder="Quantidade"
-                        min="1"
-                        value={purchaseFormData.quantity}
-                        onChange={(e) => {
-                          const qty = parseInt(e.target.value);
-                          setPurchaseFormData({
-                            ...purchaseFormData,
-                            quantity: qty,
-                            total_price: qty * purchaseFormData.unit_price
-                          });
-                        }}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Preço Unitário"
-                        step="0.01"
-                        min="0"
-                        value={purchaseFormData.unit_price}
-                        onChange={(e) => {
-                          const price = parseFloat(e.target.value);
-                          setPurchaseFormData({
-                            ...purchaseFormData,
-                            unit_price: price,
-                            total_price: purchaseFormData.quantity * price
-                          });
-                        }}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Total"
-                        step="0.01"
-                        value={purchaseFormData.total_price}
-                        readOnly
-                      />
-                    </div>
-                    <div className="form-row">
-                      <input
-                        type="text"
-                        placeholder="Fornecedor"
-                        value={purchaseFormData.supplier}
-                        onChange={(e) => setPurchaseFormData({ ...purchaseFormData, supplier: e.target.value })}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Solicitante"
-                        value={purchaseFormData.requester}
-                        onChange={(e) => setPurchaseFormData({ ...purchaseFormData, requester: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-row">
-                      <select
-                        value={purchaseFormData.status}
-                        onChange={(e) => setPurchaseFormData({ ...purchaseFormData, status: e.target.value })}
-                      >
-                        <option value="pending">Pendente</option>
-                        <option value="approved">Aprovado</option>
-                        <option value="rejected">Rejeitado</option>
-                        <option value="ordered">Pedido</option>
-                        <option value="received">Recebido</option>
-                      </select>
-                      <input
-                        type="date"
-                        placeholder="Data Esperada"
-                        value={purchaseFormData.expected_date}
-                        onChange={(e) => setPurchaseFormData({ ...purchaseFormData, expected_date: e.target.value })}
-                      />
-                    </div>
-                    <textarea
-                      placeholder="Observações"
-                      rows="3"
-                      value={purchaseFormData.notes}
-                      onChange={(e) => setPurchaseFormData({ ...purchaseFormData, notes: e.target.value })}
-                    />
-                    <div className="form-actions">
-                      <button type="submit" className="btn btn-primary">Salvar</button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowPurchaseForm(false)}>Cancelar</button>
-                    </div>
-                  </form>
-                )}
-
                 <div className="purchases-list">
-                  {purchases.map(purchase => (
-                    <div key={purchase.id} className="purchase-item">
-                      <div className="purchase-header">
-                        <strong>{purchase.description}</strong>
-                        <span
-                          className="status-badge"
-                          style={{ backgroundColor: `${statusColors[purchase.status]}20`, color: statusColors[purchase.status] }}
-                        >
-                          {statusLabels[purchase.status]}
-                        </span>
-                      </div>
-                      <div className="purchase-details">
-                        <p>Qtd: {purchase.quantity} | Preço Unit: R$ {purchase.unit_price.toFixed(2)} | Total: R$ {purchase.total_price.toFixed(2)}</p>
-                        {purchase.supplier && <p>Fornecedor: {purchase.supplier}</p>}
-                        {purchase.requester && <p>Solicitante: {purchase.requester}</p>}
-                        {purchase.expected_date && <p>Data Esperada: {new Date(purchase.expected_date).toLocaleDateString('pt-BR')}</p>}
-                      </div>
-                      <div className="purchase-actions">
-                        <button className="btn-icon-small" onClick={() => handleEditPurchase(purchase)}>Editar</button>
-                        <button className="btn-icon-small danger" onClick={() => handleDeletePurchase(purchase.id)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                  {purchases.length === 0 ? (
+                    <div className="empty-message">
+                      <Package size={32} />
+                      <p>Nenhuma solicitação de compra neste projeto.</p>
                     </div>
-                  ))}
-                  {purchases.length === 0 && !showPurchaseForm && (
-                    <p className="empty-message">Nenhuma solicitação de compra para este projeto.</p>
+                  ) : (
+                    purchases.map(request => (
+                      <div
+                        key={request.id}
+                        className="purchase-item clickable"
+                        onClick={() => setSelectedRequest(request)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div className="purchase-header">
+                          <strong>#{request.id} - {request.description}</strong>
+                          <span className={`status-badge ${request.status}`}>
+                            {
+                              {
+                                'pending': 'Pendente',
+                                'approved': 'Aprovado',
+                                'rejected': 'Rejeitado',
+                                'ordered': 'Comprado',
+                                'received': 'Retirado',
+                                'cancelled': 'Cancelado'
+                              }[request.status] || request.status
+                            }
+                          </span>
+                        </div>
+                        <div className="purchase-details">
+                          <p><strong>Solicitante:</strong> {request.requester || '-'}</p>
+                          <p><strong>Total:</strong> R$ {calculateRequestTotal(request.items).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                          <p><strong>Data:</strong> {new Date(request.created_at).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
@@ -913,6 +750,15 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
           }
         </div>
       </div>
+
+      {/* Stacked Modal for Request Details */}
+      {selectedRequest && (
+        <RequestDetailsModal
+          request={selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+          onUpdate={loadAllData}
+        />
+      )}
     </div>
   );
 };

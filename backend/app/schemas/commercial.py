@@ -26,12 +26,21 @@ class ClientResponse(ClientBase):
 class ContractBase(BaseModel):
     client_id: int
     description: str
+    contract_number: Optional[str] = None
+    signature_date: Optional[date] = None
+    end_date: Optional[date] = None
+    value: Optional[Decimal] = None
+    contract_type: Optional[str] = "LPU"
+    monthly_value: Optional[Decimal] = None
+    due_day: Optional[int] = None
+    readjustment_index: Optional[str] = None
 
 class ContractCreate(ContractBase):
     pass
 
 class ContractResponse(ContractBase):
     id: int
+    status: Optional[str] = "Ativo"
     
     class Config:
         from_attributes = True

@@ -123,7 +123,7 @@ const Roles = () => {
       </header>
 
       {showForm && (
-        <div className="roles-form-modal" onClick={() => setShowForm(false)}>
+        <div className="roles-form-modal">
           <div className="roles-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Cargo' : 'Cadastrar Cargo'}</h3>

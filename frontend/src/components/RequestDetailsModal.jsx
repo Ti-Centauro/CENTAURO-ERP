@@ -1,0 +1,353 @@
+import { useState, useEffect } from 'react';
+import { X, Plus, Trash2, Save } from 'lucide-react';
+import { updatePurchase, deletePurchase } from '../services/api';
+import './RequestDetailsModal.css';
+
+const RequestDetailsModal = ({ request, onClose, onUpdate }) => {
+  const [formData, setFormData] = useState({
+    description: '',
+    requester: '',
+    status: 'pending',
+    items: []
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (request) {
+      setFormData({
+        description: request.description,
+        requester: request.requester || '',
+        status: request.status || 'pending',
+        items: request.items || []
+      });
+    }
+  }, [request]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const handleDelete = async () => {
+    if (window.confirm('Tem certeza que deseja excluir esta solicitação?')) {
+      setLoading(true);
+      try {
+        await deletePurchase(request.id);
+        onUpdate();
+        onClose();
+      } catch (error) {
+        console.error('Error deleting request:', error);
+        alert('Erro ao excluir solicitação');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleHeaderChange = (e) => {
+    const { name, value } = e.target;
+
+    // Status Cascade Logic
+    if (name === 'status') {
+      if (window.confirm(`Deseja atualizar o status de todos os itens para "${value}"?`)) {
+
+        // Map header status to item status
+        let itemStatus = value;
+        if (value === 'ordered') itemStatus = 'bought';
+        if (value === 'received') itemStatus = 'delivered';
+
+        setFormData(prev => ({
+          ...prev,
+          [name]: value,
+          items: prev.items.map(item => {
+            // Do not update status if item is already cancelled
+            if (item.status === 'cancelled') return item;
+            return { ...item, status: itemStatus };
+          })
+        }));
+        return;
+      }
+    }
+
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleItemChange = (index, field, value) => {
+    const newItems = [...formData.items];
+    newItems[index] = { ...newItems[index], [field]: value };
+
+    // Auto-calculate total
+    if (field === 'quantity' || field === 'unit_price') {
+      const qty = parseFloat(newItems[index].quantity) || 0;
+      const price = parseFloat(newItems[index].unit_price) || 0;
+      newItems[index].total_price = qty * price;
+    }
+
+    setFormData(prev => ({ ...prev, items: newItems }));
+  };
+
+  const addItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          description: '',
+          manufacturer: '',
+          model: '',
+          quantity: 1,
+          unit: 'un',
+          unit_price: 0,
+          total_price: 0,
+          supplier: '',
+          status: 'pending'
+        }
+      ]
+    }));
+  };
+
+  const removeItem = (index) => {
+    const newItems = formData.items.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, items: newItems }));
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      // Prepare data for backend
+      const dataToSend = {
+        ...request, // Keep project_id and other fields
+        description: formData.description,
+        requester: formData.requester,
+        status: formData.status,
+        items: formData.items.map(item => ({
+          ...item,
+          quantity: parseInt(item.quantity),
+          unit_price: parseFloat(item.unit_price),
+          total_price: parseFloat(item.total_price)
+        }))
+      };
+
+      await updatePurchase(request.id, dataToSend);
+      onUpdate(); // Refresh parent list
+      onClose();
+    } catch (error) {
+      console.error('Error updating request:', error);
+      alert('Erro ao salvar solicitação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateTotal = () => {
+    return formData.items.reduce((sum, item) => {
+      if (item.status === 'cancelled') return sum;
+      return sum + (parseFloat(item.total_price) || 0);
+    }, 0);
+  };
+
+  return (
+    <div className="request-modal-overlay">
+      <div className="request-modal" onClick={e => e.stopPropagation()}>
+        <div className="request-modal-header">
+          <div>
+            <h3>Solicitação #{request.id}</h3>
+            <span className={`status-badge ${formData.status}`}>
+              {
+                {
+                  'pending': 'Pendente',
+                  'approved': 'Aprovado',
+                  'rejected': 'Rejeitado',
+                  'ordered': 'Comprado',
+                  'received': 'Retirado',
+                  'cancelled': 'Cancelado'
+                }[formData.status] || formData.status
+              }
+            </span>
+          </div>
+          <button className="close-btn" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="request-modal-content">
+          {/* Header Fields */}
+          <div className="request-header-form">
+            <div className="form-group">
+              <label>Descrição do Pacote</label>
+              <input
+                type="text"
+                name="description"
+                value={formData.description}
+                onChange={handleHeaderChange}
+                className="input"
+              />
+            </div>
+            <div className="form-group">
+              <label>Solicitante</label>
+              <input
+                type="text"
+                name="requester"
+                value={formData.requester}
+                onChange={handleHeaderChange}
+                className="input"
+              />
+            </div>
+            <div className="form-group">
+              <label>Status Geral</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleHeaderChange}
+                className="input"
+              >
+                <option value="pending">Pendente</option>
+                <option value="approved">Aprovado</option>
+                <option value="rejected">Rejeitado</option>
+                <option value="ordered">Comprado</option>
+                <option value="received">Retirado</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <div className="items-section">
+            <div className="items-header">
+              <h4>Itens da Solicitação</h4>
+              <button className="btn btn-sm btn-secondary" onClick={addItem}>
+                <Plus size={16} /> Adicionar Item
+              </button>
+            </div>
+
+            <div className="items-table-container">
+              <table className="items-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '22%' }}>Item / Material</th>
+                    <th style={{ width: '18%' }}>Fabricante / Modelo</th>
+                    <th style={{ width: '15%' }}>Qtd | Un</th>
+                    <th style={{ width: '12%' }}>Preço Unit.</th>
+                    <th style={{ width: '12%' }}>Total</th>
+                    <th style={{ width: '15%' }}>Status</th>
+                    <th style={{ width: '6%' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formData.items.map((item, index) => (
+                    <tr key={index} className={item.status === 'cancelled' ? 'item-row cancelled' : 'item-row'}>
+                      <td>
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                          placeholder="Descrição do item"
+                          className="input-cell"
+                        />
+                      </td>
+                      <td>
+                        <div className="double-input">
+                          <input
+                            type="text"
+                            value={item.manufacturer || ''}
+                            onChange={(e) => handleItemChange(index, 'manufacturer', e.target.value)}
+                            placeholder="Fabricante"
+                            className="input-cell"
+                          />
+                          <input
+                            type="text"
+                            value={item.model || ''}
+                            onChange={(e) => handleItemChange(index, 'model', e.target.value)}
+                            placeholder="Modelo"
+                            className="input-cell"
+                          />
+                        </div>
+                      </td>
+                      <td>
+                        <div className="double-input">
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                            min="1"
+                            className="input-cell"
+                          />
+                          <input
+                            type="text"
+                            value={item.unit || 'un'}
+                            onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                            placeholder="Un"
+                            className="input-cell"
+                            style={{ width: '40px' }}
+                          />
+                        </div>
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={item.unit_price}
+                          onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
+                          step="0.01"
+                          className="input-cell"
+                        />
+                      </td>
+                      <td>
+                        <div className="read-only-value">
+                          R$ {(parseFloat(item.total_price) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </td>
+                      <td>
+                        <select
+                          value={item.status}
+                          onChange={(e) => handleItemChange(index, 'status', e.target.value)}
+                          className="input-cell"
+                        >
+                          <option value="pending">Pendente</option>
+                          <option value="approved">Aprovado</option>
+                          <option value="rejected">Rejeitado</option>
+                          <option value="quoted">Cotado</option>
+                          <option value="bought">Comprado</option>
+                          <option value="in_stock">Em estoque</option>
+                          <option value="delivered">Retirado</option>
+                          <option value="cancelled">Cancelado</option>
+                        </select>
+                      </td>
+                      <td>
+                        <button
+                          className="btn-icon-danger"
+                          onClick={() => removeItem(index)}
+                          title="Excluir item"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div className="request-modal-footer">
+          <button className="btn btn-danger" onClick={handleDelete} disabled={loading} style={{ marginRight: 'auto' }}>
+            <Trash2 size={18} />
+            Excluir
+          </button>
+          <div className="total-summary">
+            <span>Total da Solicitação:</span>
+            <strong>R$ {calculateTotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+          </div>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
+            <Save size={18} />
+            {loading ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RequestDetailsModal;

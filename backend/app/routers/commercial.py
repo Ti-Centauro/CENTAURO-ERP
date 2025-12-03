@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload, joinedload
 from datetime import date
 from typing import List
@@ -54,14 +54,58 @@ async def delete_client(client_id: int, db: AsyncSession = Depends(get_db)):
 async def get_contracts(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Contract))
     contracts = result.scalars().all()
+    
+    # Calculate status dynamically
+    today = date.today()
+    for contract in contracts:
+        if contract.end_date and contract.end_date < today:
+            contract.status = "Vencido"
+        else:
+            contract.status = "Ativo"
+            
     return contracts
 
 @router.post("/contracts", response_model=schemas.ContractResponse)
 async def create_contract(contract: schemas.ContractCreate, db: AsyncSession = Depends(get_db)):
+    # 1. Get Client to get client_number
+    result = await db.execute(select(models.Client).where(models.Client.id == contract.client_id))
+    client = result.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # 2. Determine Date components (YY, MM)
+    ref_date = contract.signature_date or date.today()
+    yy = ref_date.strftime("%y")
+    mm = ref_date.strftime("%m")
+
+    # 3. Count existing contracts for this year to determine sequence
+    # Pattern: CEC_{YY}%
+    pattern = f"CEC_{yy}%"
+    result = await db.execute(select(func.count(models.Contract.id)).where(models.Contract.contract_number.like(pattern)))
+    count = result.scalar() or 0
+    next_number = count + 1
+
+    # 4. Generate TAG
+    nn = f"{next_number:02d}"
+    ccc = client.client_number if client.client_number else "00" # Default to 00 if missing
+    
+    tag = f"CEC_{yy}{mm}_{nn}_{ccc}"
+
+    # 5. Create Contract
     db_contract = models.Contract(**contract.model_dump())
+    db_contract.contract_number = tag
+    
     db.add(db_contract)
     await db.commit()
     await db.refresh(db_contract)
+    
+    # Set status for response
+    today = date.today()
+    if db_contract.end_date and db_contract.end_date < today:
+        db_contract.status = "Vencido"
+    else:
+        db_contract.status = "Ativo"
+        
     return db_contract
 
 @router.delete("/contracts/{contract_id}")
@@ -74,9 +118,53 @@ async def delete_contract(contract_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"message": "Contract deleted successfully"}
 
+@router.put("/contracts/{contract_id}", response_model=schemas.ContractResponse)
+async def update_contract(contract_id: int, contract: schemas.ContractCreate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Contract).where(models.Contract.id == contract_id))
+    db_contract = result.scalar_one_or_none()
+    if not db_contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Update fields
+    contract_data = contract.model_dump(exclude_unset=True)
+    
+    for key, value in contract_data.items():
+        if key != "contract_number": # Protect TAG
+            setattr(db_contract, key, value)
+    
+    await db.commit()
+    await db.refresh(db_contract)
+    
+    # Set status for response
+    today = date.today()
+    if db_contract.end_date and db_contract.end_date < today:
+        db_contract.status = "Vencido"
+    else:
+        db_contract.status = "Ativo"
+        
+    return db_contract
+
 # Projects
 @router.get("/projects", response_model=List[schemas.ProjectResponse])
 async def get_projects(db: AsyncSession = Depends(get_db)):
+    # Check for expired projects and update status
+    today = date.today()
+    
+    # Find active projects that have expired
+    result = await db.execute(
+        select(models.Project).where(
+            models.Project.end_date < today,
+            models.Project.status != "Finalizado",
+            models.Project.status != "Cancelado" # Optional: don't touch cancelled ones
+        )
+    )
+    expired_projects = result.scalars().all()
+    
+    if expired_projects:
+        for project in expired_projects:
+            project.status = "Finalizado"
+        await db.commit()
+
     result = await db.execute(
         select(models.Project).options(
             selectinload(models.Project.billings),
@@ -123,22 +211,43 @@ async def create_project(project: schemas.ProjectCreate, db: AsyncSession = Depe
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    # 2. Determine Project Number
-    if project.project_number:
-        next_number = project.project_number
-    else:
-        result = await db.execute(select(models.Project.project_number).order_by(models.Project.project_number.desc()).limit(1))
-        max_number = result.scalar_one_or_none()
-        next_number = (max_number or 0) + 1
-    
-    # 3. Generate Tag
+    # 2. Determine Project Number and TAG
     today = date.today()
-    mm = today.strftime("%m")
-    yy = today.strftime("%y")
-    nn = f"{next_number:02d}"
-    ccc = client.client_number if client.client_number else "000"
-    
-    tag = f"CE{mm}{nn}{yy}_{ccc}"
+    ref_date = project.start_date or today
+    yy = ref_date.strftime("%y")
+    mm = ref_date.strftime("%m")
+    ccc = client.client_number if client.client_number else "00"
+
+    tag = ""
+    next_number = 0
+
+    if project.contract_id:
+        # Linked Project: CEC_(...)_{Contract}_P{Seq}
+        # Get Contract TAG
+        result = await db.execute(select(models.Contract).where(models.Contract.id == project.contract_id))
+        contract = result.scalar_one_or_none()
+        if not contract:
+             raise HTTPException(status_code=404, detail="Contract not found")
+        
+        contract_tag = contract.contract_number
+        
+        # Count projects for this contract
+        result = await db.execute(select(func.count(models.Project.id)).where(models.Project.contract_id == project.contract_id))
+        count = result.scalar() or 0
+        next_number = count + 1
+        
+        tag = f"{contract_tag}_P{next_number:02d}"
+        
+    else:
+        # Standalone Project: CEP_{YY}{MM}_{Seq}_{Client}
+        # Count standalone projects for this year
+        pattern = f"CEP_{yy}%"
+        result = await db.execute(select(func.count(models.Project.id)).where(models.Project.tag.like(pattern)))
+        count = result.scalar() or 0
+        next_number = count + 1
+        
+        nn = f"{next_number:02d}"
+        tag = f"CEP_{yy}{mm}_{nn}_{ccc}"
     
     # Create DB object
     db_project = models.Project(**project.model_dump(exclude={"tag"}))

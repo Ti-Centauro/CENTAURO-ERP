@@ -37,7 +37,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="confirm-modal-overlay" onClick={onClose}>
+    <div className="confirm-modal-overlay">
       <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
         <div className="confirm-modal-header">
           <h3>{title}</h3>

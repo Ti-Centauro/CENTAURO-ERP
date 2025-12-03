@@ -138,7 +138,7 @@ const Tools = () => {
       </header>
 
       {showForm && (
-        <div className="tools-form-modal" onClick={() => setShowForm(false)}>
+        <div className="tools-form-modal">
           <div className="tools-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Ferramenta' : 'Cadastrar Ferramenta'}</h3>

@@ -249,7 +249,7 @@ const Fleet = () => {
 
       {/* Fleet Form Modal */}
       {showFleetForm && (
-        <div className="fleet-form-modal" onClick={() => setShowFleetForm(false)}>
+        <div className="fleet-form-modal">
           <div className="fleet-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingFleetId ? 'Editar Veículo' : 'Cadastrar Veículo'}</h3>
@@ -402,7 +402,7 @@ const Fleet = () => {
 
       {/* Insurance Form Modal */}
       {showInsuranceForm && (
-        <div className="fleet-form-modal" onClick={() => setShowInsuranceForm(false)}>
+        <div className="fleet-form-modal">
           <div className="fleet-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingInsuranceId ? 'Editar Seguro' : 'Cadastrar Seguro'}</h3>
