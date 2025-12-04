@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, FileText, Upload, Search } from 'lucide-react';
-import { getContracts, createContract, updateContract, deleteContract, getClients } from '../services/api';
+import { getContracts, createContract, updateContract, deleteContract, getClients, getProjects, getAllBillings } from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 import './Contracts.css';
 
 const Contracts = () => {
   const [contracts, setContracts] = useState([]);
   const [clients, setClients] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [billings, setBillings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -46,6 +48,8 @@ const Contracts = () => {
   useEffect(() => {
     loadContracts();
     loadClients();
+    loadProjects();
+    loadBillings();
   }, []);
 
   const loadContracts = async () => {
@@ -66,6 +70,41 @@ const Contracts = () => {
     } catch (error) {
       console.error('Error loading clients:', error);
     }
+  };
+
+  const loadProjects = async () => {
+    try {
+      const response = await getProjects();
+      setProjects(response.data);
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    }
+  };
+
+  const loadBillings = async () => {
+    try {
+      const response = await getAllBillings();
+      setBillings(response.data);
+    } catch (error) {
+      console.error('Error loading billings:', error);
+    }
+  };
+
+  // Helper: Get project count for a contract
+  const getProjectCount = (contractId) => {
+    return projects.filter(p => p.contract_id === contractId).length;
+  };
+
+  // Helper: Get total billed value for a contract (from all child projects)
+  const getTotalBilled = (contractId) => {
+    const contractProjectIds = projects
+      .filter(p => p.contract_id === contractId)
+      .map(p => p.id);
+
+    return billings
+      .filter(b => contractProjectIds.includes(b.project_id)
+        && !['CANCELADA', 'SUBSTITUIDA'].includes(b.status))
+      .reduce((sum, b) => sum + parseFloat(b.value || 0), 0);
   };
 
   const handleSubmit = async (e) => {
@@ -378,6 +417,21 @@ const Contracts = () => {
                           placeholder="0,00"
                         />
                       </div>
+                      {editingId && (
+                        <div className="form-group" style={{ marginTop: '0.5rem' }}>
+                          <label className="label">Valor Faturado (R$)</label>
+                          <div style={{
+                            padding: '0.75rem',
+                            backgroundColor: '#f0f9ff',
+                            borderRadius: '0.5rem',
+                            border: '1px solid #bae6fd',
+                            color: '#0369a1',
+                            fontWeight: '600'
+                          }}>
+                            R$ {getTotalBilled(editingId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      )}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label className="label">Dia de Vencimento</label>
@@ -492,6 +546,18 @@ const Contracts = () => {
               <h3 className="contract-title">{contract.description}</h3>
               <p className="contract-id">ID: {contract.id}</p>
               {contract.contract_number && <p className="contract-number">{contract.contract_number}</p>}
+              {getProjectCount(contract.id) > 0 && (
+                <p className="project-count" style={{
+                  fontSize: '0.8rem',
+                  color: '#64748b',
+                  marginTop: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
+                }}>
+                  📂 {getProjectCount(contract.id)} projeto{getProjectCount(contract.id) > 1 ? 's' : ''} vinculado{getProjectCount(contract.id) > 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           ))
         )}
