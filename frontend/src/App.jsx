@@ -13,6 +13,7 @@ import Fleet from './pages/Fleet';
 import Tools from './pages/Tools';
 import Tickets from './pages/Tickets';
 import AccountsReceivable from './pages/AccountsReceivable';
+
 import Login from './pages/Login';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './context/AuthContext';
@@ -45,6 +46,7 @@ function App() {
           <Route path="/projects" element={<PrivateRoute requiredPermission="projects"><Layout><Projects /></Layout></PrivateRoute>} />
           <Route path="/purchases" element={<PrivateRoute requiredPermission="purchases"><Layout><Purchases /></Layout></PrivateRoute>} />
           <Route path="/roles" element={<PrivateRoute requiredPermission="roles"><Layout><Roles /></Layout></PrivateRoute>} />
+
           <Route path="/fleet" element={<PrivateRoute requiredPermission="fleet"><Layout><Fleet /></Layout></PrivateRoute>} />
           <Route path="/tools" element={<PrivateRoute requiredPermission="tools"><Layout><Tools /></Layout></PrivateRoute>} />
           <Route path="/tickets" element={<PrivateRoute requiredPermission="tickets"><Layout><Tickets /></Layout></PrivateRoute>} />

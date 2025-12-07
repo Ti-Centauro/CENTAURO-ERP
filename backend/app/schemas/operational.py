@@ -27,6 +27,7 @@ class CollaboratorBase(BaseModel):
     phone: Optional[str] = None
     salary: Optional[str] = None
     role_id: Optional[int] = None
+    team_id: Optional[int] = None
     role: Optional[str] = None  # Mantendo por compatibilidade
     cnh_number: Optional[str] = None
     cnh_category: Optional[str] = None

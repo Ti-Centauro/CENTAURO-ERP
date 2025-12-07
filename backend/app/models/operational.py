@@ -23,8 +23,10 @@ class Collaborator(Base):
     salary = Column(String, nullable=True)  # Salário como string para manter formatação
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
     role = Column(String, nullable=True)  # Mantendo por compatibilidade
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
     
     role_obj = relationship("app.models.roles.Role")
+    team = relationship("app.models.teams.Team", back_populates="members", foreign_keys=[team_id])
     
     # CNH Data
     cnh_number = Column(String, nullable=True)

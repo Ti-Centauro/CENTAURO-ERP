@@ -4,6 +4,7 @@ from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models.users import User, UserRole
 from app.models.operational import Collaborator
+from app.models.teams import Team
 from app.auth import get_password_hash
 
 async def create_user_lucas():

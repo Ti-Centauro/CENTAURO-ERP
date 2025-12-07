@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Edit, Users, Mail, Phone, Briefcase, FileText, IdCard, Search, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import api, {
   getCollaborators, createCollaborator, updateCollaborator, deleteCollaborator,
   getCertifications, createCertification, deleteCertification
 } from '../services/api';
+import Teams from './Teams';
 import ConfirmModal from '../components/ConfirmModal';
 import './Clients.css';
 
 const Collaborators = () => {
+  const [viewMode, setViewMode] = useState('collaborators'); // 'collaborators' or 'teams'
+  const teamsRef = useRef();
   const [collaborators, setCollaborators] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -26,8 +30,10 @@ const Collaborators = () => {
     email: '',
     phone: '',
     salary: '',
+    salary: '',
     role_id: '',
     role: '',
+    team_id: '',
     // CNH Data
     cnh_number: '',
     cnh_category: '',
@@ -62,12 +68,14 @@ const Collaborators = () => {
 
   const loadData = async () => {
     try {
-      const [collabsRes, rolesRes] = await Promise.all([
+      const [collabsRes, rolesRes, teamsRes] = await Promise.all([
         getCollaborators(),
-        api.get('/roles/roles')
+        api.get('/roles/roles'),
+        api.get('/teams/teams')
       ]);
       setCollaborators(collabsRes.data);
       setRoles(rolesRes.data);
+      setTeams(teamsRes.data);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -123,7 +131,9 @@ const Collaborators = () => {
     try {
       const dataToSend = {
         ...formData,
+        ...formData,
         role_id: formData.role_id ? parseInt(formData.role_id) : null,
+        team_id: formData.team_id ? parseInt(formData.team_id) : null,
         cnh_validity: formData.cnh_validity || null, // Fix: Send null instead of empty string
       };
 
@@ -192,8 +202,10 @@ const Collaborators = () => {
       email: collaborator.email || '',
       phone: collaborator.phone || '',
       salary: collaborator.salary || '',
+      salary: collaborator.salary || '',
       role_id: collaborator.role_id || '',
       role: collaborator.role || '',
+      team_id: collaborator.team_id || '',
       cnh_number: collaborator.cnh_number || '',
       cnh_category: collaborator.cnh_category || '',
       cnh_validity: collaborator.cnh_validity || '',
@@ -224,7 +236,7 @@ const Collaborators = () => {
 
   const resetForm = () => {
     setFormData({
-      name: '', cpf: '', rg: '', email: '', phone: '', salary: '', role_id: '', role: '',
+      name: '', cpf: '', rg: '', email: '', phone: '', salary: '', role_id: '', role: '', team_id: '',
       cnh_number: '', cnh_category: '', cnh_validity: '',
     });
     setCertFormData({ name: '', type: 'NR', validity: '' });
@@ -259,42 +271,69 @@ const Collaborators = () => {
             <h1>Gestão de Colaboradores</h1>
             <p>Cadastro e controle de equipe</p>
           </div>
-          <button className="btn btn-primary" onClick={() => {
-            setEditingId(null);
-            resetForm();
-            setShowForm(true);
-          }} style={{ marginTop: '1rem' }}>
-            <Plus size={20} />
-            Novo Colaborador
-          </button>
+
+          <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center', alignSelf: 'flex-start', marginTop: '1rem' }}>
+            <div className="tab-switcher-container">
+              <div className={`tab-glider ${viewMode === 'collaborators' ? 'left' : 'right'}`} style={{ transform: viewMode === 'collaborators' ? 'translateX(0)' : 'translateX(100%)' }} />
+              <button
+                className={`tab-btn ${viewMode === 'collaborators' ? 'active' : ''}`}
+                onClick={() => setViewMode('collaborators')}
+              >
+                <Users size={18} />
+                Colaboradores
+              </button>
+              <button
+                className={`tab-btn ${viewMode === 'teams' ? 'active' : ''}`}
+                onClick={() => setViewMode('teams')}
+              >
+                <Users size={18} />
+                Times
+              </button>
+            </div>
+
+            <button className="btn btn-primary" onClick={() => {
+              if (viewMode === 'collaborators') {
+                setEditingId(null);
+                resetForm();
+                setShowForm(true);
+              } else {
+                teamsRef.current?.openForm();
+              }
+            }}>
+              <Plus size={20} />
+              {viewMode === 'collaborators' ? 'Novo Colaborador' : 'Novo Time'}
+            </button>
+          </div>
         </div>
 
-        <div className="filters-bar" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <div className="search-input-container" style={{ position: 'relative', flex: 1, minWidth: '300px' }}>
-            <Search size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-            <input
-              type="text"
-              className="input"
-              placeholder="Buscar por nome, email ou CPF..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '40px', width: '100%' }}
-            />
+        {viewMode === 'collaborators' && (
+          <div className="filters-bar" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <div className="search-input-container" style={{ position: 'relative', flex: 1, minWidth: '300px' }}>
+              <Search size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                className="input"
+                placeholder="Buscar por nome, email ou CPF..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ paddingLeft: '40px', width: '100%' }}
+              />
+            </div>
+            <div className="filter-role" style={{ minWidth: '200px' }}>
+              <select
+                className="input"
+                value={selectedRoleFilter}
+                onChange={(e) => setSelectedRoleFilter(e.target.value)}
+                style={{ width: '100%' }}
+              >
+                <option value="">Todas as Funções</option>
+                {roles.map(role => (
+                  <option key={role.id} value={role.id}>{role.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="filter-role" style={{ minWidth: '200px' }}>
-            <select
-              className="input"
-              value={selectedRoleFilter}
-              onChange={(e) => setSelectedRoleFilter(e.target.value)}
-              style={{ width: '100%' }}
-            >
-              <option value="">Todas as Funções</option>
-              {roles.map(role => (
-                <option key={role.id} value={role.id}>{role.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        )}
       </header>
 
       {showForm && (
@@ -363,6 +402,13 @@ const Collaborators = () => {
                     <select name="role_id" className="input" value={formData.role_id} onChange={handleChange} required>
                       <option value="">Selecione um cargo</option>
                       {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Time / Departamento</label>
+                    <select name="team_id" className="input" value={formData.team_id} onChange={handleChange}>
+                      <option value="">Selecione um time</option>
+                      {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
@@ -521,70 +567,75 @@ const Collaborators = () => {
         </div>
       )}
 
-      <div className="clients-grid">
-        {loading ? (
-          <div className="loading">Carregando colaboradores...</div>
-        ) : filteredCollaborators.length === 0 ? (
-          <div className="empty-state card">
-            <Users size={48} color="#94a3b8" />
-            <p>{collaborators.length === 0 ? "Nenhum colaborador cadastrado ainda." : "Nenhum colaborador encontrado com os filtros atuais."}</p>
-          </div>
-        ) : (
-          filteredCollaborators.map((collaborator) => (
-            <div
-              key={collaborator.id}
-              className="client-card card clickable"
-              onClick={() => handleEdit(collaborator)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="client-card-header">
-                <div className="client-icon" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
-                  <Users size={24} />
+      {viewMode === 'teams' ? (
+        <Teams ref={teamsRef} embedded={true} />
+      ) : (
+        <div className="clients-grid">
+          {loading ? (
+            <div className="loading">Carregando colaboradores...</div>
+          ) : filteredCollaborators.length === 0 ? (
+            <div className="empty-state card">
+              <Users size={48} color="#94a3b8" />
+              <p>{collaborators.length === 0 ? "Nenhum colaborador cadastrado ainda." : "Nenhum colaborador encontrado com os filtros atuais."}</p>
+            </div>
+          ) : (
+            filteredCollaborators.map((collaborator) => (
+              <div
+                key={collaborator.id}
+                className="client-card card clickable"
+                onClick={() => handleEdit(collaborator)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="client-card-header">
+                  <div className="client-icon" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                    <Users size={24} />
+                  </div>
+                </div>
+                <h3 className="client-name">{collaborator.name}</h3>
+                <p className="client-cnpj">
+                  <Briefcase size={14} style={{ display: 'inline', marginRight: '6px' }} />
+                  {collaborator.role}
+                </p>
+                {collaborator.cnh_validity && (
+                  (() => {
+                    const status = getValidityStatus(collaborator.cnh_validity);
+                    if (status.text !== 'Válido') {
+                      return (
+                        <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: status.color, fontWeight: '500' }}>
+                          <status.icon size={14} />
+                          <span>CNH: {status.text}</span>
+                        </div>
+                      )
+                    }
+                    return null;
+                  })()
+                )}
+                <div className="client-details">
+                  {collaborator.cpf && (
+                    <div className="detail-item">
+                      <IdCard size={16} color="#64748b" />
+                      <span>{collaborator.cpf}</span>
+                    </div>
+                  )}
+                  {collaborator.email && (
+                    <div className="detail-item">
+                      <Mail size={16} color="#64748b" />
+                      <span>{collaborator.email}</span>
+                    </div>
+                  )}
+                  {collaborator.phone && (
+                    <div className="detail-item">
+                      <Phone size={16} color="#64748b" />
+                      <span>{collaborator.phone}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <h3 className="client-name">{collaborator.name}</h3>
-              <p className="client-cnpj">
-                <Briefcase size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                {collaborator.role}
-              </p>
-              {collaborator.cnh_validity && (
-                (() => {
-                  const status = getValidityStatus(collaborator.cnh_validity);
-                  if (status.text !== 'Válido') {
-                    return (
-                      <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: status.color, fontWeight: '500' }}>
-                        <status.icon size={14} />
-                        <span>CNH: {status.text}</span>
-                      </div>
-                    )
-                  }
-                  return null;
-                })()
-              )}
-              <div className="client-details">
-                {collaborator.cpf && (
-                  <div className="detail-item">
-                    <IdCard size={16} color="#64748b" />
-                    <span>{collaborator.cpf}</span>
-                  </div>
-                )}
-                {collaborator.email && (
-                  <div className="detail-item">
-                    <Mail size={16} color="#64748b" />
-                    <span>{collaborator.email}</span>
-                  </div>
-                )}
-                {collaborator.phone && (
-                  <div className="detail-item">
-                    <Phone size={16} color="#64748b" />
-                    <span>{collaborator.phone}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )
+      }
 
       <ConfirmModal
         isOpen={showConfirmModal}
@@ -593,7 +644,7 @@ const Collaborators = () => {
         title="Confirmar Exclusão"
         message={`Tem certeza que deseja excluir este ${deleteType === 'collaborator' ? 'colaborador' : 'item'}? Esta ação não pode ser desfeita.`}
       />
-    </div>
+    </div >
   );
 };
 

@@ -34,6 +34,7 @@ const Layout = ({ children }) => {
     { path: '/kanban', icon: KanbanSquare, label: 'Kanban', permission: 'kanban' },
     { path: '/clients', icon: Users, label: 'Clientes', permission: 'clients' },
     { path: '/collaborators', icon: UserCircle, label: 'Colaboradores', permission: 'collaborators' },
+
     { path: '/contracts', icon: FileText, label: 'Contratos', permission: 'contracts' },
     { path: '/projects', icon: Briefcase, label: 'Projetos', permission: 'projects' },
     { path: '/purchases', icon: ShoppingCart, label: 'Compras', permission: 'purchases' },

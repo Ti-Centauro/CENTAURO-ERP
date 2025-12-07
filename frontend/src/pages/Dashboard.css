@@ -49,7 +49,7 @@
 
 .widget-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
 }
 
@@ -60,6 +60,8 @@
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   transition: transform 0.2s;
+  display: flex;
+  flex-direction: column;
 }
 
 .stat-card:hover {
@@ -102,6 +104,8 @@
   font-size: 0.75rem;
   color: #94a3b8;
   margin-top: 0.5rem;
+  line-height: 1.3;
+  overflow-wrap: break-word;
 }
 
 /* Specific Lists inside Widgets */
