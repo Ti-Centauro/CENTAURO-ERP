@@ -170,17 +170,18 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
     e.preventDefault();
     try {
       await addProjectTool(project.id, {
-        ...toolFormData,
         project_id: project.id,
         tool_id: parseInt(toolFormData.tool_id),
-        quantity: parseInt(toolFormData.quantity)
+        quantity: parseInt(toolFormData.quantity),
+        start_date: toolFormData.start_date || null,
+        end_date: toolFormData.end_date || null
       });
       setShowToolForm(false);
       setToolFormData({ tool_id: '', quantity: 1, start_date: '', end_date: '' });
       loadAllData();
     } catch (error) {
       console.error('Error adding tool:', error);
-      alert('Erro ao adicionar ferramenta');
+      alert('Erro ao adicionar ferramenta: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -199,16 +200,17 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
     e.preventDefault();
     try {
       await addProjectVehicle(project.id, {
-        ...vehicleFormData,
         project_id: project.id,
-        vehicle_id: parseInt(vehicleFormData.vehicle_id)
+        vehicle_id: parseInt(vehicleFormData.vehicle_id),
+        start_date: vehicleFormData.start_date || null,
+        end_date: vehicleFormData.end_date || null
       });
       setShowVehicleForm(false);
       setVehicleFormData({ vehicle_id: '', start_date: '', end_date: '' });
       loadAllData();
     } catch (error) {
       console.error('Error adding vehicle:', error);
-      alert('Erro ao adicionar veículo');
+      alert('Erro ao adicionar veículo: ' + (error.response?.data?.detail || error.message));
     }
   };
 

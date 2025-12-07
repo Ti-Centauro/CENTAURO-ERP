@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
-import { getAllocations, getCollaborators, getFleet, createAllocation, updateAllocation, deleteAllocation } from '../services/api';
+import { getAllocations, getCollaborators, getFleet, getProjects, getClients, createAllocation, updateAllocation, deleteAllocation } from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 import './Scheduler.css';
 
@@ -8,6 +8,8 @@ const Scheduler = () => {
   const [allocations, setAllocations] = useState([]);
   const [collaborators, setCollaborators] = useState([]);
   const [fleet, setFleet] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [clients, setClients] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('week');
   const [showForm, setShowForm] = useState(false);
@@ -29,14 +31,18 @@ const Scheduler = () => {
 
   const loadData = async () => {
     try {
-      const [allocRes, collabRes, fleetRes] = await Promise.all([
+      const [allocRes, collabRes, fleetRes, projRes, clientsRes] = await Promise.all([
         getAllocations(),
         getCollaborators(),
-        getFleet()
+        getFleet(),
+        getProjects(),
+        getClients()
       ]);
       setAllocations(allocRes.data);
       setCollaborators(collabRes.data);
       setFleet(fleetRes.data);
+      setProjects(projRes.data);
+      setClients(clientsRes.data);
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -277,9 +283,23 @@ const Scheduler = () => {
                               e.stopPropagation();
                               handleEditAllocation(alloc);
                             }}
-                            title={`Projeto #${alloc.project_id} - Clique para editar`}
+                            title={(() => {
+                              const proj = projects.find(p => p.id === alloc.project_id);
+                              const client = proj ? clients.find(c => c.id === proj.client_id) : null;
+                              return proj ? `${client?.name || 'Cliente'} | ${proj.tag}` : 'Clique para editar';
+                            })()}
                           >
-                            <span className="allocation-label">Proj #{alloc.project_id}</span>
+                            <span className="allocation-label">
+                              {(() => {
+                                const proj = projects.find(p => p.id === alloc.project_id);
+                                if (proj) {
+                                  const client = clients.find(c => c.id === proj.client_id);
+                                  const clientName = client?.name?.split(' ')[0] || '';
+                                  return `${clientName} | ${proj.tag}`;
+                                }
+                                return `Proj #${alloc.project_id}`;
+                              })()}
+                            </span>
                           </div>
                         );
                       })}

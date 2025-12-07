@@ -13,7 +13,7 @@ sys.path.append(os.getcwd())
 
 from app.database import AsyncSessionLocal
 from app.models.roles import Role
-from app.models.operational import Collaborator, Certification, CertificationType
+from app.models.operational import Collaborator, Certification, CertificationType, Allocation, ResourceType, AllocationType
 from app.models.commercial import Client, Contract, Project, ProjectBilling
 from app.models.assets import Fleet, FuelType, Insurance, Tool, ToolStatus
 from app.models.tickets import Ticket, TicketStatus, TicketPriority
@@ -28,6 +28,7 @@ async def clear_data(db):
     await db.execute(delete(PurchaseItem))
     await db.execute(delete(PurchaseRequest))
     await db.execute(delete(Ticket))
+    await db.execute(delete(Allocation))
     await db.execute(delete(ProjectBilling))
     await db.execute(delete(Project))
     await db.execute(delete(Contract))
@@ -170,12 +171,15 @@ async def seed_fleet(db, insurances):
         }
     ]
     
+    created_fleet = []
     for v_data in vehicles:
         vehicle = Fleet(**v_data)
         db.add(vehicle)
+        created_fleet.append(vehicle)
     
     await db.flush()
-    print(f"✅ {len(vehicles)} veículos criados.")
+    print(f"✅ {len(created_fleet)} veículos criados.")
+    return created_fleet
 
 async def seed_collaborators(db, roles_map):
     """Cria 10 colaboradores com certificações"""
@@ -605,6 +609,70 @@ async def seed_billings(db, projects):
         
     print(f"✅ {len(created_billings) + 2} faturamentos criados.")
 
+async def seed_allocations(db, collaborators, fleet, projects):
+    """Cria alocações de recursos em projetos"""
+    print("🔍 Criando alocações...")
+    
+    today = date.today()
+    created_allocations = []
+    
+    # Allocate first 5 collaborators to different projects for this week and next
+    for i, collab in enumerate(collaborators[:5]):
+        proj = projects[i % len(projects)]
+        
+        # Current week allocation
+        alloc = Allocation(
+            date=today + timedelta(days=i),
+            resource_type=ResourceType.PERSON,
+            resource_id=collab.id,
+            project_id=proj.id,
+            description=f"Alocado no projeto {proj.name}",
+            type=AllocationType.RESERVATION
+        )
+        db.add(alloc)
+        created_allocations.append(alloc)
+        
+        # Another day allocation  
+        alloc2 = Allocation(
+            date=today + timedelta(days=i+7),
+            resource_type=ResourceType.PERSON,
+            resource_id=collab.id,
+            project_id=proj.id,
+            description=f"Alocado no projeto {proj.name}",
+            type=AllocationType.RESERVATION
+        )
+        db.add(alloc2)
+        created_allocations.append(alloc2)
+    
+    # Allocate vehicles to projects
+    for i, vehicle in enumerate(fleet[:3]):
+        proj = projects[(i+2) % len(projects)]
+        
+        alloc = Allocation(
+            date=today + timedelta(days=i),
+            resource_type=ResourceType.CAR,
+            resource_id=vehicle.id,
+            project_id=proj.id,
+            description=f"Veículo alocado para {proj.name}",
+            type=AllocationType.RESERVATION
+        )
+        db.add(alloc)
+        created_allocations.append(alloc)
+        
+        alloc2 = Allocation(
+            date=today + timedelta(days=i+3),
+            resource_type=ResourceType.CAR,
+            resource_id=vehicle.id,
+            project_id=proj.id,
+            description=f"Veículo alocado para {proj.name}",
+            type=AllocationType.RESERVATION
+        )
+        db.add(alloc2)
+        created_allocations.append(alloc2)
+    
+    await db.flush()
+    print(f"✅ {len(created_allocations)} alocações criadas.")
+
 async def main():
     print("🌱 Iniciando seed de dados (REFAZENDO TUDO)...")
     try:
@@ -614,7 +682,7 @@ async def main():
             roles_map = await seed_roles(db)
             clients = await seed_clients(db)
             insurances = await seed_insurances(db)
-            await seed_fleet(db, insurances)
+            fleet = await seed_fleet(db, insurances)
             collaborators = await seed_collaborators(db, roles_map)
             await seed_tools(db)
             
@@ -624,6 +692,7 @@ async def main():
             await seed_tickets(db, contracts, collaborators)
             await seed_purchases(db, projects)
             await seed_billings(db, projects)
+            await seed_allocations(db, collaborators, fleet, projects)
             
             await db.commit()
             print("✨ Seed concluído com sucesso!")
