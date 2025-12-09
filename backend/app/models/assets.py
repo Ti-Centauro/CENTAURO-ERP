@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Enum, Date, ForeignKey, Float, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
@@ -20,6 +20,10 @@ class FuelType(str, enum.Enum):
     GNV_ALCOOL = "GNV + Alcool"
     GNV_GASOLINA = "GNV + Gasolina"
     DIESEL = "Diesel"
+
+class MaintenanceType(str, enum.Enum):
+    PREVENTIVA = "PREVENTIVA"
+    CORRETIVA = "CORRETIVA"
 
 class Insurance(Base):
     __tablename__ = "insurances"
@@ -52,6 +56,10 @@ class Fleet(Base):
     color = Column(String, nullable=True)
     fuel_type = Column(Enum(FuelType), nullable=True)
     status = Column(Enum(FleetStatus), default=FleetStatus.ACTIVE)
+    odometer = Column(Integer, default=0)
+
+    # Maintenance Relationship
+    maintenances = relationship("VehicleMaintenance", back_populates="vehicle")
 
 class Tool(Base):
     __tablename__ = "tools"
@@ -65,3 +73,20 @@ class Tool(Base):
     current_holder = Column(String, nullable=False) 
     # "Onde" - Optional
     current_location = Column(String, nullable=True)
+
+class VehicleMaintenance(Base):
+    __tablename__ = "vehicle_maintenances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vehicle_id = Column(Integer, ForeignKey("fleet.id"), nullable=False)
+    workshop_name = Column(String, nullable=False)
+    entry_date = Column(Date, nullable=False)
+    exit_date = Column(Date, nullable=True)
+    cost = Column(Float, nullable=False)
+    odometer = Column(Integer, nullable=False)
+    maintenance_type = Column(Enum(MaintenanceType), nullable=False)
+    categories = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    attachment = Column(String, nullable=True)
+
+    vehicle = relationship("Fleet", back_populates="maintenances")

@@ -12,7 +12,7 @@ router = APIRouter()
 # Fleet
 @router.get("/fleet", response_model=List[schemas.FleetResponse])
 async def get_fleet(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.Fleet).options(selectinload(models.Fleet.insurance)))
+    result = await db.execute(select(models.Fleet).options(selectinload(models.Fleet.insurance), selectinload(models.Fleet.maintenances)))
     fleet = result.scalars().all()
     return fleet
 
@@ -65,7 +65,7 @@ async def create_fleet_item(fleet: schemas.FleetCreate, db: AsyncSession = Depen
 
 @router.put("/fleet/{fleet_id}", response_model=schemas.FleetResponse)
 async def update_fleet_item(fleet_id: int, fleet: schemas.FleetCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.Fleet).where(models.Fleet.id == fleet_id))
+    result = await db.execute(select(models.Fleet).options(selectinload(models.Fleet.insurance), selectinload(models.Fleet.maintenances)).where(models.Fleet.id == fleet_id))
     db_fleet = result.scalar_one_or_none()
     if not db_fleet:
         raise HTTPException(status_code=404, detail="Fleet item not found")

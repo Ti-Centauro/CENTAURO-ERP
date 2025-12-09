@@ -213,11 +213,11 @@ async def seed_fleet(db, insurances):
     
     created_fleet = []
     for v_data in vehicles:
+        v_data['odometer'] = 0
         vehicle = Fleet(**v_data)
         db.add(vehicle)
+        await db.flush()
         created_fleet.append(vehicle)
-    
-    await db.flush()
     print(f"✅ {len(created_fleet)} veículos criados.")
     return created_fleet
 

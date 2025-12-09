@@ -95,5 +95,10 @@ export const createPurchase = (data) => api.post('/purchases/purchases', data);
 export const updatePurchase = (id, data) => api.put(`/purchases/purchases/${id}`, data);
 export const deletePurchase = (id) => api.delete(`/purchases/purchases/${id}`);
 
+// Maintenance
+export const getVehicleMaintenances = (vehicleId) => api.get(`/maintenance/maintenance/vehicle/${vehicleId}`);
+export const createMaintenance = (data) => api.post('/maintenance/maintenance', data);
+export const updateMaintenance = (id, data) => api.put(`/maintenance/maintenance/${id}`, data);
+export const deleteMaintenance = (id) => api.delete(`/maintenance/maintenance/${id}`);
 
 export default api;

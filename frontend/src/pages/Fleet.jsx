@@ -4,6 +4,7 @@ import {
   getFleet, createFleet, deleteFleet, updateFleet,
   getInsurances, createInsurance, updateInsurance, deleteInsurance
 } from '../services/api';
+import MaintenanceTab from '../components/MaintenanceTab';
 import ConfirmModal from '../components/ConfirmModal';
 import './Fleet.css';
 
@@ -26,7 +27,10 @@ const Fleet = () => {
     insurance_id: '',
     fuel_type: '',
     status: 'ACTIVE',
+    odometer: 0,
   });
+
+  const [modalTab, setModalTab] = useState('details'); // 'details', 'maintenance'
 
   // Insurance Form State
   const [showInsuranceForm, setShowInsuranceForm] = useState(false);
@@ -87,8 +91,10 @@ const Fleet = () => {
       insurance_id: '',
       fuel_type: '',
       status: 'ACTIVE',
+      odometer: 0,
     });
     setEditingFleetId(null);
+    setModalTab('details');
   };
 
   const handleFleetSubmit = async (e) => {
@@ -124,8 +130,10 @@ const Fleet = () => {
       insurance_id: vehicle.insurance_id || '',
       fuel_type: vehicle.fuel_type || '',
       status: vehicle.status,
+      odometer: vehicle.odometer || 0,
     });
     setEditingFleetId(vehicle.id);
+    setModalTab('details');
     setShowFleetForm(true);
   };
 
@@ -251,7 +259,7 @@ const Fleet = () => {
       {showFleetForm && (
         <div className="fleet-form-modal">
           <div className="fleet-form card" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3>{editingFleetId ? 'Editar Veículo' : 'Cadastrar Veículo'}</h3>
               {editingFleetId && (
                 <button
@@ -264,138 +272,193 @@ const Fleet = () => {
                 </button>
               )}
             </div>
-            <form onSubmit={handleFleetSubmit}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="label">Placa *</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={fleetFormData.license_plate}
-                    onChange={(e) => setFleetFormData({ ...fleetFormData, license_plate: e.target.value })}
-                    required
-                    placeholder="ABC-1234"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Modelo *</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={fleetFormData.model}
-                    onChange={(e) => setFleetFormData({ ...fleetFormData, model: e.target.value })}
-                    required
-                    placeholder="Hilux"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Marca *</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={fleetFormData.brand}
-                    onChange={(e) => setFleetFormData({ ...fleetFormData, brand: e.target.value })}
-                    required
-                    placeholder="Toyota"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Ano *</label>
-                  <input
-                    type="number"
-                    className="input"
-                    value={fleetFormData.year}
-                    onChange={(e) => setFleetFormData({ ...fleetFormData, year: e.target.value })}
-                    required
-                    min="1900"
-                    max={new Date().getFullYear() + 1}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Cor</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={fleetFormData.color}
-                    onChange={(e) => setFleetFormData({ ...fleetFormData, color: e.target.value })}
-                    placeholder="Prata"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Combustível</label>
-                  <select
-                    className="input"
-                    value={fleetFormData.fuel_type}
-                    onChange={(e) => setFleetFormData({ ...fleetFormData, fuel_type: e.target.value })}
-                  >
-                    <option value="">Selecione...</option>
-                    <option value="Alcool">Álcool</option>
-                    <option value="Gasolina">Gasolina</option>
-                    <option value="Flex">Flex</option>
-                    <option value="GNV">GNV</option>
-                    <option value="GNV + Alcool">GNV + Álcool</option>
-                    <option value="GNV + Gasolina">GNV + Gasolina</option>
-                    <option value="Diesel">Diesel</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="label">CNPJ (Matriz/Filial)</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={fleetFormData.cnpj}
-                    onChange={(e) => setFleetFormData({ ...fleetFormData, cnpj: e.target.value })}
-                    placeholder="00.000.000/0000-00"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Status *</label>
-                  <select
-                    className="input"
-                    value={fleetFormData.status}
-                    onChange={(e) => setFleetFormData({ ...fleetFormData, status: e.target.value })}
-                    required
-                  >
-                    <option value="ACTIVE">Ativo</option>
-                    <option value="MAINTENANCE">Manutenção</option>
-                  </select>
-                </div>
 
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label className="label">Seguro Vinculado</label>
-                  <select
-                    className="input"
-                    value={fleetFormData.insurance_id}
-                    onChange={(e) => setFleetFormData({ ...fleetFormData, insurance_id: e.target.value })}
-                  >
-                    <option value="">Sem seguro</option>
-                    {insurances.map(ins => (
-                      <option key={ins.id} value={ins.id}>
-                        {ins.insurance_company} - Apólice: {ins.policy_number} (Vence: {new Date(ins.validity).toLocaleDateString('pt-BR')})
-                      </option>
-                    ))}
-                  </select>
-                  <small style={{ color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
-                    Cadastre novos seguros na aba "Seguros" para selecioná-los aqui.
-                  </small>
-                </div>
-              </div>
-              <div className="form-actions">
+            {editingFleetId && (
+              <div style={{ borderBottom: '1px solid #e2e8f0', marginBottom: '1.5rem', display: 'flex', gap: '1.5rem' }}>
                 <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowFleetForm(false);
-                    resetFleetForm();
+                  onClick={() => setModalTab('details')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0.5rem 0',
+                    borderBottom: modalTab === 'details' ? '2px solid #0284c7' : '2px solid transparent',
+                    color: modalTab === 'details' ? '#0284c7' : '#64748b',
+                    fontWeight: modalTab === 'details' ? 600 : 500,
+                    cursor: 'pointer',
+                    fontSize: '0.95rem'
                   }}
                 >
-                  Cancelar
+                  Dados do Veículo
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Salvar Veículo
+                <button
+                  onClick={() => setModalTab('maintenance')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0.5rem 0',
+                    borderBottom: modalTab === 'maintenance' ? '2px solid #0284c7' : '2px solid transparent',
+                    color: modalTab === 'maintenance' ? '#0284c7' : '#64748b',
+                    fontWeight: modalTab === 'maintenance' ? 600 : 500,
+                    cursor: 'pointer',
+                    fontSize: '0.95rem'
+                  }}
+                >
+                  Manutenções
                 </button>
               </div>
-            </form>
+            )}
+
+            {modalTab === 'details' ? (
+              <form onSubmit={handleFleetSubmit}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="label">Placa *</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={fleetFormData.license_plate}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, license_plate: e.target.value })}
+                      required
+                      placeholder="ABC-1234"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Modelo *</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={fleetFormData.model}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, model: e.target.value })}
+                      required
+                      placeholder="Hilux"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Marca *</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={fleetFormData.brand}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, brand: e.target.value })}
+                      required
+                      placeholder="Toyota"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Ano *</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={fleetFormData.year}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, year: e.target.value })}
+                      required
+                      min="1900"
+                      max={new Date().getFullYear() + 1}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Cor</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={fleetFormData.color}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, color: e.target.value })}
+                      placeholder="Prata"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Combustível</label>
+                    <select
+                      className="input"
+                      value={fleetFormData.fuel_type}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, fuel_type: e.target.value })}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Alcool">Álcool</option>
+                      <option value="Gasolina">Gasolina</option>
+                      <option value="Flex">Flex</option>
+                      <option value="GNV">GNV</option>
+                      <option value="GNV + Alcool">GNV + Álcool</option>
+                      <option value="GNV + Gasolina">GNV + Gasolina</option>
+                      <option value="Diesel">Diesel</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="label">KM Atual</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={fleetFormData.odometer}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, odometer: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="label">CNPJ (Matriz/Filial)</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={fleetFormData.cnpj}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, cnpj: e.target.value })}
+                      placeholder="00.000.000/0000-00"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Status *</label>
+                    <select
+                      className="input"
+                      value={fleetFormData.status}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, status: e.target.value })}
+                      required
+                    >
+                      <option value="ACTIVE">Ativo</option>
+                      <option value="MAINTENANCE">Manutenção</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="label">Seguro Vinculado</label>
+                    <select
+                      className="input"
+                      value={fleetFormData.insurance_id}
+                      onChange={(e) => setFleetFormData({ ...fleetFormData, insurance_id: e.target.value })}
+                    >
+                      <option value="">Sem seguro</option>
+                      {insurances.map(ins => (
+                        <option key={ins.id} value={ins.id}>
+                          {ins.insurance_company} - Apólice: {ins.policy_number} (Vence: {new Date(ins.validity).toLocaleDateString('pt-BR')})
+                        </option>
+                      ))}
+                    </select>
+                    <small style={{ color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
+                      Cadastre novos seguros na aba "Seguros" para selecioná-los aqui.
+                    </small>
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowFleetForm(false);
+                      resetFleetForm();
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Salvar Veículo
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <MaintenanceTab
+                vehicle={{ id: editingFleetId, odometer: fleetFormData.odometer }}
+                onUpdate={loadData}
+              />
+            )}
           </div>
         </div>
       )}
@@ -506,12 +569,33 @@ const Fleet = () => {
                   <div className="vehicle-icon">
                     <Car size={24} />
                   </div>
-                  <span
-                    className="status-badge"
-                    style={getStatusBadge(vehicle.status)}
-                  >
-                    {vehicle.status === 'ACTIVE' ? 'Ativo' : 'Manutenção'}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    <span
+                      className="status-badge"
+                      style={getStatusBadge(vehicle.status)}
+                    >
+                      {vehicle.status === 'ACTIVE' ? 'Ativo' : 'Manutenção'}
+                    </span>
+                    {vehicle.status === 'MAINTENANCE' && vehicle.maintenances && (() => {
+                      const todayStr = new Date().toLocaleDateString('en-CA');
+                      const activeMaint = vehicle.maintenances.find(m => {
+                        // Logic: Entry has happened (<= today) AND (not finished OR exit future)
+                        // AND exit date exists (to show forecast)
+                        const entryStr = m.entry_date;
+                        const exitStr = m.exit_date;
+                        return entryStr <= todayStr && exitStr && exitStr > todayStr;
+                      });
+
+                      if (activeMaint) {
+                        return (
+                          <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 500 }}>
+                            Previsão: {new Date(activeMaint.exit_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
                 </div>
                 <h3 className="vehicle-model">{vehicle.model}</h3>
                 <p className="vehicle-plate">{vehicle.license_plate}</p>

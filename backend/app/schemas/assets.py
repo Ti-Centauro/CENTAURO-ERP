@@ -1,6 +1,9 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date
+
+from app.models.assets import FuelType, FleetStatus
+from app.schemas.maintenance import VehicleMaintenanceResponse
 
 # Insurance Schemas
 class InsuranceBase(BaseModel):
@@ -27,8 +30,9 @@ class FleetBase(BaseModel):
     cnpj: Optional[str] = None
     insurance_id: Optional[int] = None
     color: Optional[str] = None
-    fuel_type: Optional[str] = None
-    status: str = "ACTIVE"
+    fuel_type: Optional[FuelType] = None
+    status: FleetStatus = FleetStatus.ACTIVE
+    odometer: Optional[int] = 0
 
 class FleetCreate(FleetBase):
     pass
@@ -36,6 +40,7 @@ class FleetCreate(FleetBase):
 class FleetResponse(FleetBase):
     id: int
     insurance: Optional[InsuranceResponse] = None
+    maintenances: List[VehicleMaintenanceResponse] = []
     
     class Config:
         from_attributes = True
