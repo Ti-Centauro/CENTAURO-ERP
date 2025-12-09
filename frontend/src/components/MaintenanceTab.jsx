@@ -289,7 +289,7 @@ const MaintenanceTab = ({ vehicle, onUpdate }) => {
             ) : (
               maintenances.map(item => (
                 <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '0.5rem' }}>{new Date(item.entry_date).toLocaleDateString('pt-BR')}</td>
+                  <td style={{ padding: '0.5rem' }}>{item.entry_date ? item.entry_date.split('-').reverse().join('/') : ''}</td>
                   <td style={{ padding: '0.5rem' }}>{item.workshop_name}</td>
                   <td style={{ padding: '0.5rem' }}>
                     <span style={{
@@ -305,6 +305,35 @@ const MaintenanceTab = ({ vehicle, onUpdate }) => {
                   </td>
                   <td style={{ padding: '0.5rem', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {item.categories}
+                  </td>
+                  <td style={{ padding: '0.5rem' }}>{item.odometer} km</td>
+                  <td style={{ padding: '0.5rem' }}>R$ {item.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td style={{ padding: '0.5rem' }}>
+                    {(() => {
+                      const todayStr = new Date().toLocaleDateString('en-CA');
+                      const entryDateStr = item.entry_date;
+                      const exitDateStr = item.exit_date;
+
+                      if (entryDateStr > todayStr) {
+                        return (
+                          <span style={{ color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar size={14} /> Agendado
+                          </span>
+                        );
+                      }
+                      if (!exitDateStr || exitDateStr > todayStr) {
+                        return (
+                          <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Activity size={14} /> Em andamento
+                          </span>
+                        );
+                      }
+                      return (
+                        <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          Concluído
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td style={{ padding: '0.5rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
