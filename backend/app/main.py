@@ -27,8 +27,9 @@ app.include_router(roles.router, prefix="/roles", tags=["Roles"])
 app.include_router(auth.router, tags=["Authentication"])
 app.include_router(teams.router, prefix="/teams", tags=["Teams"])
 app.include_router(maintenance.router, prefix="/maintenance", tags=["Maintenance"])
-from app.routers import dashboard
+from app.routers import dashboard, ai
 app.include_router(dashboard.router, tags=["Dashboard"])
+app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 
 @app.on_event("startup")
 async def startup():

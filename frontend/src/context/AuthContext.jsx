@@ -25,14 +25,21 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const fetchUser = async () => {
-      if (token) {
-        try {
-          const response = await api.get('/me'); // Use local api instance
-          setUser(response.data);
-        } catch (error) {
-          console.error("Failed to fetch user", error);
-          logout();
-        }
+      // Logic modified to support Backend Auth Bypass
+      // We attempt to fetch user even if no token is present
+      try {
+        const response = await api.get('/me'); // Use local api instance
+        setUser(response.data);
+        // If backend returned user but we had no token, it means we are in bypass mode.
+        // We might want to set a dummy token? Not strictly necessary if backend doesn't check it.
+      } catch (error) {
+        console.error("Failed to fetch user", error);
+        // Only logout (clear state) if we really failed
+        // But logout clears user, so we are good.
+        // If 401, it will fail.
+        setUser(null);
+        localStorage.removeItem('token');
+        setToken(null);
       }
       setLoading(false);
     };

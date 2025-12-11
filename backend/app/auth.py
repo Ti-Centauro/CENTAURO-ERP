@@ -19,7 +19,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -39,12 +39,34 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 from sqlalchemy.future import select
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    # BYPASS AUTH FOR DEVELOPMENT
+    # Force auto-login as admin if no token or hardcoded bypass
+    
+    from sqlalchemy.orm import selectinload
+    from app.models.operational import Collaborator
+
+    async def get_admin_user():
+        # Fallback to specifically seeded admin
+        query = select(User).options(
+            selectinload(User.collaborator).selectinload(Collaborator.role_obj)
+        ).filter(User.email == "lucas.silva@centauro.com.br")
+        result = await db.execute(query)
+        user = result.scalars().first()
+        return user
+
+    # If no token provided, just return admin
+    if not token:
+        user = await get_admin_user()
+        if user:
+            return user
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
@@ -52,11 +74,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
             raise credentials_exception
         token_data = TokenData(email=email)
     except JWTError:
+        # If token is invalid (e.g. expired from previous session), also fallback to admin for dev convenience?
+        # Or maybe just raise exception. Let's just raise exception to avoid confusion if token IS present but bad.
+        # But user asked to IGNORE login. So maybe fallback even on error? 
+        # let's try to just use the token if present, but if it fails, fallback to admin?
+        # For now, stick to standard behavior if token is present but invalid.
+        # But wait, frontend might have an old token.
+        # Let's simple allow bypass if token is None.
         raise credentials_exception
     
-    from sqlalchemy.orm import selectinload
-    from app.models.operational import Collaborator
-
     query = select(User).options(
         selectinload(User.collaborator).selectinload(Collaborator.role_obj)
     ).filter(User.email == token_data.email)
