@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, FileText, Upload, Search } from 'lucide-react';
 import { getContracts, createContract, updateContract, deleteContract, getClients, getProjects, getAllBillings } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import './Contracts.css';
 
 const Contracts = () => {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('contracts', 'edit');
   const [contracts, setContracts] = useState([]);
   const [clients, setClients] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -211,14 +214,16 @@ const Contracts = () => {
             <h1>Gestão de Contratos</h1>
             <p>Contratos guarda-chuva vinculados a clientes</p>
           </div>
-          <button className="btn btn-primary" onClick={() => {
-            setEditingId(null);
-            resetForm();
-            setShowForm(true);
-          }} style={{ marginTop: '1rem' }}>
-            <Plus size={20} />
-            Novo Contrato
-          </button>
+          {canEdit && (
+            <button className="btn btn-primary" onClick={() => {
+              setEditingId(null);
+              resetForm();
+              setShowForm(true);
+            }} style={{ marginTop: '1rem' }}>
+              <Plus size={20} />
+              Novo Contrato
+            </button>
+          )}
         </div>
 
         <div className="filters-bar" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
@@ -264,7 +269,7 @@ const Contracts = () => {
           <div className="contract-form card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Contrato' : 'Criar Contrato'}</h3>
-              {editingId && (
+              {editingId && canEdit && (
                 <button
                   type="button"
                   className="btn-icon-small danger"
@@ -487,9 +492,11 @@ const Contracts = () => {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingId ? 'Salvar Alterações' : 'Salvar Contrato'}
-                </button>
+                {canEdit && (
+                  <button type="submit" className="btn btn-primary">
+                    {editingId ? 'Salvar Alterações' : 'Salvar Contrato'}
+                  </button>
+                )}
               </div>
             </form>
           </div>

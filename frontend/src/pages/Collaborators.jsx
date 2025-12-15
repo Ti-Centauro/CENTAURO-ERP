@@ -4,11 +4,14 @@ import api, {
   getCollaborators, createCollaborator, updateCollaborator, deleteCollaborator,
   getCertifications, createCertification, deleteCertification
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import Teams from './Teams';
 import ConfirmModal from '../components/ConfirmModal';
 import './Clients.css';
 
 const Collaborators = () => {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('collaborators', 'edit');
   const [viewMode, setViewMode] = useState('collaborators'); // 'collaborators' or 'teams'
   const teamsRef = useRef();
   const [collaborators, setCollaborators] = useState([]);
@@ -291,18 +294,20 @@ const Collaborators = () => {
               </button>
             </div>
 
-            <button className="btn btn-primary" onClick={() => {
-              if (viewMode === 'collaborators') {
-                setEditingId(null);
-                resetForm();
-                setShowForm(true);
-              } else {
-                teamsRef.current?.openForm();
-              }
-            }}>
-              <Plus size={20} />
-              {viewMode === 'collaborators' ? 'Novo Colaborador' : 'Novo Time'}
-            </button>
+            {canEdit && (
+              <button className="btn btn-primary" onClick={() => {
+                if (viewMode === 'collaborators') {
+                  setEditingId(null);
+                  resetForm();
+                  setShowForm(true);
+                } else {
+                  teamsRef.current?.openForm();
+                }
+              }}>
+                <Plus size={20} />
+                {viewMode === 'collaborators' ? 'Novo Colaborador' : 'Novo Time'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -370,13 +375,15 @@ const Collaborators = () => {
                         Certificações (NR/ASO)
                       </button>
                     </div>
-                    <button
-                      className="btn-icon-small danger"
-                      onClick={() => handleDelete(editingId)}
-                      title="Excluir Colaborador"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                    {canEdit && (
+                      <button
+                        className="btn-icon-small danger"
+                        onClick={() => handleDelete(editingId)}
+                        title="Excluir Colaborador"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -455,7 +462,7 @@ const Collaborators = () => {
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">Salvar</button>
+                  {canEdit && <button type="submit" className="btn btn-primary">Salvar</button>}
                 </div>
               </form>
             ) : (
@@ -496,9 +503,11 @@ const Collaborators = () => {
                         required
                       />
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>
-                      <Plus size={18} />
-                    </button>
+                    {canEdit && (
+                      <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>
+                        <Plus size={18} />
+                      </button>
+                    )}
                   </div>
                 </form>
 
@@ -544,13 +553,15 @@ const Collaborators = () => {
                               <StatusIcon size={14} />
                               {status.text}
                             </div>
-                            <button
-                              className="btn-icon-small danger"
-                              onClick={() => handleDelete(cert.id, 'certification')}
-                              title="Excluir certificação"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {canEdit && (
+                              <button
+                                className="btn-icon-small danger"
+                                onClick={() => handleDelete(cert.id, 'certification')}
+                                title="Excluir certificação"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

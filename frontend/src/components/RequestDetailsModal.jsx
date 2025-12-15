@@ -192,7 +192,7 @@ const RequestDetailsModal = ({ request, onClose, onUpdate, context = 'projects',
                 value={formData.description}
                 onChange={handleHeaderChange}
                 className="input"
-                disabled={!isProjectsContext}
+                disabled={!isProjectsContext || readOnly}
               />
             </div>
             <div className="form-group">
@@ -203,7 +203,7 @@ const RequestDetailsModal = ({ request, onClose, onUpdate, context = 'projects',
                 value={formData.requester}
                 onChange={handleHeaderChange}
                 className="input"
-                disabled={!isProjectsContext}
+                disabled={!isProjectsContext || readOnly}
               />
             </div>
             <div className="form-group">
@@ -213,6 +213,7 @@ const RequestDetailsModal = ({ request, onClose, onUpdate, context = 'projects',
                 value={formData.status}
                 onChange={handleHeaderChange}
                 className="input"
+                disabled={!isProjectsContext || readOnly}
               >
                 <option value="pending">Pendente</option>
                 <option value="approved">Aprovado</option>
@@ -232,7 +233,7 @@ const RequestDetailsModal = ({ request, onClose, onUpdate, context = 'projects',
           <div className="items-section">
             <div className="items-header">
               <h4>Itens da Solicitação</h4>
-              {isProjectsContext && (
+              {isProjectsContext && !readOnly && (
                 <button className="btn btn-sm btn-secondary" onClick={addItem}>
                   <Plus size={16} /> Adicionar Item
                 </button>
@@ -375,7 +376,7 @@ const RequestDetailsModal = ({ request, onClose, onUpdate, context = 'projects',
                         </select>
                       </td>
                       <td>
-                        {isProjectsContext ? (
+                        {isProjectsContext && !readOnly ? (
                           <button
                             className="btn-icon-danger"
                             onClick={() => removeItem(index)}

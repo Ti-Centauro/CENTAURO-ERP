@@ -43,8 +43,8 @@
 }
 
 .roles-form {
-  max-width: 600px;
-  /* Increased from 500px for better grid layout */
+  max-width: 800px;
+  /* Increased from 600px to prevent horizontal scroll */
   width: 90%;
   padding: 2rem;
   background: white;
@@ -52,6 +52,7 @@
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .roles-form h3 {
@@ -247,6 +248,7 @@
 .approval-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
   background: white;
   border: 1px solid #e2e8f0;

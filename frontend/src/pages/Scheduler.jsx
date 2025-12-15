@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
 import { getAllocations, getCollaborators, getFleet, getProjects, getClients, createAllocation, updateAllocation, deleteAllocation } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import './Scheduler.css';
 
 const Scheduler = () => {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('scheduler', 'edit');
   const [allocations, setAllocations] = useState([]);
   const [collaborators, setCollaborators] = useState([]);
   const [fleet, setFleet] = useState([]);
@@ -212,10 +215,12 @@ const Scheduler = () => {
           </button>
         </div>
         <div className="scheduler-actions">
-          <button className="btn btn-primary" onClick={handleAddAllocation}>
-            <Plus size={20} />
-            Nova Alocação
-          </button>
+          {canEdit && (
+            <button className="btn btn-primary" onClick={handleAddAllocation}>
+              <Plus size={20} />
+              Nova Alocação
+            </button>
+          )}
           <div className="view-toggle">
             <button
               className={`btn-toggle ${viewMode === 'week' ? 'active' : ''}`}
@@ -419,7 +424,7 @@ const Scheduler = () => {
 
 
               <div className="form-actions">
-                {editingId && (
+                {editingId && canEdit && (
                   <button
                     type="button"
                     className="btn btn-danger-outline"
@@ -432,9 +437,11 @@ const Scheduler = () => {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Salvar
-                </button>
+                {canEdit && (
+                  <button type="submit" className="btn btn-primary">
+                    Salvar
+                  </button>
+                )}
               </div>
             </form>
           </div>

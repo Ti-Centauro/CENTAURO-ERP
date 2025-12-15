@@ -5,10 +5,11 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Plus, GripVertical, Trash2, Edit, X, User, Briefcase } from 'lucide-react';
 import { getTasks, createTask, updateTask, deleteTask, getProjects, getCollaborators } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import './Kanban.css';
 
-const TaskCard = ({ task, onEdit, onDelete, getProjectName, getCollaboratorName }) => {
+const TaskCard = ({ task, onEdit, onDelete, getProjectName, getCollaboratorName, canEdit }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
 
   const style = {
@@ -29,12 +30,16 @@ const TaskCard = ({ task, onEdit, onDelete, getProjectName, getCollaboratorName 
           <GripVertical size={16} color="#94a3b8" />
         </div>
         <div className="task-actions">
-          <button className="btn-icon-small" onClick={() => onEdit(task)}>
-            <Edit size={14} />
-          </button>
-          <button className="btn-icon-small danger" onClick={() => onDelete(task.id)}>
-            <Trash2 size={14} />
-          </button>
+          {canEdit && (
+            <>
+              <button className="btn-icon-small" onClick={() => onEdit(task)}>
+                <Edit size={14} />
+              </button>
+              <button className="btn-icon-small danger" onClick={() => onDelete(task.id)}>
+                <Trash2 size={14} />
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div className="task-content">
@@ -69,7 +74,7 @@ const TaskCard = ({ task, onEdit, onDelete, getProjectName, getCollaboratorName 
   );
 };
 
-const Column = ({ column, tasks, onAddTask, onEditTask, onDeleteTask, getProjectName, getCollaboratorName }) => {
+const Column = ({ column, tasks, onAddTask, onEditTask, onDeleteTask, getProjectName, getCollaboratorName, canEdit }) => {
   return (
     <div className="kanban-column">
       <div className="column-header">
@@ -86,19 +91,24 @@ const Column = ({ column, tasks, onAddTask, onEditTask, onDeleteTask, getProject
               onDelete={onDeleteTask}
               getProjectName={getProjectName}
               getCollaboratorName={getCollaboratorName}
+              canEdit={canEdit}
             />
           ))}
         </SortableContext>
-        <button className="add-task-btn" onClick={() => onAddTask(column.id)}>
-          <Plus size={16} />
-          Adicionar Tarefa
-        </button>
+        {canEdit && (
+          <button className="add-task-btn" onClick={() => onAddTask(column.id)}>
+            <Plus size={16} />
+            Adicionar Tarefa
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
 const Kanban = () => {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('kanban', 'edit');
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [collaborators, setCollaborators] = useState([]);
@@ -262,10 +272,12 @@ const Kanban = () => {
           <h1>Kanban - Gestão de Tarefas</h1>
           <p>Controle de atividades dos supervisores</p>
         </div>
-        <button className="btn btn-primary" onClick={() => handleAddTask('todo')}>
-          <Plus size={20} />
-          Nova Tarefa
-        </button>
+        {canEdit && (
+          <button className="btn btn-primary" onClick={() => handleAddTask('todo')}>
+            <Plus size={20} />
+            Nova Tarefa
+          </button>
+        )}
       </header>
 
       {showForm && (
@@ -359,9 +371,11 @@ const Kanban = () => {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Salvar
-                </button>
+                {canEdit && (
+                  <button type="submit" className="btn btn-primary">
+                    Salvar
+                  </button>
+                )}
               </div>
             </form>
           </div>
@@ -380,6 +394,7 @@ const Kanban = () => {
               onDeleteTask={handleDeleteTask}
               getProjectName={getProjectName}
               getCollaboratorName={getCollaboratorName}
+              canEdit={canEdit}
             />
           ))}
         </div>

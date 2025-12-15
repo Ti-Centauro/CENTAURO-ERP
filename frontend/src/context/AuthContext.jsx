@@ -102,7 +102,9 @@ export const AuthProvider = ({ children }) => {
     if (!modulePerms) return false;
 
     // Check specific action
-    return modulePerms.includes(action);
+    // Map 'edit' to 'write' to match database storage conventions
+    const normalizedAction = action === 'edit' ? 'write' : action;
+    return modulePerms.includes(normalizedAction);
   };
 
   const value = {

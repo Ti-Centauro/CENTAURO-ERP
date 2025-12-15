@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit, Users, MapPin, Phone, Mail, Search } from 'lucide-react';
 import { getClients, createClient, deleteClient, updateClient } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import './Clients.css';
 
 const Clients = () => {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('clients', 'edit');
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -165,22 +168,24 @@ const Clients = () => {
             <h1>Gestão de Clientes</h1>
             <p>Cadastro e controle de clientes</p>
           </div>
-          <button className="btn btn-primary" onClick={() => {
-            setEditingId(null);
-            setFormData({
-              name: '',
-              client_number: '',
-              cnpj: '',
-              contact_person: '',
-              email: '',
-              phone: '',
-              address: '',
-            });
-            setShowForm(true);
-          }} style={{ marginTop: '1rem' }}>
-            <Plus size={20} />
-            Novo Cliente
-          </button>
+          {canEdit && (
+            <button className="btn btn-primary" onClick={() => {
+              setEditingId(null);
+              setFormData({
+                name: '',
+                client_number: '',
+                cnpj: '',
+                contact_person: '',
+                email: '',
+                phone: '',
+                address: '',
+              });
+              setShowForm(true);
+            }} style={{ marginTop: '1rem' }}>
+              <Plus size={20} />
+              Novo Cliente
+            </button>
+          )}
         </div>
 
         <div className="filters-bar" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
@@ -203,7 +208,7 @@ const Clients = () => {
           <div className="clients-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Cliente' : 'Cadastrar Cliente'}</h3>
-              {editingId && (
+              {editingId && canEdit && (
                 <button
                   type="button"
                   className="btn-icon-small danger"
@@ -300,9 +305,11 @@ const Clients = () => {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Salvar Cliente
-                </button>
+                {canEdit && (
+                  <button type="submit" className="btn btn-primary">
+                    Salvar Cliente
+                  </button>
+                )}
               </div>
             </form>
           </div>

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Wrench, MapPin, User, Edit } from 'lucide-react';
 import { getTools, createTool, deleteTool, updateTool, getCollaborators, getProjects } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import SearchableSelect from '../components/SearchableSelect';
 import './Tools.css';
 
 const Tools = () => {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('tools', 'edit');
   const [tools, setTools] = useState([]);
   const [collaborators, setCollaborators] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -172,10 +175,12 @@ const Tools = () => {
           <h1>Gestão de Ferramentas</h1>
           <p>Rastreamento de ferramentas e equipamentos</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-          <Plus size={20} />
-          Nova Ferramenta
-        </button>
+        {canEdit && (
+          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+            <Plus size={20} />
+            Nova Ferramenta
+          </button>
+        )}
       </header>
 
       {showForm && (
@@ -183,7 +188,7 @@ const Tools = () => {
           <div className="tools-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Ferramenta' : 'Cadastrar Ferramenta'}</h3>
-              {editingId && (
+              {editingId && canEdit && (
                 <button
                   type="button"
                   className="btn-icon-small danger"
@@ -260,9 +265,11 @@ const Tools = () => {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Salvar Ferramenta
-                </button>
+                {canEdit && (
+                  <button type="submit" className="btn btn-primary">
+                    Salvar Ferramenta
+                  </button>
+                )}
               </div>
             </form>
           </div>

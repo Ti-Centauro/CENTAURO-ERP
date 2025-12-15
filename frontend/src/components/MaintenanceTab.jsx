@@ -4,7 +4,7 @@ import { getVehicleMaintenances, createMaintenance, updateMaintenance, deleteMai
 
 const CATEGORIES_OPTIONS = ["Motor", "Freio", "Suspensão", "Pneus", "Elétrica", "Funilaria", "Óleo/Filtros", "Outros"];
 
-const MaintenanceTab = ({ vehicle, onUpdate }) => {
+const MaintenanceTab = ({ vehicle, onUpdate, canEdit = true }) => {
   const [maintenances, setMaintenances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -260,9 +260,11 @@ const MaintenanceTab = ({ vehicle, onUpdate }) => {
             R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </span>
         </div>
-        <button className="btn btn-primary small" onClick={handleAddNew}>
-          <Plus size={16} /> Nova
-        </button>
+        {canEdit && (
+          <button className="btn btn-primary small" onClick={handleAddNew}>
+            <Plus size={16} /> Nova
+          </button>
+        )}
       </div>
 
       <div className="table-responsive">
@@ -337,12 +339,16 @@ const MaintenanceTab = ({ vehicle, onUpdate }) => {
                   </td>
                   <td style={{ padding: '0.5rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button className="btn-icon-small" onClick={() => handleEdit(item)} title="Editar">
-                        <Edit size={16} />
-                      </button>
-                      <button className="btn-icon-small danger" onClick={() => handleDelete(item.id)} title="Excluir">
-                        <Trash2 size={16} />
-                      </button>
+                      {canEdit && (
+                        <>
+                          <button className="btn-icon-small" onClick={() => handleEdit(item)} title="Editar">
+                            <Edit size={16} />
+                          </button>
+                          <button className="btn-icon-small danger" onClick={() => handleDelete(item.id)} title="Excluir">
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

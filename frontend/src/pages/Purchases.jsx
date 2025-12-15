@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Filter, Package } from 'lucide-react';
 import { getPurchases, createPurchase, getProjects } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import RequestDetailsModal from '../components/RequestDetailsModal';
 import './Purchases.css';
 
 const Purchases = () => {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('purchases', 'edit');
   const [requests, setRequests] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,12 +101,14 @@ const Purchases = () => {
       <header className="purchases-header">
         <div>
           <h1>Compras & Solicitações</h1>
-          <p>Gestão de pacotes de solicitação de compra</p>
+          <p>Gestão de compras e pedidos de material</p>
         </div>
-        <button className="btn btn-primary" onClick={handleCreateRequest}>
-          <Plus size={20} />
-          Nova Solicitação
-        </button>
+        {canEdit && (
+          <button className="btn btn-primary" onClick={handleCreateRequest}>
+            <Plus size={20} />
+            Nova Solicitação
+          </button>
+        )}
       </header>
 
       {/* Search and Filters */}
@@ -211,8 +216,8 @@ const Purchases = () => {
         <RequestDetailsModal
           request={selectedRequest}
           onClose={() => setSelectedRequest(null)}
-          onUpdate={loadData}
-          context="purchases"
+          onUpdate={() => loadData(selectedRequest.id)}
+          readOnly={!canEdit}
         />
       )}
     </div>

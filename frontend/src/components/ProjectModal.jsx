@@ -16,7 +16,7 @@ import RequestDetailsModal from './RequestDetailsModal';
 import ConfirmModal from './ConfirmModal';
 import './ProjectModal.css';
 
-const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
+const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) => {
   const [activeTab, setActiveTab] = useState('info');
   const [loading, setLoading] = useState(false);
   const [deleteUnlocked, setDeleteUnlocked] = useState(false);
@@ -383,27 +383,29 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
             <DollarSign size={16} /> Faturamento
           </button>
 
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
-            <button
-              className={`btn-icon-small ${deleteUnlocked ? 'danger' : ''}`}
-              onClick={() => {
-                if (deleteUnlocked) {
-                  onDelete(project.id);
-                  setDeleteUnlocked(false);
-                } else {
-                  setDeleteUnlocked(true);
-                }
-              }}
-              title={deleteUnlocked ? "Clique para excluir" : "Clique para desbloquear exclusão"}
-              style={{
-                backgroundColor: deleteUnlocked ? 'var(--danger)' : 'var(--bg-tertiary)',
-                color: deleteUnlocked ? 'white' : 'var(--text-secondary)',
-                transition: 'all 0.3s'
-              }}
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
+          {canEdit && (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+              <button
+                className={`btn-icon-small ${deleteUnlocked ? 'danger' : ''}`}
+                onClick={() => {
+                  if (deleteUnlocked) {
+                    onDelete(project.id);
+                    setDeleteUnlocked(false);
+                  } else {
+                    setDeleteUnlocked(true);
+                  }
+                }}
+                title={deleteUnlocked ? "Clique para excluir" : "Clique para desbloquear exclusão"}
+                style={{
+                  backgroundColor: deleteUnlocked ? 'var(--danger)' : 'var(--bg-tertiary)',
+                  color: deleteUnlocked ? 'white' : 'var(--text-secondary)',
+                  transition: 'all 0.3s'
+                }}
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          )}
         </div>
         <div className="project-modal-content">
           {/* TAB: INFO */}
@@ -411,9 +413,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
             <div className="tab-content">
               <div className="tab-header">
                 <h3>Informações do Projeto</h3>
-                <button className="btn btn-primary btn-sm" onClick={() => onEdit(project)}>
-                  <Edit size={16} /> Editar
-                </button>
+                {canEdit && (
+                  <button className="btn btn-primary btn-sm" onClick={() => onEdit(project)}>
+                    <Edit size={16} /> Editar
+                  </button>
+                )}
               </div>
               <div className="info-grid">
                 <div className="info-item">
@@ -478,9 +482,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
               <div className="tab-content">
                 <div className="tab-header">
                   <h3>Colaboradores Alocados</h3>
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowCollabForm(!showCollabForm)}>
-                    <Plus size={16} /> Adicionar
-                  </button>
+                  {canEdit && (
+                    <button className="btn btn-primary btn-sm" onClick={() => setShowCollabForm(!showCollabForm)}>
+                      <Plus size={16} /> Adicionar
+                    </button>
+                  )}
                 </div>
 
                 {showCollabForm && (
@@ -533,9 +539,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
                           )}
                         </div>
                       </div>
-                      <button className="btn-icon-small danger" onClick={() => handleRemoveCollaborator(pc.id)}>
-                        <Trash2 size={16} />
-                      </button>
+                      {canEdit && (
+                        <button className="btn-icon-small danger" onClick={() => handleRemoveCollaborator(pc.id)}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   ))}
                   {projectCollaborators.length === 0 && !showCollabForm && (
@@ -554,9 +562,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
                 <div className="resource-section">
                   <div className="tab-header">
                     <h3><Wrench size={20} /> Ferramentas</h3>
-                    <button className="btn btn-primary btn-sm" onClick={() => setShowToolForm(!showToolForm)}>
-                      <Plus size={16} /> Adicionar
-                    </button>
+                    {canEdit && (
+                      <button className="btn btn-primary btn-sm" onClick={() => setShowToolForm(!showToolForm)}>
+                        <Plus size={16} /> Adicionar
+                      </button>
+                    )}
                   </div>
 
                   {showToolForm && (
@@ -594,9 +604,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
                             <p className="resource-role">Qtd: {pt.quantity}</p>
                           </div>
                         </div>
-                        <button className="btn-icon-small danger" onClick={() => handleRemoveTool(pt.id)}>
-                          <Trash2 size={16} />
-                        </button>
+                        {canEdit && (
+                          <button className="btn-icon-small danger" onClick={() => handleRemoveTool(pt.id)}>
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     ))}
                     {projectTools.length === 0 && !showToolForm && (
@@ -609,9 +621,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
                 <div className="resource-section">
                   <div className="tab-header">
                     <h3><Truck size={20} /> Veículos</h3>
-                    <button className="btn btn-primary btn-sm" onClick={() => setShowVehicleForm(!showVehicleForm)}>
-                      <Plus size={16} /> Adicionar
-                    </button>
+                    {canEdit && (
+                      <button className="btn btn-primary btn-sm" onClick={() => setShowVehicleForm(!showVehicleForm)}>
+                        <Plus size={16} /> Adicionar
+                      </button>
+                    )}
                   </div>
 
                   {showVehicleForm && (
@@ -640,9 +654,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
                             <strong>{getVehicleName(pv.vehicle_id)}</strong>
                           </div>
                         </div>
-                        <button className="btn-icon-small danger" onClick={() => handleRemoveVehicle(pv.id)}>
-                          <Trash2 size={16} />
-                        </button>
+                        {canEdit && (
+                          <button className="btn-icon-small danger" onClick={() => handleRemoveVehicle(pv.id)}>
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     ))}
                     {projectVehicles.length === 0 && !showVehicleForm && (
@@ -660,9 +676,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
               <div className="tab-content">
                 <div className="tab-header">
                   <h3>Solicitações de Compra</h3>
-                  <button className="btn btn-primary btn-sm" onClick={handleCreateRequest}>
-                    <Plus size={16} /> Nova Solicitação
-                  </button>
+                  {canEdit && (
+                    <button className="btn btn-primary btn-sm" onClick={handleCreateRequest}>
+                      <Plus size={16} /> Nova Solicitação
+                    </button>
+                  )}
                 </div>
 
                 <div className="purchases-list">
@@ -713,9 +731,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
               <div className="tab-content">
                 <div className="tab-header">
                   <h3>Histórico de Faturamento</h3>
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowBillingForm(!showBillingForm)}>
-                    <Plus size={16} /> Novo Faturamento
-                  </button>
+                  {canEdit && (
+                    <button className="btn btn-primary btn-sm" onClick={() => setShowBillingForm(!showBillingForm)}>
+                      <Plus size={16} /> Novo Faturamento
+                    </button>
+                  )}
                 </div>
 
                 <div className="billing-summary card">
@@ -783,7 +803,7 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
                           </p>
                         </div>
                       </div>
-                      {billing.status === 'PREVISTO' && (
+                      {billing.status === 'PREVISTO' && canEdit && (
                         <button className="btn-icon-small danger" onClick={() => handleDeleteBilling(billing)}>
                           <Trash2 size={16} />
                         </button>
@@ -807,6 +827,7 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete }) => {
           onClose={() => setSelectedRequest(null)}
           onUpdate={loadAllData}
           context="projects"
+          readOnly={!canEdit}
         />
       )}
 

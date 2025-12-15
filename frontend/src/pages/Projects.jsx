@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit, Eye } from 'lucide-react';
 import { getProjects, createProject, updateProject, deleteProject, getContracts, getClients, getCollaborators } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import ProjectModal from '../components/ProjectModal';
 import './Projects.css';
 
 const Projects = () => {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('projects', 'edit');
   const [projects, setProjects] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [clients, setClients] = useState([]);
@@ -280,10 +283,12 @@ const Projects = () => {
           <h1>Gestão de Projetos</h1>
           <p>Controle de projetos e informações financeiras</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-          <Plus size={20} />
-          Novo Projeto
-        </button>
+        {canEdit && (
+          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+            <Plus size={20} />
+            Novo Projeto
+          </button>
+        )}
       </header>
 
       {showForm && (
@@ -666,6 +671,7 @@ const Projects = () => {
               setShowProjectModal(false);
               handleDelete(id);
             }}
+            canEdit={canEdit}
           />
         )
       }

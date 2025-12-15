@@ -142,7 +142,15 @@ const Roles = () => {
           <p>Cadastro de funções e cargos</p>
         </div>
         <div className="header-actions">
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+          <button className="btn btn-primary" onClick={() => {
+            setEditingId(null);
+            setFormData({
+              name: '',
+              description: '',
+              permissions: {}
+            });
+            setShowForm(true);
+          }}>
             <Plus size={20} />
             Novo Cargo
           </button>
@@ -230,6 +238,10 @@ const Roles = () => {
                 <p className="section-description">Permissões para aprovar solicitações de compra</p>
                 <div className="approvals-grid">
                   <label className="approval-item">
+                    <div className="approval-info">
+                      <span className="approval-label">Validação Técnica</span>
+                      <span className="approval-description">Aprovar especificações (Engenharia)</span>
+                    </div>
                     <input
                       type="checkbox"
                       checked={formData.permissions?.approvals?.approve_technical || false}
@@ -246,13 +258,13 @@ const Roles = () => {
                         }));
                       }}
                     />
-                    <div className="approval-info">
-                      <span className="approval-label">Validação Técnica</span>
-                      <span className="approval-description">Aprovar especificações (Engenharia)</span>
-                    </div>
                   </label>
 
                   <label className="approval-item">
+                    <div className="approval-info">
+                      <span className="approval-label">Controle de Projetos</span>
+                      <span className="approval-description">Aprovar orçamento (Luiza)</span>
+                    </div>
                     <input
                       type="checkbox"
                       checked={formData.permissions?.approvals?.approve_budget || false}
@@ -269,13 +281,13 @@ const Roles = () => {
                         }));
                       }}
                     />
-                    <div className="approval-info">
-                      <span className="approval-label">Controle de Projetos</span>
-                      <span className="approval-description">Aprovar orçamento (Luiza)</span>
-                    </div>
                   </label>
 
                   <label className="approval-item">
+                    <div className="approval-info">
+                      <span className="approval-label">Liberação Financeira</span>
+                      <span className="approval-description">Aprovar pagamento (Mayara)</span>
+                    </div>
                     <input
                       type="checkbox"
                       checked={formData.permissions?.approvals?.approve_finance || false}
@@ -292,10 +304,6 @@ const Roles = () => {
                         }));
                       }}
                     />
-                    <div className="approval-info">
-                      <span className="approval-label">Liberação Financeira</span>
-                      <span className="approval-description">Aprovar pagamento (Mayara)</span>
-                    </div>
                   </label>
                 </div>
               </div>

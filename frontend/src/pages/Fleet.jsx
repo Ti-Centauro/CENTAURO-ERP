@@ -5,10 +5,13 @@ import {
   getInsurances, createInsurance, updateInsurance, deleteInsurance
 } from '../services/api';
 import MaintenanceTab from '../components/MaintenanceTab';
+import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import './Fleet.css';
 
 const Fleet = () => {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('fleet', 'edit');
   const [activeTab, setActiveTab] = useState('fleet'); // 'fleet' or 'insurance'
   const [fleet, setFleet] = useState([]);
   const [insurances, setInsurances] = useState([]);
@@ -237,21 +240,23 @@ const Fleet = () => {
               Seguros
             </button>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              if (activeTab === 'fleet') {
-                resetFleetForm();
-                setShowFleetForm(true);
-              } else {
-                resetInsuranceForm();
-                setShowInsuranceForm(true);
-              }
-            }}
-          >
-            <Plus size={20} />
-            {activeTab === 'fleet' ? 'Novo Veículo' : 'Novo Seguro'}
-          </button>
+          {canEdit && (
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                if (activeTab === 'fleet') {
+                  resetFleetForm();
+                  setShowFleetForm(true);
+                } else {
+                  resetInsuranceForm();
+                  setShowInsuranceForm(true);
+                }
+              }}
+            >
+              <Plus size={20} />
+              {activeTab === 'fleet' ? 'Novo Veículo' : 'Novo Seguro'}
+            </button>
+          )}
         </div>
       </header>
 
@@ -261,7 +266,7 @@ const Fleet = () => {
           <div className="fleet-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3>{editingFleetId ? 'Editar Veículo' : 'Cadastrar Veículo'}</h3>
-              {editingFleetId && (
+              {editingFleetId && canEdit && (
                 <button
                   type="button"
                   className="btn-icon-small danger"
@@ -448,9 +453,11 @@ const Fleet = () => {
                   >
                     Cancelar
                   </button>
-                  <button type="submit" className="btn btn-primary">
-                    Salvar Veículo
-                  </button>
+                  {canEdit && (
+                    <button type="submit" className="btn btn-primary">
+                      Salvar Veículo
+                    </button>
+                  )}
                 </div>
               </form>
             ) : (
@@ -458,6 +465,7 @@ const Fleet = () => {
                 <MaintenanceTab
                   vehicle={{ id: editingFleetId, odometer: fleetFormData.odometer }}
                   onUpdate={loadData}
+                  canEdit={canEdit}
                 />
                 <div className="form-actions" style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
                   <button
@@ -483,7 +491,7 @@ const Fleet = () => {
           <div className="fleet-form card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingInsuranceId ? 'Editar Seguro' : 'Cadastrar Seguro'}</h3>
-              {editingInsuranceId && (
+              {editingInsuranceId && canEdit && (
                 <button
                   type="button"
                   className="btn-icon-small danger"
@@ -551,9 +559,11 @@ const Fleet = () => {
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Salvar Seguro
-                </button>
+                {canEdit && (
+                  <button type="submit" className="btn btn-primary">
+                    Salvar Seguro
+                  </button>
+                )}
               </div>
             </form>
           </div>

@@ -32,8 +32,10 @@ async def read_users_me(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
-    # Fetch user with collaborator relationship
-    query = select(User).options(selectinload(User.collaborator)).where(User.id == current_user.id)
+    # Fetch user with collaborator relationship and role
+    query = select(User).options(
+        selectinload(User.collaborator).selectinload(User.collaborator.property.mapper.class_.role_obj)
+    ).where(User.id == current_user.id)
     result = await db.execute(query)
     user_with_collab = result.scalar_one_or_none()
     
@@ -42,12 +44,20 @@ async def read_users_me(
     if user_with_collab and user_with_collab.collaborator:
         collaborator_name = user_with_collab.collaborator.name
     
+    
+    # Use user_with_collab to access the properties that rely on relationships (like permissions)
+    # If fetch failed for some reason (unlikely if active), fall back to current_user
+    final_user = user_with_collab if user_with_collab else current_user
+
+    print(f"DEBUG: User {final_user.email} Role: {final_user.role}")
+    print(f"DEBUG: Permissions: {final_user.permissions}")
+
     return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        role=current_user.role,
-        is_superuser=current_user.is_superuser,
-        permissions=current_user.permissions or {},
-        collaborator_id=current_user.collaborator_id,
+        id=final_user.id,
+        email=final_user.email,
+        role=final_user.role,
+        is_superuser=final_user.is_superuser,
+        permissions=final_user.permissions or {},
+        collaborator_id=final_user.collaborator_id,
         collaborator_name=collaborator_name
     )
