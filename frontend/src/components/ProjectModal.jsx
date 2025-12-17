@@ -58,7 +58,6 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
 
   const [toolFormData, setToolFormData] = useState({
     tool_id: '',
-    quantity: 1,
     start_date: '',
     end_date: ''
   });
@@ -181,12 +180,12 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
       await addProjectTool(project.id, {
         project_id: project.id,
         tool_id: parseInt(toolFormData.tool_id),
-        quantity: parseInt(toolFormData.quantity),
+        quantity: 1, // Default to 1 as requested (unique tools)
         start_date: toolFormData.start_date || null,
         end_date: toolFormData.end_date || null
       });
       setShowToolForm(false);
-      setToolFormData({ tool_id: '', quantity: 1, start_date: '', end_date: '' });
+      setToolFormData({ tool_id: '', start_date: '', end_date: '' });
       loadAllData();
     } catch (error) {
       console.error('Error adding tool:', error);
@@ -748,26 +747,43 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
 
                   {showToolForm && (
                     <form className="resource-form" onSubmit={handleAddTool}>
-                      <select
-                        value={toolFormData.tool_id}
-                        onChange={(e) => setToolFormData({ ...toolFormData, tool_id: e.target.value })}
-                        required
-                      >
-                        <option value="">Selecione uma ferramenta</option>
-                        {availableTools.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        placeholder="Quantidade"
-                        min="1"
-                        value={toolFormData.quantity}
-                        onChange={(e) => setToolFormData({ ...toolFormData, quantity: e.target.value })}
-                        required
-                      />
-                      <button type="submit" className="btn btn-primary btn-sm">Salvar</button>
-                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowToolForm(false)}>Cancelar</button>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>Ferramenta</label>
+                        <select
+                          value={toolFormData.tool_id}
+                          onChange={(e) => setToolFormData({ ...toolFormData, tool_id: e.target.value })}
+                          required
+                          style={{ width: '100%' }}
+                        >
+                          <option value="">Selecione...</option>
+                          {availableTools.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-row" style={{ display: 'flex', gap: '1rem', flex: 1 }}>
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>Início</label>
+                          <input
+                            type="date"
+                            value={toolFormData.start_date}
+                            onChange={(e) => setToolFormData({ ...toolFormData, start_date: e.target.value })}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>Fim</label>
+                          <input
+                            type="date"
+                            value={toolFormData.end_date}
+                            onChange={(e) => setToolFormData({ ...toolFormData, end_date: e.target.value })}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
+                      <button type="submit" className="btn btn-primary btn-sm" style={{ height: '38px', alignSelf: 'center' }}>Salvar</button>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowToolForm(false)} style={{ height: '38px', alignSelf: 'center' }}>Cancelar</button>
                     </form>
                   )}
 
@@ -778,7 +794,13 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                           <Wrench size={20} />
                           <div>
                             <strong>{getToolName(pt.tool_id)}</strong>
-                            <p className="resource-role">Qtd: {pt.quantity}</p>
+                            {pt.start_date && (
+                              <p className="resource-dates">
+                                <Calendar size={14} />
+                                {new Date(pt.start_date).toLocaleDateString('pt-BR')}
+                                {pt.end_date && ` - ${new Date(pt.end_date).toLocaleDateString('pt-BR')}`}
+                              </p>
+                            )}
                           </div>
                         </div>
                         {canEdit && (

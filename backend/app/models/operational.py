@@ -6,6 +6,7 @@ import enum
 class ResourceType(str, enum.Enum):
     CAR = "CAR"
     PERSON = "PERSON"
+    TOOL = "TOOL"
 
 class AllocationType(str, enum.Enum):
     RESERVATION = "RESERVATION"

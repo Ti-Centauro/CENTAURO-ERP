@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
-import { getAllocations, getCollaborators, getFleet, getProjects, getClients, createAllocation, updateAllocation, deleteAllocation } from '../services/api';
+import { getAllocations, getCollaborators, getFleet, getTools, getProjects, getClients, createAllocation, updateAllocation, deleteAllocation } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import './Scheduler.css';
@@ -11,6 +11,7 @@ const Scheduler = () => {
   const [allocations, setAllocations] = useState([]);
   const [collaborators, setCollaborators] = useState([]);
   const [fleet, setFleet] = useState([]);
+  const [tools, setTools] = useState([]);
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -33,16 +34,18 @@ const Scheduler = () => {
 
   const loadData = async () => {
     try {
-      const [allocRes, collabRes, fleetRes, projRes, clientsRes] = await Promise.all([
+      const [allocRes, collabRes, fleetRes, toolsRes, projRes, clientsRes] = await Promise.all([
         getAllocations(),
         getCollaborators(),
         getFleet(),
+        getTools(),
         getProjects(),
         getClients()
       ]);
       setAllocations(allocRes.data);
       setCollaborators(collabRes.data);
       setFleet(fleetRes.data);
+      setTools(toolsRes.data);
       setProjects(projRes.data);
       setClients(clientsRes.data);
     } catch (error) {
@@ -53,7 +56,8 @@ const Scheduler = () => {
   // Combine resources
   const resources = [
     ...collaborators.map(c => ({ id: `person-${c.id}`, type: 'PERSON', name: c.name, originalId: c.id })),
-    ...fleet.map(f => ({ id: `car-${f.id}`, type: 'CAR', name: `${f.license_plate} (${f.model})`, originalId: f.id }))
+    ...fleet.map(f => ({ id: `car-${f.id}`, type: 'CAR', name: `${f.license_plate} (${f.model})`, originalId: f.id })),
+    ...tools.map(t => ({ id: `tool-${t.id}`, type: 'TOOL', name: t.name, originalId: t.id }))
   ];
 
   // Generate days based on view mode
@@ -270,7 +274,7 @@ const Scheduler = () => {
               <div key={resource.id} className="grid-row">
                 <div className="resource-cell">
                   <span className={`resource-badge ${resource.type.toLowerCase()}`}>
-                    {resource.type === 'PERSON' ? '👤' : '🚗'}
+                    {resource.type === 'PERSON' ? '👤' : (resource.type === 'CAR' ? '🚗' : '🔧')}
                   </span>
                   <span className="resource-name">{resource.name}</span>
                 </div>
@@ -354,6 +358,7 @@ const Scheduler = () => {
                 >
                   <option value="PERSON">Colaborador</option>
                   <option value="CAR">Veículo</option>
+                  <option value="TOOL">Ferramenta</option>
                 </select>
               </div>
               <div className="form-group">
@@ -370,9 +375,13 @@ const Scheduler = () => {
                     collaborators.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))
-                  ) : (
+                  ) : formData.resource_type === 'CAR' ? (
                     fleet.map(f => (
                       <option key={f.id} value={f.id}>{f.model} - {f.license_plate}</option>
+                    ))
+                  ) : (
+                    tools.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
                     ))
                   )}
                 </select>
