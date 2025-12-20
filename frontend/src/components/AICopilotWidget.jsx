@@ -54,9 +54,19 @@ const AICopilotWidget = () => {
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
+      let errorMsg = 'Desculpe, ocorreu um erro ao processar sua solicitação. Tente novamente.';
+
+      if (error.code === 'ECONNABORTED') {
+        errorMsg = 'A solicitação demorou muito para responder. Tente novamente.';
+      } else if (error.response?.data?.detail) {
+        errorMsg = `Erro: ${error.response.data.detail}`;
+      } else if (error.message) {
+        errorMsg = `Erro: ${error.message}`;
+      }
+
       const errorMessage = {
         role: 'assistant',
-        content: 'Desculpe, ocorreu um erro ao processar sua solicitação. Tente novamente.'
+        content: errorMsg
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
