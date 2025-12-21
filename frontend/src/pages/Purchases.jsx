@@ -91,9 +91,9 @@ const Purchases = () => {
     return true;
   });
 
-  const calculateTotal = (items) => {
-    if (!items) return 0;
-    return items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+  const calculateTotal = (request) => {
+    const itemsTotal = (request.items || []).reduce((sum, item) => sum + (item.total_price || 0), 0);
+    return itemsTotal + (request.shipping_cost || 0);
   };
 
   return (
@@ -190,7 +190,7 @@ const Purchases = () => {
                   <td>{request.requester || '-'}</td>
                   <td>{getProjectName(request.project_id)}</td>
                   <td>{new Date(request.created_at).toLocaleDateString('pt-BR')}</td>
-                  <td>R$ {calculateTotal(request.items).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td>R$ {calculateTotal(request).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                   <td>
                     <span className={`status-badge ${request.status}`}>
                       {

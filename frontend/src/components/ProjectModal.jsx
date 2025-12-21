@@ -131,6 +131,16 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
       setProjectDetails(projectRes.data);
       setBillings(projectRes.data.billings || []);
 
+      // Always fetch purchases for Cost Summary on Info tab
+      const purchasesRes = await getPurchases(project.id);
+      const enrichedPurchases = purchasesRes.data.map(p => ({
+        ...p,
+        project_tag: project.tag,
+        project_name: project.name,
+        client_name: getClientName(project.client_id)
+      }));
+      setPurchases(enrichedPurchases);
+
       // Load project resources based on active tab
       if (activeTab === 'team') {
         const res = await getProjectCollaborators(project.id);
@@ -142,15 +152,6 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
         ]);
         setProjectTools(toolsRes.data);
         setProjectVehicles(vehiclesRes.data);
-      } else if (activeTab === 'purchases') {
-        const res = await getPurchases(project.id);
-        const enrichedPurchases = res.data.map(p => ({
-          ...p,
-          project_tag: project.tag,
-          project_name: project.name,
-          client_name: getClientName(project.client_id)
-        }));
-        setPurchases(enrichedPurchases);
       } else if (activeTab === 'feedback') {
         const res = await getProjectFeedbacks(project.id);
         setFeedbacks(res.data);
@@ -276,9 +277,9 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
     }
   };
 
-  const calculateRequestTotal = (items) => {
-    if (!items) return 0;
-    return items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+  const calculateRequestTotal = (request) => {
+    const itemsTotal = (request.items || []).reduce((sum, item) => sum + (item.total_price || 0), 0);
+    return itemsTotal + (request.shipping_cost || 0);
   };
 
   const handleAddBilling = async (e) => {
@@ -533,21 +534,21 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                   <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#64748b' }}>Detalhamento de Custos (Realizado)</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                     <div>
-                      <label style={{ fontSize: '0.8rem', color: '#475569', display: 'block' }}>bricks Materiais/Serviços</label>
+                      <label style={{ fontSize: '0.8rem', color: '#475569', display: 'block' }}>Compras e Serviços</label>
                       <span style={{ fontSize: '1rem', fontWeight: '600', color: '#334155' }}>
-                        R$ {(purchases.reduce((acc, p) => acc + (p.total_price || 0), 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(purchases.reduce((acc, p) => acc + (p.items?.reduce((iAcc, item) => iAcc + (item.total_price || 0), 0) || 0) + (p.shipping_cost || 0), 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.8rem', color: '#475569', display: 'block' }}>hard_hat Mão de Obra</label>
+                      <label style={{ fontSize: '0.8rem', color: '#475569', display: 'block' }}>Mão de Obra e Despesas</label>
                       <span style={{ fontSize: '1rem', fontWeight: '600', color: '#334155' }}>
                         R$ {(projectDetails.total_labor_cost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.8rem', color: '#475569', display: 'block' }}>moneybag Total Geral</label>
+                      <label style={{ fontSize: '0.8rem', color: '#475569', display: 'block' }}>Custo Total do Projeto</label>
                       <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0f172a' }}>
-                        R$ {((purchases.reduce((acc, p) => acc + (p.total_price || 0), 0)) + (Number(projectDetails.total_labor_cost) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {((purchases.reduce((acc, p) => acc + (p.items?.reduce((iAcc, item) => iAcc + (item.total_price || 0), 0) || 0) + (p.shipping_cost || 0), 0)) + (Number(projectDetails.total_labor_cost) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
@@ -1041,7 +1042,7 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                         </div>
                         <div className="purchase-details">
                           <p><strong>Solicitante:</strong> {request.requester || '-'}</p>
-                          <p><strong>Total:</strong> R$ {calculateRequestTotal(request.items).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                          <p><strong>Total:</strong> R$ {calculateRequestTotal(request).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                           <p><strong>Data:</strong> {new Date(request.created_at).toLocaleDateString('pt-BR')}</p>
                         </div>
                       </div>

@@ -114,24 +114,20 @@ async def get_finance_dashboard(
     monthly_revenue = res_revenue.scalar() or 0
     
     # 3. Outflow (Approved Purchase Requests)
-    # Currently we only have PurhcaseRequest and items.
-    # Logic: Find approved requests, sum their items.
-    # Note: PurchaseRequest model has 'status'.
-    query_outflow = select(func.sum(PurchaseItem.total_price)).join(PurchaseRequest).where(
-        and_(
-            PurchaseRequest.status == 'approved',
-            # Assuming we want "this month" or "total pending"? 
-            # Prompt said "Note on Cash Flow... base Outflow on Approved Requests".
-            # Let's show Total Approved Pending Payment (proxy) or just This Month's Approvals
-            # Let's do This Month's Approvals for a "Flow" metric.
-            # Assuming created_at or similar exists, or we just sum all approved for now.
-            # PurchaseRequest usually needs a date field. 
-            # If no date field, we return total approved.
-            PurchaseRequest.status == 'approved'
-        )
+    # Sum items total_price + request shipping_cost for approved requests
+    query_items = select(func.sum(PurchaseItem.total_price)).join(PurchaseRequest).where(
+        PurchaseRequest.status == 'approved'
     )
-    res_outflow = await db.execute(query_outflow)
-    total_outflow = res_outflow.scalar() or 0
+    res_items = await db.execute(query_items)
+    items_total = res_items.scalar() or 0
+    
+    query_shipping = select(func.sum(PurchaseRequest.shipping_cost)).where(
+        PurchaseRequest.status == 'approved'
+    )
+    res_shipping = await db.execute(query_shipping)
+    shipping_total = res_shipping.scalar() or 0
+    
+    total_outflow = items_total + shipping_total
 
     return {
         "billing_backlog": backlog_value,

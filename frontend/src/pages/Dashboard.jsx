@@ -67,20 +67,20 @@ const FinanceWidget = ({ data }) => {
       <h4><DollarSign size={18} /> Financeiro</h4>
       <div className="widget-grid">
         <StatCard
-          title="Revenue (Mês)"
+          title="Receita (Mês)"
           value={`R$ ${data.monthly_revenue?.toLocaleString('pt-BR')}`}
           icon={TrendingUp}
           color="#10b981"
         />
         <StatCard
-          title="Backlog Faturamento"
+          title="Faturamento Pendente"
           value={`R$ ${data.billing_backlog?.toLocaleString('pt-BR')}`}
           icon={Wallet}
           color="#8b5cf6"
           subtext="Medições para Faturar"
         />
         <StatCard
-          title="Outflow (Aprovado)"
+          title="Saídas (Aprovadas)"
           value={`R$ ${data.projected_outflow?.toLocaleString('pt-BR')}`}
           icon={ShoppingCart}
           color="#ef4444"
