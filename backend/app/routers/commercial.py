@@ -15,7 +15,9 @@ router = APIRouter()
 # Clients
 @router.get("/clients", response_model=List[schemas.ClientResponse])
 async def get_clients(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.Client))
+    result = await db.execute(
+        select(models.Client).options(selectinload(models.Client.contacts))
+    )
     clients = result.scalars().all()
     return clients
 
@@ -50,6 +52,52 @@ async def delete_client(client_id: int, db: AsyncSession = Depends(get_db)):
     await db.delete(client)
     await db.commit()
     return {"message": "Client deleted successfully"}
+
+# Client Contacts
+@router.post("/clients/{client_id}/contacts", response_model=schemas.ClientContactResponse)
+async def add_client_contact(client_id: int, contact: schemas.ClientContactCreate, db: AsyncSession = Depends(get_db)):
+    from app.models.client_contacts import ClientContact
+    
+    # Verify client exists
+    result = await db.execute(select(models.Client).where(models.Client.id == client_id))
+    client = result.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    db_contact = ClientContact(**contact.model_dump(), client_id=client_id)
+    db.add(db_contact)
+    await db.commit()
+    await db.refresh(db_contact)
+    return db_contact
+
+@router.put("/clients/contacts/{contact_id}", response_model=schemas.ClientContactResponse)
+async def update_client_contact(contact_id: int, contact: schemas.ClientContactCreate, db: AsyncSession = Depends(get_db)):
+    from app.models.client_contacts import ClientContact
+    
+    result = await db.execute(select(ClientContact).where(ClientContact.id == contact_id))
+    db_contact = result.scalar_one_or_none()
+    if not db_contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    for key, value in contact.model_dump().items():
+        setattr(db_contact, key, value)
+    
+    await db.commit()
+    await db.refresh(db_contact)
+    return db_contact
+
+@router.delete("/clients/contacts/{contact_id}")
+async def delete_client_contact(contact_id: int, db: AsyncSession = Depends(get_db)):
+    from app.models.client_contacts import ClientContact
+    
+    result = await db.execute(select(ClientContact).where(ClientContact.id == contact_id))
+    contact = result.scalar_one_or_none()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    await db.delete(contact)
+    await db.commit()
+    return {"message": "Contact deleted successfully"}
 
 # Contracts
 @router.get("/contracts", response_model=List[schemas.ContractResponse])

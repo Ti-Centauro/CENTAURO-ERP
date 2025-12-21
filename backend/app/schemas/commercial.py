@@ -1,14 +1,33 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date as DateType, datetime
 from decimal import Decimal
+
+
+# Client Contact Schemas
+class ClientContactBase(BaseModel):
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    department: str = "Geral"
+
+class ClientContactCreate(ClientContactBase):
+    pass
+
+class ClientContactResponse(ClientContactBase):
+    id: int
+    client_id: int
+    
+    class Config:
+        from_attributes = True
+
 
 # Client Schemas
 class ClientBase(BaseModel):
     name: str
     client_number: Optional[str] = None
     cnpj: Optional[str] = None
-    contact_person: Optional[str] = None
+    contact_person: Optional[str] = None  # Legacy field
     email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
@@ -18,6 +37,7 @@ class ClientCreate(ClientBase):
 
 class ClientResponse(ClientBase):
     id: int
+    contacts: List[ClientContactResponse] = []
     
     class Config:
         from_attributes = True

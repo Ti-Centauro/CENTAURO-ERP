@@ -15,13 +15,14 @@ class Client(Base):
     client_number = Column(String, unique=True, index=True, nullable=True)  # Número interno do cliente (01, 02, 03...)
     name = Column(String, index=True)
     cnpj = Column(String, unique=True, nullable=True)
-    contact_person = Column(String, nullable=True)
+    contact_person = Column(String, nullable=True)  # Legacy - will be migrated to contacts
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     address = Column(String, nullable=True)
 
     contracts = relationship("Contract", back_populates="client")
     projects = relationship("Project", back_populates="client")
+    contacts = relationship("ClientContact", back_populates="client", cascade="all, delete-orphan")
 
 
 class Contract(Base):

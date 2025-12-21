@@ -1,4 +1,5 @@
 from .commercial import Client, Contract, Project, ProjectFeedback
+from .client_contacts import ClientContact
 from .assets import Fleet, Tool
 from .collaborator_teams import collaborator_teams  # Must be before operational
 from .teams import Team

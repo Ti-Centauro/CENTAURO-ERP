@@ -176,7 +176,17 @@ const Tools = () => {
           <p>Rastreamento de ferramentas e equipamentos</p>
         </div>
         {canEdit && (
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+          <button className="btn btn-primary" onClick={() => {
+            setEditingId(null);
+            setFormData({
+              name: '',
+              serial_number: '',
+              current_holder: '',
+              current_location: '',
+              status: 'AVAILABLE',
+            });
+            setShowForm(true);
+          }}>
             <Plus size={20} />
             Nova Ferramenta
           </button>
