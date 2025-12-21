@@ -130,5 +130,7 @@ export const uploadPayroll = (formData) => api.post('/finance/payroll/upload', f
     'Content-Type': 'multipart/form-data',
   },
 });
+export const getPayrollPeriods = () => api.get('/finance/payroll/periods');
+export const getPayrollDetails = (month, year) => api.get('/finance/payroll/details', { params: { month, year } });
 
 export default api;
