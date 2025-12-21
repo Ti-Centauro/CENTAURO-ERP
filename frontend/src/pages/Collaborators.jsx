@@ -5,7 +5,9 @@ import api, {
   getCertifications, createCertification, deleteCertification,
   getCollaboratorEducation, createCollaboratorEducation, deleteCollaboratorEducation,
   getCollaboratorReviews, createCollaboratorReview, deleteCollaboratorReview, getCollaboratorPerformance
-} from '../services/api'; import { Star, UserCheck, Shield, Clock as ClockIcon, TrendingUp } from 'lucide-react';
+} from '../services/api';
+import { Star, UserCheck, Shield, Clock as ClockIcon, TrendingUp } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../context/AuthContext';
 import Teams from './Teams';
 import ConfirmModal from '../components/ConfirmModal';
@@ -931,6 +933,70 @@ const Collaborators = () => {
                     );
                   })}
                 </div>
+
+                {/* Performance Chart - Last 12 Months */}
+                {reviewsList.length > 0 && (
+                  <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '0.75rem', marginBottom: '2rem', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', color: '#475569', fontWeight: '600' }}>
+                      <TrendingUp size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'text-bottom' }} />
+                      Evolução do Desempenho (Últimos 12 Meses)
+                    </h4>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart
+                        data={(() => {
+                          // Group reviews by month and calculate averages
+                          const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                          const last12Months = [];
+                          const now = new Date();
+
+                          for (let i = 11; i >= 0; i--) {
+                            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                            last12Months.push({
+                              month: `${monthNames[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`,
+                              year: d.getFullYear(),
+                              monthNum: d.getMonth()
+                            });
+                          }
+
+                          return last12Months.map(m => {
+                            const monthReviews = reviewsList.filter(r => {
+                              const rd = new Date(r.date);
+                              return rd.getFullYear() === m.year && rd.getMonth() === m.monthNum;
+                            });
+
+                            if (monthReviews.length === 0) {
+                              return { name: m.month, tecnica: null, seguranca: null, assiduidade: null };
+                            }
+
+                            const avgTech = monthReviews.reduce((s, r) => s + r.score_technical, 0) / monthReviews.length;
+                            const avgSafety = monthReviews.reduce((s, r) => s + r.score_safety, 0) / monthReviews.length;
+                            const avgPunct = monthReviews.reduce((s, r) => s + r.score_punctuality, 0) / monthReviews.length;
+
+                            return {
+                              name: m.month,
+                              tecnica: Number(avgTech.toFixed(1)),
+                              seguranca: Number(avgSafety.toFixed(1)),
+                              assiduidade: Number(avgPunct.toFixed(1))
+                            };
+                          });
+                        })()}
+                        margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                        <YAxis domain={[0, 5]} ticks={[1, 2, 3, 4, 5]} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                        <Tooltip
+                          contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem' }}
+                          formatter={(value, name) => [value ? value.toFixed(1) : '-', name]}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '0.85rem' }} />
+                        <Line type="monotone" dataKey="tecnica" name="Técnica" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} connectNulls />
+                        <Line type="monotone" dataKey="seguranca" name="Segurança" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} connectNulls />
+                        <Line type="monotone" dataKey="assiduidade" name="Assiduidade" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} connectNulls />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
 
                 {/* 2. Add Review Form */}
                 {canEdit && (
