@@ -33,6 +33,7 @@ const RequestDetailsModal = ({ request, onClose, onUpdate, context = 'projects',
         service_start_date: request.service_start_date || '',
         service_end_date: request.service_end_date || '',
         is_indefinite_term: request.is_indefinite_term || false,
+        arrival_forecast: request.arrival_forecast || '',
         items: request.items || []
       });
     }
@@ -156,6 +157,7 @@ const RequestDetailsModal = ({ request, onClose, onUpdate, context = 'projects',
         service_start_date: formData.category === 'SERVICE' ? (formData.service_start_date || null) : null,
         service_end_date: formData.category === 'SERVICE' ? (formData.service_end_date || null) : null,
         is_indefinite_term: formData.category === 'SERVICE' ? formData.is_indefinite_term : false,
+        arrival_forecast: formData.category === 'MATERIAL' ? (formData.arrival_forecast || null) : null,
         items: formData.items.map(item => ({
           ...item,
           quantity: parseInt(item.quantity),
@@ -267,7 +269,7 @@ const RequestDetailsModal = ({ request, onClose, onUpdate, context = 'projects',
                     onChange={handleHeaderChange}
                     disabled={!isProjectsContext || readOnly}
                   />
-                  Serviço
+                  Serviço / Locação
                 </label>
               </div>
             </div>
@@ -290,6 +292,21 @@ const RequestDetailsModal = ({ request, onClose, onUpdate, context = 'projects',
                 <option value="received">Retirado</option>
               </select>
             </div>
+
+            {formData.category === 'MATERIAL' && (
+              <div className="form-group" style={{ flex: '1 1 150px' }}>
+                <label>Previsão de Entrega</label>
+                <input
+                  type="date"
+                  name="arrival_forecast"
+                  value={formData.arrival_forecast || ''}
+                  onChange={handleHeaderChange}
+                  className="input"
+                  disabled={!isProjectsContext || readOnly}
+                  placeholder="Data prevista"
+                />
+              </div>
+            )}
 
             {formData.category === 'SERVICE' && (
               <>

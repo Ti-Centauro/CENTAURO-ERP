@@ -39,7 +39,10 @@ class PurchaseRequestBase(BaseModel):
     service_start_date: Optional[date] = None
     service_end_date: Optional[date] = None
     is_indefinite_term: bool = False
-
+    
+    # Material Fields
+    arrival_forecast: Optional[date] = None
+    
 class PurchaseRequestCreate(PurchaseRequestBase):
     items: Optional[list[PurchaseItemCreate]] = []
 

@@ -18,6 +18,9 @@ class PurchaseRequest(Base):
     service_start_date = Column(Date, nullable=True)
     service_end_date = Column(Date, nullable=True)
     is_indefinite_term = Column(Boolean, default=False)
+    
+    # Material Fields
+    arrival_forecast = Column(Date, nullable=True) # Data prevista para chegada do material
 
     created_at = Column(DateTime, default=datetime.utcnow)
     

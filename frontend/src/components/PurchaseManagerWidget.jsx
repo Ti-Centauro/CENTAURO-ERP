@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, CheckCircle, Truck, Clock, Package, AlertCircle, ChevronRight } from 'lucide-react';
+import {
+  ShoppingCart,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  ChevronRight,
+  Package,
+  Truck,
+  Target
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getPurchases, getProjects } from '../services/api';
 import RequestDetailsModal from './RequestDetailsModal';
@@ -136,54 +146,84 @@ const PurchaseManagerWidget = () => {
   };
 
   const getDeliveryInfo = (purchase) => {
-    const items = purchase.items || [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Find earliest expected date from NON-DELIVERED items only
-    let earliestDate = null;
-    for (const item of items) {
-      // Skip delivered items
-      if (item.status === 'delivered') continue;
+    // 1. Engineer's Expectation Date (Left Side)
+    let engineerDateStr = null;
+    if (purchase.category === 'SERVICE') {
+      engineerDateStr = purchase.service_start_date;
+    } else {
+      engineerDateStr = purchase.arrival_forecast;
+    }
 
+    const engineerDateFormatted = engineerDateStr
+      ? (() => {
+        const [y, m, d] = engineerDateStr.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('pt-BR');
+      })()
+      : null;
+
+    // 2. Purchasing's Forecast Date (Right Side - Timer)
+    // Find earliest expected date from NON-DELIVERED items only
+    const items = purchase.items || [];
+    let purchasingDateStr = null;
+    let earliestDate = null;
+
+    for (const item of items) {
+      if (item.status === 'delivered') continue;
       if (item.expected_date) {
-        // Parse date as local timezone (not UTC)
-        const [year, month, day] = item.expected_date.split('-').map(Number);
-        const date = new Date(year, month - 1, day); // month is 0-indexed
+        const [y, m, d] = item.expected_date.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
         if (!earliestDate || date < earliestDate) {
           earliestDate = date;
         }
       }
     }
 
-    if (!earliestDate) {
-      return { text: 'Sem previsão', isLate: false, isSoon: false };
-    }
+    // Timer Logic
+    // Default style to match engineer date
+    // We will render this in the JSX, but here we just flag properties
+    let timerInfo = null;
 
-    const diffDays = Math.ceil((earliestDate - today) / (1000 * 60 * 60 * 24));
+    if (earliestDate) {
+      const diffTime = earliestDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 0) {
-      return {
-        text: `Atrasado (${earliestDate.toLocaleDateString('pt-BR')})`,
-        isLate: true,
-        isSoon: false
-      };
-    } else if (diffDays === 0) {
-      return { text: 'Entrega Hoje', isLate: false, isSoon: true };
-    } else if (diffDays === 1) {
-      return { text: 'Chega Amanhã', isLate: false, isSoon: true };
-    } else if (diffDays <= 7) {
-      return {
-        text: `Em ${diffDays} dias (${earliestDate.toLocaleDateString('pt-BR')})`,
+      if (diffDays < 0) {
+        timerInfo = {
+          text: `Atrasado (${Math.abs(diffDays)} dias)`,
+          isLate: true,
+          isSoon: false,
+          showTruck: false // Late shows AlertCircle
+        };
+      } else if (diffDays === 0) {
+        timerInfo = { text: 'Hoje', isLate: false, isSoon: true, showTruck: true };
+      } else if (diffDays === 1) {
+        timerInfo = { text: 'Amanhã', isLate: false, isSoon: true, showTruck: true };
+      } else if (diffDays <= 7) {
+        timerInfo = { text: `Faltam ${diffDays} dias`, isLate: false, isSoon: true, showTruck: true };
+      } else {
+        // More than 7 days
+        timerInfo = {
+          text: earliestDate.toLocaleDateString('pt-BR'),
+          isLate: false,
+          isSoon: false,
+          showTruck: true
+        };
+      }
+    } else {
+      timerInfo = {
+        text: 'Sem previsão',
         isLate: false,
-        isSoon: true
+        isSoon: false,
+        showTruck: true
       };
     }
 
     return {
-      text: earliestDate.toLocaleDateString('pt-BR'),
-      isLate: false,
-      isSoon: false
+      engineerDate: engineerDateFormatted,
+      timer: timerInfo
     };
   };
 
@@ -290,10 +330,23 @@ const PurchaseManagerWidget = () => {
                         {itemStatus.label}
                       </span>
                     </div>
-                    <div className={`tracking-item-date ${deliveryInfo.isLate ? 'late' : ''} ${deliveryInfo.isSoon ? 'soon' : ''}`}>
-                      {deliveryInfo.isLate && <AlertCircle size={14} />}
-                      {deliveryInfo.isSoon && <Truck size={14} />}
-                      <span>{deliveryInfo.text}</span>
+                    <div className="tracking-item-right-container" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {deliveryInfo.engineerDate && (
+                        <span className="tracking-date-fixed" title="Previsão do Engenheiro" style={{ color: '#64748b', fontSize: '13px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Target size={14} />
+                          {deliveryInfo.engineerDate}
+                        </span>
+                      )}
+
+                      {deliveryInfo.timer && (
+                        <div className={`tracking-item-date ${deliveryInfo.timer.isLate ? 'late' : ''} ${deliveryInfo.timer.isSoon ? 'soon' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {deliveryInfo.timer.isLate && <AlertCircle size={14} />}
+                          {(deliveryInfo.timer.isSoon || deliveryInfo.timer.showTruck) && <Truck size={14} />}
+                          <span style={{ color: deliveryInfo.timer.isLate || deliveryInfo.timer.isSoon ? 'inherit' : '#64748b', fontSize: '13px', fontWeight: 500 }}>
+                            {deliveryInfo.timer.text}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <ChevronRight size={18} className="chevron" />
                   </div>
