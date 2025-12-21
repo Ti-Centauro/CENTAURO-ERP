@@ -108,6 +108,7 @@ class ProjectBase(BaseModel):
     end_date: Optional[DateType] = None
     estimated_start_date: Optional[DateType] = None
     estimated_end_date: Optional[DateType] = None
+    warranty_months: Optional[int] = None  # Warranty period in months from end_date
 
 class ProjectCreate(ProjectBase):
     project_number: Optional[int] = None
@@ -119,6 +120,7 @@ class ProjectResponse(ProjectBase):
     billings: list[ProjectBillingResponse] = []
     invoiced: Optional[Decimal] = None # Calculated field
     total_labor_cost: Optional[Decimal] = 0.0 # Calculated field
+    warranty_end_date: Optional[DateType] = None  # Calculated: end_date + warranty_months
     
     class Config:
         from_attributes = True

@@ -39,6 +39,7 @@ const Projects = () => {
     end_date: '',
     estimated_start_date: '',
     estimated_end_date: '',
+    warranty_months: '',
   });
 
   useEffect(() => {
@@ -112,6 +113,7 @@ const Projects = () => {
         end_date: formData.end_date || null,
         estimated_start_date: formData.estimated_start_date || null,
         estimated_end_date: formData.estimated_end_date || null,
+        warranty_months: formData.warranty_months ? parseInt(formData.warranty_months) : null,
       };
 
       if (editingId) {
@@ -154,6 +156,7 @@ const Projects = () => {
       end_date: project.end_date || '',
       estimated_start_date: project.estimated_start_date || '',
       estimated_end_date: project.estimated_end_date || '',
+      warranty_months: project.warranty_months || '',
       project_number: project.project_number,
       invoiced: project.invoiced,
       status: project.status,
@@ -209,6 +212,7 @@ const Projects = () => {
       end_date: '',
       estimated_start_date: '',
       estimated_end_date: '',
+      warranty_months: '',
       status: 'Em Andamento',
     });
   };
@@ -527,6 +531,18 @@ const Projects = () => {
                     className="input"
                     value={formData.end_date}
                     onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Garantia (meses)</label>
+                  <input
+                    type="number"
+                    name="warranty_months"
+                    className="input"
+                    value={formData.warranty_months}
+                    onChange={handleChange}
+                    min="0"
+                    placeholder="Ex: 12"
                   />
                 </div>
               </div>

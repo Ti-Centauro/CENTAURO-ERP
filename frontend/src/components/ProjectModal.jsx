@@ -636,6 +636,26 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                   <label>Fim Real:</label>
                   <span>{formatDateUTC(project.end_date)}</span>
                 </div>
+                {project.warranty_months && project.end_date && (
+                  <div className="info-item">
+                    <label>Garantia até:</label>
+                    <span style={{
+                      color: (() => {
+                        const endDate = new Date(project.end_date + 'T12:00:00');
+                        const warrantyEnd = new Date(endDate);
+                        warrantyEnd.setMonth(warrantyEnd.getMonth() + project.warranty_months);
+                        return warrantyEnd < new Date() ? '#ef4444' : '#10b981';
+                      })()
+                    }}>
+                      {(() => {
+                        const endDate = new Date(project.end_date + 'T12:00:00');
+                        const warrantyEnd = new Date(endDate);
+                        warrantyEnd.setMonth(warrantyEnd.getMonth() + project.warranty_months);
+                        return warrantyEnd.toLocaleDateString('pt-BR');
+                      })()} ({project.warranty_months} meses)
+                    </span>
+                  </div>
+                )}
                 <div className="info-item" style={{ gridColumn: '1 / -1' }}>
                   <label>Escopo:</label>
                   <span className="scope-text">{project.scope || 'N/A'}</span>

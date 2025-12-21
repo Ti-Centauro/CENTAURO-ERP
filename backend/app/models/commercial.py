@@ -71,6 +71,9 @@ class Project(Base):
     end_date = Column(Date)
     estimated_start_date = Column(Date)
     estimated_end_date = Column(Date)
+    
+    # Warranty
+    warranty_months = Column(Integer, nullable=True)  # Warranty period in months from end_date
 
     contract = relationship("Contract", back_populates="projects")
     client = relationship("Client", back_populates="projects")
