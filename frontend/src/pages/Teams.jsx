@@ -187,6 +187,45 @@ const Teams = forwardRef(({ embedded = false }, ref) => {
                 </select>
               </div>
 
+              {/* Membros do Time */}
+              {editingId && (
+                <div className="form-group">
+                  <label className="label" style={{ marginBottom: '0.75rem' }}>Membros do Time</label>
+                  {(() => {
+                    const teamMembers = collaborators.filter(c => c.team_id === editingId);
+                    if (teamMembers.length === 0) {
+                      return (
+                        <p style={{ color: '#94a3b8', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                          Nenhum membro vinculado a este time.
+                        </p>
+                      );
+                    }
+                    return (
+                      <div className="team-members-grid">
+                        {teamMembers.map(member => (
+                          <div key={member.id} className="team-member-card">
+                            <div className="team-member-avatar">
+                              {member.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="team-member-info">
+                              <div className="team-member-name">
+                                {member.name}
+                                {member.id === parseInt(formData.leader_id) && (
+                                  <Crown size={12} color="#f59e0b" />
+                                )}
+                              </div>
+                              <div className="team-member-role">
+                                {member.role || 'Sem cargo definido'}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
               <div className="form-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
