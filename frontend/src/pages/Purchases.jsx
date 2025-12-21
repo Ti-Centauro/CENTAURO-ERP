@@ -6,7 +6,7 @@ import RequestDetailsModal from '../components/RequestDetailsModal';
 import './Purchases.css';
 
 const Purchases = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const canEdit = hasPermission('purchases', 'edit');
   const [requests, setRequests] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -16,6 +16,11 @@ const Purchases = () => {
   const [filterProject, setFilterProject] = useState('all');
 
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Get requester name from logged user
+  const getRequesterName = () => {
+    return user?.collaborator_name || user?.email?.split('@')[0] || '';
+  };
 
   useEffect(() => {
     loadData();
@@ -49,6 +54,7 @@ const Purchases = () => {
     try {
       const newRequest = {
         description: 'Nova Solicitação',
+        requester: getRequesterName(), // Auto-fill requester with logged user
         status: 'pending',
         items: []
       };

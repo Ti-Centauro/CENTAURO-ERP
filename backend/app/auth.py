@@ -9,6 +9,8 @@ from app.database import get_db
 from app.models.users import User
 from app.schemas.auth import TokenData
 import os
+import asyncio
+from functools import partial
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,8 +23,17 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
 
-def verify_password(plain_password, hashed_password):
+def verify_password_sync(plain_password, hashed_password):
+    """Synchronous password verification - CPU intensive with Argon2"""
     return pwd_context.verify(plain_password, hashed_password)
+
+async def verify_password(plain_password, hashed_password):
+    """Async password verification - runs in thread pool to avoid blocking event loop"""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None, 
+        partial(verify_password_sync, plain_password, hashed_password)
+    )
 
 def get_password_hash(password):
     return pwd_context.hash(password)
@@ -98,7 +109,7 @@ async def authenticate_user(db: Session, email: str, password: str):
     user = result.scalars().first()
     if not user:
         return False
-    if not verify_password(password, user.password_hash):
+    if not await verify_password(password, user.password_hash):
         return False
     return user
 

@@ -13,6 +13,7 @@ import {
   getProjectCollaborators, getProjectTools, getProjectVehicles,
   getProjectFeedbacks, createProjectFeedback, deleteProjectFeedback
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import RequestDetailsModal from './RequestDetailsModal';
 import ConfirmModal from './ConfirmModal';
 import './ProjectModal.css';
@@ -26,9 +27,15 @@ const formatDateUTC = (dateString) => {
 };
 
 const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('info');
   const [loading, setLoading] = useState(false);
   const [deleteUnlocked, setDeleteUnlocked] = useState(false);
+
+  // Get requester name from logged user
+  const getRequesterName = () => {
+    return user?.collaborator_name || user?.email?.split('@')[0] || '';
+  };
 
   // Resources
   const [projectCollaborators, setProjectCollaborators] = useState([]);
@@ -258,6 +265,7 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
       const newRequest = {
         project_id: project.id,
         description: 'Nova Solicitação',
+        requester: getRequesterName(), // Auto-fill requester with logged user
         status: 'pending',
         items: []
       };
