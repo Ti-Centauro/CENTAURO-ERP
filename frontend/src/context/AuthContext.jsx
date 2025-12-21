@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
   // Configure axios defaults
   const api = axios.create({
     baseURL: 'http://127.0.0.1:8000',
-    timeout: 15000,
+    timeout: 5000, // 5 seconds timeout for faster feedback
   });
 
   api.interceptors.request.use((config) => {
@@ -31,12 +31,9 @@ export const AuthProvider = ({ children }) => {
         const response = await api.get('/me'); // Use local api instance
         setUser(response.data);
         // If backend returned user but we had no token, it means we are in bypass mode.
-        // We might want to set a dummy token? Not strictly necessary if backend doesn't check it.
       } catch (error) {
         console.error("Failed to fetch user", error);
-        // Only logout (clear state) if we really failed
-        // But logout clears user, so we are good.
-        // If 401, it will fail.
+        // Clear any stale token on error (expired, invalid, timeout, etc.)
         setUser(null);
         localStorage.removeItem('token');
         setToken(null);

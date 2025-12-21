@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, Car, MapPin, User, Calendar, Edit, Shield, Fuel, Palette, AlertCircle, FileText } from 'lucide-react';
-import {
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Car, MapPin, User, Calendar, Edit, Shield, Fuel, Palette, AlertCircle, FileText, Upload, X, Search } from 'lucide-react';
+import api, {
   getFleet, createFleet, deleteFleet, updateFleet,
   getInsurances, createInsurance, updateInsurance, deleteInsurance
 } from '../services/api';
@@ -48,6 +48,18 @@ const Fleet = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deleteType, setDeleteType] = useState(null); // 'fleet' or 'insurance'
+
+  // Fuel upload state
+  const fuelInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [fuelCosts, setFuelCosts] = useState([]);
+
+  // Fuel preview modal state
+  const [showFuelPreview, setShowFuelPreview] = useState(false);
+  const [fuelPreviewData, setFuelPreviewData] = useState(null);
+
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -215,6 +227,63 @@ const Fleet = () => {
     return colors[status] || colors.ACTIVE;
   };
 
+  // Fuel upload handler - now shows preview first
+  const handleFuelUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await api.post('/assets/fleet/fuel/preview', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setFuelPreviewData(response.data);
+      setShowFuelPreview(true);
+    } catch (error) {
+      console.error('Error previewing fuel report:', error);
+      alert('Erro ao processar planilha: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  // Confirm fuel import
+  const handleConfirmFuelImport = async () => {
+    if (!fuelPreviewData) return;
+
+    setUploading(true);
+    try {
+      const response = await api.post('/assets/fleet/fuel/confirm', {
+        competence_date: fuelPreviewData.competence_date,
+        rows: fuelPreviewData.preview
+      });
+      alert(`✅ Importação concluída!\nVeículos processados: ${response.data.processed}\nKMs atualizados: ${response.data.km_updated}`);
+      setShowFuelPreview(false);
+      setFuelPreviewData(null);
+      loadData();
+    } catch (error) {
+      console.error('Error confirming fuel import:', error);
+      alert('Erro ao salvar dados: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Load fuel costs for a vehicle
+  const loadFuelCosts = async (vehicleId) => {
+    try {
+      const response = await api.get(`/assets/fleet/${vehicleId}/fuel`);
+      setFuelCosts(response.data);
+    } catch (error) {
+      console.error('Error loading fuel costs:', error);
+      setFuelCosts([]);
+    }
+  };
+
   return (
     <div className="fleet">
       <header className="fleet-header">
@@ -223,6 +292,18 @@ const Fleet = () => {
           <p>Controle de veículos e apólices de seguro</p>
         </div>
         <div className="header-actions">
+          {/* Search Bar */}
+          <div className="search-input-container" style={{ position: 'relative', minWidth: '250px' }}>
+            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              type="text"
+              className="input"
+              placeholder="Buscar por placa, modelo ou marca..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ paddingLeft: '40px', width: '100%', height: '40px' }}
+            />
+          </div>
           <div className="tab-switcher-container">
             <div className={`tab-glider ${activeTab}`} />
             <button
@@ -241,21 +322,41 @@ const Fleet = () => {
             </button>
           </div>
           {canEdit && (
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                if (activeTab === 'fleet') {
-                  resetFleetForm();
-                  setShowFleetForm(true);
-                } else {
-                  resetInsuranceForm();
-                  setShowInsuranceForm(true);
-                }
-              }}
-            >
-              <Plus size={20} />
-              {activeTab === 'fleet' ? 'Novo Veículo' : 'Novo Seguro'}
-            </button>
+            <>
+              <input
+                type="file"
+                ref={fuelInputRef}
+                accept=".xlsx,.xls"
+                onChange={handleFuelUpload}
+                style={{ display: 'none' }}
+              />
+              {activeTab === 'fleet' && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => fuelInputRef.current?.click()}
+                  disabled={uploading}
+                  style={{ marginRight: '0.5rem' }}
+                >
+                  <Upload size={18} />
+                  {uploading ? 'Importando...' : 'Importar Combustível'}
+                </button>
+              )}
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  if (activeTab === 'fleet') {
+                    resetFleetForm();
+                    setShowFleetForm(true);
+                  } else {
+                    resetInsuranceForm();
+                    setShowInsuranceForm(true);
+                  }
+                }}
+              >
+                <Plus size={20} />
+                {activeTab === 'fleet' ? 'Novo Veículo' : 'Novo Seguro'}
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -309,6 +410,21 @@ const Fleet = () => {
                   }}
                 >
                   Manutenções
+                </button>
+                <button
+                  onClick={() => { setModalTab('fuel'); loadFuelCosts(editingFleetId); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0.5rem 0',
+                    borderBottom: modalTab === 'fuel' ? '2px solid #0284c7' : '2px solid transparent',
+                    color: modalTab === 'fuel' ? '#0284c7' : '#64748b',
+                    fontWeight: modalTab === 'fuel' ? 600 : 500,
+                    cursor: 'pointer',
+                    fontSize: '0.95rem'
+                  }}
+                >
+                  Combustível
                 </button>
               </div>
             )}
@@ -460,7 +576,7 @@ const Fleet = () => {
                   )}
                 </div>
               </form>
-            ) : (
+            ) : modalTab === 'maintenance' ? (
               <>
                 <MaintenanceTab
                   vehicle={{ id: editingFleetId, odometer: fleetFormData.odometer }}
@@ -468,6 +584,114 @@ const Fleet = () => {
                   canEdit={canEdit}
                 />
                 <div className="form-actions" style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowFleetForm(false);
+                      resetFleetForm();
+                    }}
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* Fuel Tab */
+              <>
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                  {fuelCosts.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                      <Fuel size={48} />
+                      <p style={{ marginTop: '1rem' }}>Nenhum registro de combustível encontrado.</p>
+                      <p style={{ fontSize: '0.85rem' }}>Use o botão "Importar Combustível" na tela principal para carregar dados.</p>
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                          <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569' }}>Mês/Ano</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569' }}>Litros</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569' }}>Km Rodados</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569', textAlign: 'right' }}>Valor Total</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569', textAlign: 'right' }}>Média</th>
+                          {canEdit && <th style={{ padding: '0.75rem', width: '50px' }}></th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fuelCosts.map(fc => {
+                          const date = new Date(fc.competence_date + 'T12:00:00');
+                          const avgKmL = fc.liters && fc.km_driven ? (fc.km_driven / fc.liters).toFixed(2) : '-';
+                          return (
+                            <tr key={fc.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: 500 }}>
+                                {date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
+                              </td>
+                              <td style={{ padding: '0.75rem' }}>
+                                {fc.liters ? `${fc.liters.toFixed(1)} L` : '-'}
+                              </td>
+                              <td style={{ padding: '0.75rem' }}>
+                                {fc.km_driven ? `${fc.km_driven.toLocaleString('pt-BR')} km` : '-'}
+                              </td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600, color: '#ef4444' }}>
+                                R$ {fc.total_cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right', color: '#64748b' }}>
+                                {avgKmL !== '-' ? `${avgKmL} km/L` : '-'}
+                              </td>
+                              {canEdit && (
+                                <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm('Excluir este registro de combustível?')) {
+                                        try {
+                                          await api.delete(`/assets/fleet/fuel/${fc.id}`);
+                                          loadFuelCosts(editingFleetId);
+                                        } catch (error) {
+                                          alert('Erro ao excluir: ' + error.message);
+                                        }
+                                      }
+                                    }}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      color: '#ef4444',
+                                      padding: '0.25rem'
+                                    }}
+                                    title="Excluir registro"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+                <div className="form-actions" style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  {canEdit && fuelCosts.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ background: '#fee2e2', color: '#dc2626', border: 'none' }}
+                      onClick={async () => {
+                        if (confirm('Excluir TODOS os registros de combustível deste veículo?')) {
+                          try {
+                            await api.delete(`/assets/fleet/${editingFleetId}/fuel/clear`);
+                            loadFuelCosts(editingFleetId);
+                          } catch (error) {
+                            alert('Erro ao limpar registros: ' + error.message);
+                          }
+                        }
+                      }}
+                    >
+                      Limpar Todos
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-secondary"
@@ -582,7 +806,13 @@ const Fleet = () => {
               <p>Nenhum veículo cadastrado ainda.</p>
             </div>
           ) : (
-            fleet.map((vehicle) => (
+            fleet.filter(v => {
+              const term = searchTerm.toLowerCase();
+              return !term ||
+                v.license_plate?.toLowerCase().includes(term) ||
+                v.model?.toLowerCase().includes(term) ||
+                v.brand?.toLowerCase().includes(term);
+            }).map((vehicle) => (
               <div
                 key={vehicle.id}
                 className="fleet-card card clickable"
@@ -715,6 +945,112 @@ const Fleet = () => {
           )
         )}
       </div>
+
+      {/* Fuel Preview Modal */}
+      {showFuelPreview && fuelPreviewData && (
+        <div className="fleet-form-modal">
+          <div className="fleet-form card" style={{ maxWidth: '900px', maxHeight: '80vh' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div>
+                <h3>Pré-visualização da Importação</h3>
+                <p style={{ color: '#64748b', margin: 0 }}>
+                  Competência: <strong>{fuelPreviewData.competence_label}</strong> |
+                  Total: <strong>{fuelPreviewData.total_found} veículos</strong>
+                </p>
+              </div>
+              <button
+                className="btn-delete"
+                onClick={() => {
+                  setShowFuelPreview(false);
+                  setFuelPreviewData(null);
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {fuelPreviewData.errors?.length > 0 && (
+              <div style={{
+                background: '#fef3c7',
+                border: '1px solid #f59e0b',
+                borderRadius: '0.5rem',
+                padding: '0.75rem',
+                marginBottom: '1rem'
+              }}>
+                <strong>⚠️ Avisos:</strong>
+                <ul style={{ margin: '0.5rem 0 0 1.5rem', padding: 0 }}>
+                  {fuelPreviewData.errors.map((err, i) => (
+                    <li key={i} style={{ fontSize: '0.85rem' }}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '1.5rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'white' }}>
+                  <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                    <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569' }}>Placa</th>
+                    <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569' }}>Veículo</th>
+                    <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569', textAlign: 'right' }}>Litros</th>
+                    <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569', textAlign: 'right' }}>Km Rodados</th>
+                    <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569', textAlign: 'right' }}>Valor (R$)</th>
+                    <th style={{ padding: '0.75rem', fontWeight: 600, color: '#475569', textAlign: 'right' }}>km/L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fuelPreviewData.preview.map((row, idx) => {
+                    const avgKmL = row.liters && row.km_driven ? (row.km_driven / row.liters).toFixed(2) : '-';
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.75rem', fontWeight: 600, fontFamily: 'monospace' }}>
+                          {row.license_plate}
+                        </td>
+                        <td style={{ padding: '0.75rem', color: '#64748b' }}>
+                          {row.vehicle_brand} {row.vehicle_model}
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                          {row.liters?.toFixed(2) || '-'}
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                          {row.km_driven?.toLocaleString('pt-BR') || '-'}
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600, color: '#ef4444' }}>
+                          {row.total_cost?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '-'}
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'right', color: '#64748b' }}>
+                          {avgKmL}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="form-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowFuelPreview(false);
+                  setFuelPreviewData(null);
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmFuelImport}
+                disabled={uploading}
+              >
+                {uploading ? 'Salvando...' : `Confirmar Importação (${fuelPreviewData.total_found} veículos)`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={showConfirmModal}

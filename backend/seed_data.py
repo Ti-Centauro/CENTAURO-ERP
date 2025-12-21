@@ -208,35 +208,80 @@ async def seed_insurances(db):
     return created_insurances
 
 async def seed_fleet(db, insurances):
-    """Cria 5 veículos fictícios"""
+    """Cria frota real baseada na planilha de consumo"""
     print("🔍 Criando frota...")
     
     vehicles = [
-        {
-            "license_plate": "ABC-1234", "model": "Hilux", "brand": "Toyota", "year": 2023, 
-            "fuel_type": FuelType.DIESEL, "status": "ACTIVE", "color": "Prata",
-            "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id
-        },
-        {
-            "license_plate": "XYZ-9876", "model": "S10", "brand": "Chevrolet", "year": 2022, 
-            "fuel_type": FuelType.FLEX, "status": "ACTIVE", "color": "Branca",
-            "cnpj": "33.448.150/0001-11", "insurance_id": insurances[1].id
-        },
-        {
-            "license_plate": "DEF-5678", "model": "Strada", "brand": "Fiat", "year": 2024, 
-            "fuel_type": FuelType.FLEX, "status": "MAINTENANCE", "color": "Vermelha",
-            "cnpj": "33.164.021/0001-00", "insurance_id": insurances[2].id
-        },
-        {
-            "license_plate": "GHI-9012", "model": "Saveiro", "brand": "Volkswagen", "year": 2021, 
-            "fuel_type": FuelType.FLEX, "status": "ACTIVE", "color": "Preta",
-            "cnpj": "61.074.175/0001-38", "insurance_id": insurances[0].id
-        },
-        {
-            "license_plate": "JKL-3456", "model": "Ranger", "brand": "Ford", "year": 2023, 
-            "fuel_type": FuelType.DIESEL, "status": "ACTIVE", "color": "Azul",
-            "cnpj": "61.573.796/0001-66", "insurance_id": insurances[1].id
-        }
+        # FIAT Vehicles
+        {"license_plate": "LLV7582", "model": "STRADA WORKING", "brand": "FIAT", "year": 2013, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Branco",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "LQS5041", "model": "UNO MILLE", "brand": "FIAT", "year": 2013, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Prata",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "KQW4792", "model": "PALIO", "brand": "FIAT", "year": 2015, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Branco",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "KOE4256", "model": "UNO", "brand": "FIAT", "year": 2007, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Prata",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "PUC3186", "model": "UNO", "brand": "FIAT", "year": 2014, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Branco",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "GCK9D18", "model": "WEEKEND", "brand": "FIAT", "year": 2016, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Prata",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "LUC4F47", "model": "FASTBACK/TURBO", "brand": "FIAT", "year": 2023, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Preto",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "RTG4I96", "model": "STRADA", "brand": "FIAT", "year": 2022, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Vermelho",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "TOJ0A44", "model": "ARGO", "brand": "FIAT", "year": 2025, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Branco",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "TOJ0A40", "model": "ARGO", "brand": "FIAT", "year": 2025, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Prata",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "TOJ0A45", "model": "ARGO", "brand": "FIAT", "year": 2025, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Azul",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "TOL4D70", "model": "STRADA", "brand": "FIAT", "year": 2026, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Branco",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+        {"license_plate": "TOL4D72", "model": "STRADA", "brand": "FIAT", "year": 2026, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Prata",
+         "cnpj": "61.198.164/0001-60", "insurance_id": insurances[0].id if insurances else None},
+
+        # RENAULT Vehicles
+        {"license_plate": "RQR3J33", "model": "OROCH/EXP", "brand": "RENAULT", "year": 2022, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Branco",
+         "cnpj": "33.448.150/0001-11", "insurance_id": insurances[1].id if len(insurances) > 1 else None},
+        {"license_plate": "RQR3J79", "model": "OROCH/EXP", "brand": "RENAULT", "year": 2022, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Prata",
+         "cnpj": "33.448.150/0001-11", "insurance_id": insurances[1].id if len(insurances) > 1 else None},
+        {"license_plate": "QXL0J20", "model": "KWID", "brand": "RENAULT", "year": 2021, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Vermelho",
+         "cnpj": "33.448.150/0001-11", "insurance_id": insurances[1].id if len(insurances) > 1 else None},
+        {"license_plate": "NAX6H44", "model": "KWID", "brand": "RENAULT", "year": 2023, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Branco",
+         "cnpj": "33.448.150/0001-11", "insurance_id": insurances[1].id if len(insurances) > 1 else None},
+        # VW
+        {"license_plate": "KWW2751", "model": "CROSSFOX", "brand": "VW", "year": 2010, 
+         "fuel_type": FuelType.GASOLINA, "status": "ACTIVE", "color": "Prata",
+         "cnpj": "33.164.021/0001-00", "insurance_id": insurances[2].id if len(insurances) > 2 else None},
+        # CHEVROLET Diesel
+        {"license_plate": "KZP9I09", "model": "S10", "brand": "CHEVROLET", "year": 2019, 
+         "fuel_type": FuelType.DIESEL, "status": "ACTIVE", "color": "Branco",
+         "cnpj": "61.074.175/0001-38", "insurance_id": insurances[0].id if insurances else None},
+        # MITSUBISHI Diesel
+        {"license_plate": "RMR6D75", "model": "L200", "brand": "MITSUBISHI", "year": 2022, 
+         "fuel_type": FuelType.DIESEL, "status": "ACTIVE", "color": "Prata",
+         "cnpj": "61.074.175/0001-38", "insurance_id": insurances[0].id if insurances else None},
+        # TOYOTA Diesel
+        {"license_plate": "RMS4F05", "model": "HILUX", "brand": "TOYOTA", "year": 2021, 
+         "fuel_type": FuelType.DIESEL, "status": "ACTIVE", "color": "Branco",
+         "cnpj": "61.573.796/0001-66", "insurance_id": insurances[1].id if len(insurances) > 1 else None},
     ]
     
     created_fleet = []

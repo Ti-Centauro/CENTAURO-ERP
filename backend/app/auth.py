@@ -82,16 +82,17 @@ async def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Se
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
+            # Invalid token - fallback to admin in dev
+            user = await get_admin_user()
+            if user:
+                return user
             raise credentials_exception
         token_data = TokenData(email=email)
     except JWTError:
-        # If token is invalid (e.g. expired from previous session), also fallback to admin for dev convenience?
-        # Or maybe just raise exception. Let's just raise exception to avoid confusion if token IS present but bad.
-        # But user asked to IGNORE login. So maybe fallback even on error? 
-        # let's try to just use the token if present, but if it fails, fallback to admin?
-        # For now, stick to standard behavior if token is present but invalid.
-        # But wait, frontend might have an old token.
-        # Let's simple allow bypass if token is None.
+        # Token expired or invalid - fallback to admin in dev mode for convenience
+        user = await get_admin_user()
+        if user:
+            return user
         raise credentials_exception
     
     query = select(User).options(
@@ -101,6 +102,10 @@ async def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Se
     result = await db.execute(query)
     user = result.scalars().first()
     if user is None:
+        # User from token not found - fallback to admin
+        user = await get_admin_user()
+        if user:
+            return user
         raise credentials_exception
     return user
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, Date, ForeignKey, Float, Text
+from sqlalchemy import Column, Integer, String, Enum, Date, ForeignKey, Float, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
@@ -60,6 +60,7 @@ class Fleet(Base):
 
     # Maintenance Relationship
     maintenances = relationship("VehicleMaintenance", back_populates="vehicle")
+    fuel_costs = relationship("VehicleFuelCost", back_populates="vehicle")
 
 class Tool(Base):
     __tablename__ = "tools"
@@ -90,3 +91,20 @@ class VehicleMaintenance(Base):
     attachment = Column(String, nullable=True)
 
     vehicle = relationship("Fleet", back_populates="maintenances")
+
+
+class VehicleFuelCost(Base):
+    """Monthly fuel cost record per vehicle"""
+    __tablename__ = "vehicle_fuel_costs"
+    __table_args__ = (
+        UniqueConstraint('vehicle_id', 'competence_date', name='uq_vehicle_fuel_month'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    vehicle_id = Column(Integer, ForeignKey("fleet.id"), nullable=False)
+    competence_date = Column(Date, nullable=False)  # Day 01 of reference month
+    total_cost = Column(Float, nullable=False)  # Column Q - "Total (R$) Transação"
+    liters = Column(Float, nullable=True)  # Column L - "Litros"
+    km_driven = Column(Integer, nullable=True)  # Column K - "Km Rodados"
+
+    vehicle = relationship("Fleet", back_populates="fuel_costs")

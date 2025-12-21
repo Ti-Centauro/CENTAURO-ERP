@@ -61,3 +61,21 @@ class ToolResponse(ToolBase):
     
     class Config:
         from_attributes = True
+
+
+# Vehicle Fuel Cost Schemas
+class VehicleFuelCostBase(BaseModel):
+    vehicle_id: int
+    competence_date: date
+    total_cost: float
+    liters: Optional[float] = None
+    km_driven: Optional[int] = None
+
+class VehicleFuelCostCreate(VehicleFuelCostBase):
+    pass
+
+class VehicleFuelCostResponse(VehicleFuelCostBase):
+    id: int
+    
+    class Config:
+        from_attributes = True
