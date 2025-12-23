@@ -6,7 +6,7 @@ from datetime import date, timedelta
 
 from app.database import get_db
 from app.auth import get_current_active_user, check_permission
-from app.models.commercial import Contract, ProjectBilling, BillingStatus, Client, Project
+from app.models.commercial import Contract, ProjectBilling, BillingStatus, Client, Project, ContractType
 from app.models.operational import Allocation, Collaborator, Certification, CertificationType
 from app.models.assets import Fleet, Tool
 from app.models.tickets import Ticket, TicketStatus
@@ -41,7 +41,7 @@ async def get_commercial_dashboard(
     
     # 2. LPU Budget Consumption
     # Logic: Get all active LPU contracts, sum their linked projects' budgets/values, compare to contract value
-    query_lpu = select(Contract).where(Contract.contract_type == "LPU")
+    query_lpu = select(Contract).where(Contract.contract_type == ContractType.LPU)
     result_lpu = await db.execute(query_lpu)
     lpu_contracts = result_lpu.scalars().all()
     

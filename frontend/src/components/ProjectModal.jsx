@@ -86,10 +86,11 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
   });
 
   const [billingFormData, setBillingFormData] = useState({
-    value: '',
-    date: '',
+    gross_value: '',
+    date: '', // Previsão de recebimento
     invoice_number: '',
-    description: ''
+    description: '',
+    category: 'SERVICE'
   });
 
   // Feedbacks
@@ -294,24 +295,19 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
     e.preventDefault();
 
     // Validation: Check if billing would exceed budget
-    const billingValue = parseFloat(billingFormData.value);
+    const billingValue = parseFloat(billingFormData.gross_value);
 
     // Calculate total invoiced (only PAGO status)
     const currentInvoiced = billings.reduce((sum, b) => {
       if (b.status === 'PAGO') {
-        return sum + parseFloat(b.value);
+        return sum + parseFloat(b.gross_value || b.value || 0);
       }
       return sum;
     }, 0);
 
     const budget = parseFloat(projectDetails.budget) || 0;
-    // Note: Remaining budget calculation might need adjustment if we only count PAGO as invoiced.
-    // Usually, "Remaining to Bill" should consider everything billed (even if not paid), 
-    // but the user specifically asked for "Total Faturado" to be PAGO only.
-    // I will keep the budget check against ALL billings to prevent over-billing, 
-    // but display "Total Faturado" as PAGO only.
 
-    const totalBilled = billings.reduce((sum, b) => sum + parseFloat(b.value), 0);
+    const totalBilled = billings.reduce((sum, b) => sum + parseFloat(b.gross_value || b.value || 0), 0);
     const remaining = budget - totalBilled;
 
     if (billingValue > remaining) {
@@ -322,11 +318,13 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
     try {
       await createProjectBilling(project.id, {
         ...billingFormData,
-        value: billingValue,
+        gross_value: billingValue,
+        net_value: billingValue, // Default for simplified view
+        value: billingValue, // Legacy support
         project_id: project.id
       });
       setShowBillingForm(false);
-      setBillingFormData({ value: '', date: '', invoice_number: '', description: '' });
+      setBillingFormData({ gross_value: '', date: '', invoice_number: '', description: '', category: 'SERVICE' });
       loadAllData();
     } catch (error) {
       console.error('Error adding billing:', error);
@@ -378,7 +376,7 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
   // Calculate Total Faturado (PAGO only) for display
   const totalFaturadoPago = billings.reduce((acc, curr) => {
     if (curr.status === 'PAGO') {
-      return acc + Number(curr.value);
+      return acc + Number(curr.gross_value || curr.value || 0);
     }
     return acc;
   }, 0);
@@ -1153,24 +1151,40 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
 
                 {showBillingForm && (
                   <form className="resource-form" onSubmit={handleAddBilling}>
-                    <input
-                      type="number"
-                      placeholder="Valor (R$)"
-                      step="0.01"
-                      value={billingFormData.value}
-                      onChange={(e) => setBillingFormData({ ...billingFormData, value: e.target.value })}
-                      required
-                    />
-                    {/* Date removed as per simplified workflow */}
-                    <input
-                      type="text"
-                      placeholder="Descrição (ex: 1ª Medição)"
-                      value={billingFormData.description}
-                      onChange={(e) => setBillingFormData({ ...billingFormData, description: e.target.value })}
-                      required
-                    />
-                    <button type="submit" className="btn btn-primary btn-sm">Salvar</button>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowBillingForm(false)}>Cancelar</button>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', width: '100%', marginBottom: '10px' }}>
+                      <select
+                        className="input"
+                        value={billingFormData.category}
+                        onChange={(e) => setBillingFormData({ ...billingFormData, category: e.target.value })}
+                        required
+                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                      >
+                        <option value="SERVICE">Serviço</option>
+                        <option value="MATERIAL">Material</option>
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="Valor Bruto (R$)"
+                        step="0.01"
+                        value={billingFormData.gross_value}
+                        onChange={(e) => setBillingFormData({ ...billingFormData, gross_value: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px', width: '100%' }}>
+                      <input
+                        type="text"
+                        placeholder="Descrição (ex: 1ª Medição)"
+                        value={billingFormData.description}
+                        onChange={(e) => setBillingFormData({ ...billingFormData, description: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowBillingForm(false)}>Cancelar</button>
+                      <button type="submit" className="btn btn-primary btn-sm">Salvar</button>
+                    </div>
                   </form>
                 )}
 
@@ -1181,7 +1195,7 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                         <DollarSign size={20} />
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <strong>R$ {parseFloat(billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                            <strong>R$ {parseFloat(billing.gross_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
                             <span className={`status-badge ${{
                               'PREVISTO': 'badge-gray',
                               'EMITIDA': 'badge-blue',

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload, joinedload
@@ -611,3 +611,221 @@ async def delete_project_feedback(feedback_id: int, db: AsyncSession = Depends(g
     await db.delete(feedback)
     await db.commit()
     return {"message": "Feedback deleted successfully"}
+
+# Import Taxes Endpoint
+@router.post("/billings/import-taxes")
+async def import_taxes(
+    file: UploadFile = File(...), 
+    db: AsyncSession = Depends(get_db)
+):
+    import pandas as pd
+    import io
+    import unicodedata
+    
+    # Helper to remove accents from strings
+    def remove_accents(input_str):
+        nfkd_form = unicodedata.normalize('NFKD', str(input_str))
+        return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+    
+    try:
+        content = await file.read()
+        
+        # Determine engine
+        if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+            raise HTTPException(status_code=400, detail="Formato não suportado. Use .xlsx ou .xls")
+        
+        # Read first 20 rows to find the header
+        df_preview = pd.read_excel(io.BytesIO(content), header=None, nrows=20).astype(str)
+        
+        header_row_index = 0
+        found_header = False
+        
+        # Keywords to identify the header row
+        # We look for a row that contains ("NOTA" OR "NUMERO") AND ("VALOR" OR "EMISSAO" OR "DATA" OR "ICMS")
+        for i, row in df_preview.iterrows():
+            row_str = " ".join(row.values).upper()
+            row_str_norm = remove_accents(row_str)  # Remove accents for matching
+            
+            has_id = "NOTA" in row_str_norm or "NUMERO" in row_str_norm or "NF" in row_str_norm
+            has_ctx = "VALOR" in row_str_norm or "EMISSAO" in row_str_norm or "DATA" in row_str_norm or "CLIENTE" in row_str_norm or "ICMS" in row_str_norm
+            
+            if has_id and has_ctx:
+                header_row_index = i
+                found_header = True
+                break
+        
+        # Reload with correct header
+        df = pd.read_excel(io.BytesIO(content), header=header_row_index)
+        
+        # Normalize columns: Uppercase, remove accents, remove special chars, single spaces
+        def normalize_col(col):
+            s = str(col).upper()
+            s = s.replace('º', 'O').replace('°', 'O').replace('ª', 'A')  # Ordinal indicators
+            s = s.replace('.', ' ').replace('-', ' ').replace('/', ' ')
+            s = remove_accents(s)
+            return ' '.join(s.split())  # Collapse multiple spaces
+        
+        df.columns = pd.Index([normalize_col(col) for col in df.columns])
+        
+        updates_count = 0
+        errors = []
+        logs = []
+        
+        if found_header:
+            logs.append(f"Header identificado na linha {header_row_index + 1}.")
+        else:
+            logs.append("Header nao identificado claramente. Usando linha 0.")
+
+        logs.append(f"Colunas (Normalizadas): {list(df.columns)}")
+        
+        # Iterate over rows
+        for index, row in df.iterrows():
+            invoice_number = None
+            
+            # Try to find Invoice Number column (after normalization, º becomes O)
+            possible_invoice_cols = [
+                'NO NF', 'N NF', 'NF', 'NOTA', 'N NOTA', 'NUMERO', 'NUMERO NF',
+                'NUMERO DA NOTA', 'NRO', 'NR NOTA', 'DOCUMENTO', 'NUM NF', 'NUM NOTA'
+            ]
+            
+            for col in possible_invoice_cols:
+                if col in df.columns and pd.notna(row[col]):
+                    val = str(row[col]).strip()
+                    if val and val.lower() not in ['nan', 'none', '']:
+                        # Remove .0 from float numbers like "4518.0"
+                        if '.' in val:
+                            try:
+                                invoice_number = str(int(float(val)))
+                            except:
+                                invoice_number = val
+                        else:
+                            invoice_number = val
+                        break
+            
+            if not invoice_number:
+                continue
+            
+            # Find Billing in DB
+            result = await db.execute(select(models.ProjectBilling).where(models.ProjectBilling.invoice_number == invoice_number))
+            billing = result.scalar_one_or_none()
+            
+            if not billing:
+                logs.append(f"Nota {invoice_number} nao encontrada no DB.")
+                continue
+            
+            logs.append(f"Processando Nota {invoice_number} (ID: {billing.id})")
+
+            # Determine Type (Service vs Material)
+            is_service = False
+            is_material = False
+            
+            # Heuristics for Service (Look for ISS)
+            service_keywords = ['ISS RETIDO', 'VALOR ISS', 'RETENCAO ISS', 'RETENCOES', 'VLR ISS', 'VI ISS', 'VL ISS', 'VALOR DO ISS', 'ISS VALOR RETIDO', 'ISS VALOR', 'ISS ALIQUOTA']
+            if any(k in df.columns for k in service_keywords):
+                is_service = True
+                logs.append(f"  -> Arquivo detectado como SERVIÇO (encontrou colunas ISS)")
+            
+            # Heuristics for Material (Look for ICMS/IPI)
+            material_keywords = ['ICMS', 'VALOR ICMS', 'IPI', 'VALOR IPI', 'VLR ICMS', 'VI ICMS', 'VL ICMS', 'VI IPI', 'VL IPI', 'VL ICMS TOTAL']
+            if any(k in df.columns for k in material_keywords):
+                is_material = True
+                logs.append(f"  -> Arquivo detectado como MATERIAL (encontrou colunas ICMS/IPI)")
+                
+            # Default to existing category if ambiguous or if neither was detected
+            if not is_service and not is_material:
+                logs.append(f"  -> Tipo não detectado automaticamente, usando categoria existente: {billing.category}")
+                if billing.category == "MATERIAL":
+                    is_material = True
+                elif billing.category == "SERVICE":
+                    is_service = True
+            elif is_service and is_material:
+                # Both detected - use existing category
+                logs.append(f"  -> Ambos tipos detectados, usando categoria existente: {billing.category}")
+                if billing.category == "MATERIAL":
+                    is_service = False
+                else:
+                    is_material = False
+            
+            # Helper to safely get float
+            def get_val(keywords):
+                for col in df.columns:
+                    if col in keywords:
+                        if pd.notna(row[col]):
+                            try:
+                                return float(row[col])
+                            except:
+                                pass
+                return 0.0
+
+            # Update Logic
+            if is_service:
+                billing.category = "SERVICE"
+                
+                # Ler valores individuais de retenção (se precisar detalhar)
+                billing.retention_iss = get_val(['ISS VALOR RETIDO', 'ISS RETIDO', 'RETENCAO ISS', 'VLR ISS', 'VI ISS', 'VL ISS', 'VALOR ISS RETIDO'])
+                billing.retention_inss = get_val(['VALOR INSS RETIDO', 'INSS RETIDO', 'RETENCAO INSS', 'VLR INSS', 'VI INSS', 'VL INSS', 'VALOR INSS'])
+                billing.retention_irrf = get_val(['VALOR IRRF RETIDO', 'IRRF RETIDO', 'RETENCAO IRRF', 'VLR IRRF', 'VI IRRF', 'VL IRRF', 'VALOR IRRF'])
+                billing.retention_csll = get_val(['VALOR CSSL RETIDO', 'VALOR CSLL RETIDO', 'CSLL RETIDO', 'RETENCAO CSLL', 'VLR CSLL', 'VI CSLL', 'VL CSLL', 'VALOR CSLL'])
+                billing.retention_pis = get_val(['VALOR PIS RETIDO', 'PIS RETIDO', 'RETENCAO PIS', 'VLR PIS', 'VI PIS', 'VL PIS'])
+                billing.retention_cofins = get_val(['VALOR COFINS RETIDO', 'COFINS RETIDO', 'RETENCAO COFINS', 'VLR COFINS', 'VI COFINS', 'VL COFINS'])
+                
+                # Tentar ler o TOTAL direto do Excel (coluna TOTAL)
+                excel_total = get_val(['TOTAL', 'VALOR TOTAL', 'VLR TOTAL', 'VALOR BRUTO', 'VALOR SERVICO', 'VLR SERVICO', 'VALOR DA NOTA', 'VALOR CONTABIL', 'VL CONTABIL'])
+                if excel_total > 0 and (billing.gross_value == 0 or billing.gross_value is None):
+                     billing.gross_value = excel_total
+                
+                # Tentar ler RETIDOS direto do Excel (já calculado na planilha)
+                excel_retidos = get_val(['RETIDOS', 'TOTAL RETIDOS', 'VALOR RETIDO', 'RETENCOES'])
+                
+                # Tentar ler VALOR LIQUIDO A RECEBER direto do Excel
+                excel_liquido = get_val(['VALOR LIQUIDO A RECEBER', 'VLR LIQUIDO', 'LIQUIDO A RECEBER', 'S/RETENCAO', 'S RETENCAO', 'SEM RETENCAO'])
+                
+                if excel_liquido > 0:
+                    billing.net_value = excel_liquido
+                    logs.append(f"  -> Usando VALOR LIQUIDO A RECEBER do Excel: {excel_liquido}")
+                elif excel_retidos > 0:
+                    billing.net_value = float(billing.gross_value or 0) - excel_retidos
+                    logs.append(f"  -> Calculando: {billing.gross_value} - {excel_retidos} (RETIDOS) = {billing.net_value}")
+                else:
+                    # Fallback: somar retenções individuais
+                    total_retentions = (
+                        billing.retention_iss + billing.retention_inss + billing.retention_irrf + 
+                        billing.retention_csll + billing.retention_pis + billing.retention_cofins
+                    )
+                    billing.net_value = float(billing.gross_value or 0) - total_retentions
+                    logs.append(f"  -> Calculando via soma individual: {billing.gross_value} - {total_retentions} = {billing.net_value}")
+                
+            elif is_material:
+                billing.category = "MATERIAL"
+                
+                billing.tax_icms = get_val(['ICMS', 'VALOR ICMS', 'VLR ICMS', 'VI ICMS', 'VL ICMS', 'VL ICMS TOTAL'])
+                billing.tax_ipi = get_val(['IPI', 'VALOR IPI', 'VLR IPI', 'VI IPI', 'VL IPI'])
+                billing.value_st = get_val(['ST', 'VALOR ST', 'SUBST TRIBUTARIA', 'VI ST', 'VL ST', 'VALOR ST'])
+                
+                billing.retention_pis = get_val(['PIS', 'VI PIS', 'VL PIS', 'TOTAL PIS', 'TOTAL PIS TOTAL', 'VALOR PIS'])
+                billing.retention_cofins = get_val(['COFINS', 'VI COFINS', 'VL COFINS', 'TOTAL COFINS', 'VALOR COFINS'])
+                
+                excel_gross = get_val(['VALOR BRUTO', 'VALOR PRODUTOS', 'VALOR DA NOTA', 'VALOR CONTABIL', 'VL CONTABIL'])
+                if excel_gross > 0 and (billing.gross_value == 0 or billing.gross_value is None):
+                     billing.gross_value = excel_gross
+
+                # Para Material: Valor Líquido = Bruto - (ICMS + PIS + COFINS)
+                total_taxes = billing.tax_icms + billing.retention_pis + billing.retention_cofins
+                billing.net_value = float(billing.gross_value or 0) - total_taxes 
+            
+            logs.append(f"  -> ICMS={billing.tax_icms}, ISS={billing.retention_iss}, PIS={billing.retention_pis}")
+            billing.taxes_verified = True
+            updates_count += 1
+            
+        await db.commit()
+        
+        # Limit logs for response
+        if len(logs) > 30:
+            logs = logs[:15] + ["... (logs truncados) ..."] + logs[-5:]
+            
+        return {"message": f"Processamento concluido. {updates_count} faturamentos atualizados.", "errors": errors, "debug_logs": logs}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

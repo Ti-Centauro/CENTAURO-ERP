@@ -3,7 +3,7 @@ import {
   DollarSign, Calendar, FileText, Tag, Hash, MoreVertical,
   Filter, Download, Upload, Edit, CheckCircle, AlertCircle, XCircle, RefreshCw, Search
 } from 'lucide-react';
-import { getAllBillings, updateProjectBilling, getProjects, getClients } from '../services/api';
+import { getAllBillings, updateProjectBilling, getProjects, getClients, importTaxes } from '../services/api';
 import './AccountsReceivable.css';
 
 const AccountsReceivable = () => {
@@ -30,7 +30,26 @@ const AccountsReceivable = () => {
     substitution_invoice_number: '',
     substitution_issue_date: '',
     substitution_due_date: '',
-    substitution_reason: ''
+    substitution_reason: '',
+
+    // Financial Fields
+    category: 'SERVICE',
+    gross_value: '',
+    net_value: '',
+    taxes_verified: false,
+
+    // Retentions (Service)
+    retention_iss: '',
+    retention_inss: '',
+    retention_irrf: '',
+    retention_pis: '',
+    retention_cofins: '',
+    retention_csll: '',
+
+    // Taxes (Material)
+    tax_icms: '',
+    tax_ipi: '',
+    value_st: ''
   });
 
   useEffect(() => {
@@ -93,9 +112,60 @@ const AccountsReceivable = () => {
       substitution_invoice_number: '',
       substitution_issue_date: '',
       substitution_due_date: '',
-      substitution_reason: ''
+      substitution_reason: '',
+
+      // Load Financials
+      category: billing.category || 'SERVICE',
+      gross_value: billing.gross_value || billing.value,
+      net_value: billing.net_value || billing.value, // Default to gross if net missing
+      taxes_verified: billing.taxes_verified || false,
+
+      retention_iss: billing.retention_iss || 0,
+      retention_inss: billing.retention_inss || 0,
+      retention_irrf: billing.retention_irrf || 0,
+      retention_pis: billing.retention_pis || 0,
+      retention_cofins: billing.retention_cofins || 0,
+      retention_csll: billing.retention_csll || 0,
+
+      tax_icms: billing.tax_icms || 0,
+      tax_ipi: billing.tax_ipi || 0,
+      value_st: billing.value_st || 0
     });
   };
+
+  // Tax Calculation Logic
+  useEffect(() => {
+    if (!editingBilling) return;
+
+    const gross = parseFloat(formData.gross_value) || 0;
+
+    if (formData.category === 'SERVICE') {
+      const retentions = (
+        (parseFloat(formData.retention_iss) || 0) +
+        (parseFloat(formData.retention_inss) || 0) +
+        (parseFloat(formData.retention_irrf) || 0) +
+        (parseFloat(formData.retention_pis) || 0) +
+        (parseFloat(formData.retention_cofins) || 0) +
+        (parseFloat(formData.retention_csll) || 0)
+      );
+      const net = gross - retentions;
+      // avoid infinite loop if value hasn't changed
+      if (Math.abs(net - (parseFloat(formData.net_value) || 0)) > 0.01) {
+        setFormData(prev => ({ ...prev, net_value: net.toFixed(2) }));
+      }
+    }
+    // For MATERIAL, usually Net = Gross + ST or just Gross (taxes are inside). 
+    // Keeping simple: if Material, user edits Net manually or we assume Net = Gross for now unless specified.
+  }, [
+    formData.gross_value,
+    formData.category,
+    formData.retention_iss,
+    formData.retention_inss,
+    formData.retention_irrf,
+    formData.retention_pis,
+    formData.retention_cofins,
+    formData.retention_csll
+  ]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -135,6 +205,28 @@ const AccountsReceivable = () => {
     return client ? client.name : 'N/A';
   };
 
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      setLoading(true);
+      await importTaxes(formData);
+      alert('Importação realizada com sucesso!');
+      loadData();
+    } catch (error) {
+      console.error("Error importing:", error);
+      alert('Erro na importação: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoading(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
   // Filter Logic
   const filteredBillings = billings.filter(billing => {
     // Status Filter
@@ -162,9 +254,15 @@ const AccountsReceivable = () => {
     <div className="accounts-receivable-container">
       <div className="page-header">
         <h1>Contas a Receber</h1>
-        <button className="btn btn-secondary" onClick={loadData}>
-          <RefreshCw size={16} /> Atualizar
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+            <Upload size={16} /> Importar Retenções (XLSX)
+            <input type="file" accept=".xlsx, .xls" style={{ display: 'none' }} onChange={handleImport} />
+          </label>
+          <button className="btn btn-secondary" onClick={loadData}>
+            <RefreshCw size={16} /> Atualizar
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -244,7 +342,14 @@ const AccountsReceivable = () => {
                   <td>{getClientName(billing.project_id)}</td>
                   <td>{billing.description}</td>
                   <td><Tag size={14} /> {getProjectTag(billing.project_id)}</td>
-                  <td className="text-right font-medium">R$ {parseFloat(billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="text-right font-medium">
+                    <div>
+                      R$ {parseFloat(billing.gross_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                    <div style={{ fontSize: '0.75em', color: '#64748b' }}>
+                      Liq: R$ {parseFloat(billing.net_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                  </td>
                   <td className="text-right">{billing.invoice_number || '-'}</td>
                 </tr>
               ))
@@ -359,6 +464,79 @@ const AccountsReceivable = () => {
                       required
                     />
                   </div>
+                </div>
+              )}
+
+              {/* Financial & Tax Section */}
+              <div className="form-section-divider">
+                <h4>Dados Fiscais & Financeiros</h4>
+              </div>
+
+              <div className="form-group">
+                <label>Categoria</label>
+                <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                  <option value="SERVICE">Serviço</option>
+                  <option value="MATERIAL">Material</option>
+                </select>
+              </div>
+
+              <div className="form-row" style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Valor Bruto (R$)</label>
+                  <input type="number" step="0.01" value={formData.gross_value} onChange={e => setFormData({ ...formData, gross_value: e.target.value })} required />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Valor Líquido (R$)</label>
+                  <input type="number" step="0.01" value={formData.net_value} onChange={e => setFormData({ ...formData, net_value: e.target.value })} required />
+                </div>
+              </div>
+
+              {formData.category === 'SERVICE' && (
+                <div className="tax-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <h5 style={{ gridColumn: '1 / -1', margin: 0, color: '#64748b' }}>Retenções (Fonte)</h5>
+
+                  <label className="tax-input">
+                    <span>ISS</span>
+                    <input type="number" step="0.01" value={formData.retention_iss} onChange={e => setFormData({ ...formData, retention_iss: e.target.value })} />
+                  </label>
+                  <label className="tax-input">
+                    <span>INSS</span>
+                    <input type="number" step="0.01" value={formData.retention_inss} onChange={e => setFormData({ ...formData, retention_inss: e.target.value })} />
+                  </label>
+                  <label className="tax-input">
+                    <span>IRRF</span>
+                    <input type="number" step="0.01" value={formData.retention_irrf} onChange={e => setFormData({ ...formData, retention_irrf: e.target.value })} />
+                  </label>
+                  <label className="tax-input">
+                    <span>CSLL</span>
+                    <input type="number" step="0.01" value={formData.retention_csll} onChange={e => setFormData({ ...formData, retention_csll: e.target.value })} />
+                  </label>
+                  <label className="tax-input">
+                    <span>PIS</span>
+                    <input type="number" step="0.01" value={formData.retention_pis} onChange={e => setFormData({ ...formData, retention_pis: e.target.value })} />
+                  </label>
+                  <label className="tax-input">
+                    <span>COFINS</span>
+                    <input type="number" step="0.01" value={formData.retention_cofins} onChange={e => setFormData({ ...formData, retention_cofins: e.target.value })} />
+                  </label>
+                </div>
+              )}
+
+              {formData.category === 'MATERIAL' && (
+                <div className="tax-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <h5 style={{ gridColumn: '1 / -1', margin: 0, color: '#64748b' }}>Impostos (Nota)</h5>
+                  <label className="tax-input">
+                    <span>ICMS</span>
+                    <input type="number" step="0.01" value={formData.tax_icms} onChange={e => setFormData({ ...formData, tax_icms: e.target.value })} />
+                  </label>
+                  <label className="tax-input">
+                    <span>PIS</span>
+                    <input type="number" step="0.01" value={formData.retention_pis} onChange={e => setFormData({ ...formData, retention_pis: e.target.value })} />
+                  </label>
+                  <label className="tax-input">
+                    <span>COFINS</span>
+                    <input type="number" step="0.01" value={formData.retention_cofins} onChange={e => setFormData({ ...formData, retention_cofins: e.target.value })} />
+                  </label>
                 </div>
               )}
 

@@ -838,17 +838,30 @@ async def seed_billings(db, projects):
                 invoice_number = f"{random.randint(1000, 9999)}"
                 
             elif status_choice == BillingStatus.SUBSTITUIDA:
-                # Needs a replacement. We'll handle this by creating a replacement first?
-                # Or just skip for now and handle manually if needed.
-                # Let's simplify: Create a "PAGO" billing and say this one was replaced by it.
-                # But we need the ID.
-                # Strategy: Create this as PREVISTO first, then update later?
-                # Or just skip SUBSTITUIDA in this random loop and do a specific case.
                 status_choice = BillingStatus.PREVISTO # Fallback
             
+            # New Fields Logic
+            category = "SERVICE"
+            gross_value = value
+            net_value = value
+            taxes_verified = False
+            retention_iss = 0
+            
+            # Simulate 30% of paid bills having taxes verified/imported
+            if status_choice == BillingStatus.PAGO and random.random() < 0.3:
+                 taxes_verified = True
+                 category = "SERVICE"
+                 retention_iss = value * 0.05 # 5% ISS
+                 net_value = value - retention_iss
+
             billing = ProjectBilling(
                 project_id=project.id,
                 value=value,
+                gross_value=gross_value, 
+                net_value=net_value,
+                category=category,
+                taxes_verified=taxes_verified,
+                retention_iss=retention_iss,
                 description=description,
                 status=status_choice,
                 date=date_due,
@@ -871,6 +884,9 @@ async def seed_billings(db, projects):
         replacement = ProjectBilling(
             project_id=p.id,
             value=5000,
+            gross_value=5000,
+            net_value=5000,
+            category="SERVICE",
             description="Medição Corrigida",
             status=BillingStatus.EMITIDA,
             date=date.today() + timedelta(days=15),
@@ -884,6 +900,9 @@ async def seed_billings(db, projects):
         original = ProjectBilling(
             project_id=p.id,
             value=5000,
+            gross_value=5000,
+            net_value=5000,
+            category="SERVICE",
             description="Medição Incorreta",
             status=BillingStatus.SUBSTITUIDA,
             date=date.today() + timedelta(days=15),

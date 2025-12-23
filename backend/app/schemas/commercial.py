@@ -67,7 +67,7 @@ class ContractResponse(ContractBase):
 
 # Project Billing Schemas
 class ProjectBillingBase(BaseModel):
-    value: Decimal
+    value: Decimal # This will now be treated as Gross Value in simple view, or legacy support
     date: Optional[DateType] = None # Due Date
     issue_date: Optional[DateType] = None
     payment_date: Optional[DateType] = None
@@ -76,6 +76,23 @@ class ProjectBillingBase(BaseModel):
     status: Optional[str] = "PREVISTO"
     attachment_url: Optional[str] = None
     replaced_by_id: Optional[int] = None
+
+    # New Fields
+    category: Optional[str] = "SERVICE"
+    gross_value: Optional[Decimal] = 0
+    net_value: Optional[Decimal] = 0
+    taxes_verified: Optional[bool] = False
+
+    retention_iss: Optional[Decimal] = 0
+    retention_inss: Optional[Decimal] = 0
+    retention_irrf: Optional[Decimal] = 0
+    retention_pis: Optional[Decimal] = 0
+    retention_cofins: Optional[Decimal] = 0
+    retention_csll: Optional[Decimal] = 0
+
+    tax_icms: Optional[Decimal] = 0
+    tax_ipi: Optional[Decimal] = 0
+    value_st: Optional[Decimal] = 0
 
 class ProjectBillingCreate(ProjectBillingBase):
     # Fields for substitution workflow

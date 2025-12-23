@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime, Enum, Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
@@ -106,6 +106,28 @@ class ProjectBilling(Base):
 
     project = relationship("Project", back_populates="billings")
     replaced_by = relationship("ProjectBilling", remote_side=[id])
+
+    # New Financial Fields
+    category = Column(Enum("SERVICE", "MATERIAL", name="billing_category"), default="SERVICE")
+    gross_value = Column(Numeric(10, 2), default=0) # Valor da Nota / Bruto
+    net_value = Column(Numeric(10, 2), default=0) # Valor Líquido (Caixa)
+    taxes_verified = Column(Boolean, default=False)
+
+    # Retentions (Service)
+    retention_iss = Column(Numeric(10, 2), default=0)
+    retention_inss = Column(Numeric(10, 2), default=0)
+    retention_irrf = Column(Numeric(10, 2), default=0)
+    retention_pis = Column(Numeric(10, 2), default=0)
+    retention_cofins = Column(Numeric(10, 2), default=0)
+    retention_csll = Column(Numeric(10, 2), default=0)
+
+    # Taxes (Material)
+    tax_icms = Column(Numeric(10, 2), default=0)
+    tax_ipi = Column(Numeric(10, 2), default=0)
+    value_st = Column(Numeric(10, 2), default=0)
+
+    # Migration Helper: Sync value to gross_value if empty
+
 
 class FeedbackType(str, enum.Enum):
     INFO = "INFO"
