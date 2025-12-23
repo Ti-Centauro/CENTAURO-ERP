@@ -90,6 +90,13 @@ class ProjectBillingBase(BaseModel):
     retention_cofins: Optional[Decimal] = 0
     retention_csll: Optional[Decimal] = 0
 
+    # Non-retained taxes (Service)
+    tax_iss: Optional[Decimal] = 0
+    tax_pis: Optional[Decimal] = 0
+    tax_cofins: Optional[Decimal] = 0
+    tax_irpj: Optional[Decimal] = 0
+
+    # Taxes (Material)
     tax_icms: Optional[Decimal] = 0
     tax_ipi: Optional[Decimal] = 0
     value_st: Optional[Decimal] = 0

@@ -678,6 +678,10 @@ async def import_taxes(
 
         logs.append(f"Colunas (Normalizadas): {list(df.columns)}")
         
+        # Debug: mostrar colunas que contêm PIS, COFINS ou ISS
+        pis_cofins_cols = [c for c in df.columns if 'PIS' in c or 'COFINS' in c or 'ISS' in c.split()]
+        logs.append(f"Colunas PIS/COFINS/ISS: {pis_cofins_cols}")
+        
         # Iterate over rows
         for index, row in df.iterrows():
             invoice_number = None
@@ -761,31 +765,70 @@ async def import_taxes(
             if is_service:
                 billing.category = "SERVICE"
                 
-                # Ler valores individuais de retenção (se precisar detalhar)
-                billing.retention_iss = get_val(['ISS VALOR RETIDO', 'ISS RETIDO', 'RETENCAO ISS', 'VLR ISS', 'VI ISS', 'VL ISS', 'VALOR ISS RETIDO'])
-                billing.retention_inss = get_val(['VALOR INSS RETIDO', 'INSS RETIDO', 'RETENCAO INSS', 'VLR INSS', 'VI INSS', 'VL INSS', 'VALOR INSS'])
-                billing.retention_irrf = get_val(['VALOR IRRF RETIDO', 'IRRF RETIDO', 'RETENCAO IRRF', 'VLR IRRF', 'VI IRRF', 'VL IRRF', 'VALOR IRRF'])
-                billing.retention_csll = get_val(['VALOR CSSL RETIDO', 'VALOR CSLL RETIDO', 'CSLL RETIDO', 'RETENCAO CSLL', 'VLR CSLL', 'VI CSLL', 'VL CSLL', 'VALOR CSLL'])
-                billing.retention_pis = get_val(['VALOR PIS RETIDO', 'PIS RETIDO', 'RETENCAO PIS', 'VLR PIS', 'VI PIS', 'VL PIS'])
-                billing.retention_cofins = get_val(['VALOR COFINS RETIDO', 'COFINS RETIDO', 'RETENCAO COFINS', 'VLR COFINS', 'VI COFINS', 'VL COFINS'])
+                # ==== IMPOSTOS RETIDOS (Cliente desconta e paga ao governo) ====
+                # Fórmula: RETIDOS = SOMA(IRRF, INSS, CSLL, COFINS, PIS retidos) + ISS se retido
                 
-                # Tentar ler o TOTAL direto do Excel (coluna TOTAL)
+                # PIS Retido (coluna R)
+                billing.retention_pis = get_val(['VALOR PIS RETIDO', 'PIS RETIDO', 'VI PIS RETIDO', 'VL PIS RETIDO'])
+                # COFINS Retido (coluna U)
+                billing.retention_cofins = get_val(['VALOR COFINS RETIDO', 'COFINS RETIDO', 'VI COFINS RETIDO', 'VL COFINS RETIDO'])
+                # CSLL Retido (coluna X)
+                billing.retention_csll = get_val(['VALOR CSSL RETIDO', 'VALOR CSLL RETIDO', 'CSLL RETIDO', 'VI CSLL RETIDO', 'VL CSLL RETIDO'])
+                # INSS Retido (coluna Y)
+                billing.retention_inss = get_val(['VALOR INSS RETIDO', 'INSS RETIDO', 'VI INSS RETIDO', 'VL INSS RETIDO'])
+                # IRRF Retido (coluna AB)
+                billing.retention_irrf = get_val(['VALOR IRRF RETIDO', 'IRRF RETIDO', 'VI IRRF RETIDO', 'VL IRRF RETIDO'])
+                
+                # ISS - lógica especial: se ISS VALOR RETIDO > 0, usa ISS VALOR como retenção
+                iss_valor_retido = get_val(['ISS VALOR RETIDO', 'ISS RETIDO'])  # Coluna O - flag
+                iss_valor = get_val(['ISS VALOR', 'VALOR ISS'])  # Coluna N - valor
+                if iss_valor_retido > 0:
+                    billing.retention_iss = iss_valor  # ISS foi retido pelo cliente
+                    billing.tax_iss = 0
+                else:
+                    billing.retention_iss = 0
+                    billing.tax_iss = iss_valor  # ISS a pagar pela empresa
+                
+                # ==== IMPOSTOS NÃO RETIDOS (Empresa paga ao governo) ====
+                # Fórmula: NÃO RETIDOS = PIS (AG) + COFINS (AJ) + ISS se não retido + IRPJ
+                # Colunas do Excel: N="ISS Valor", AG="Valor PIS", AJ="Valor COFINS"
+                # Após normalização: "ISS VALOR", "VALOR PIS", "VALOR COFINS"
+                
+                # Tentar ler S/RETENÇÃO direto do Excel (coluna calculada)
+                excel_sem_retencao = get_val(['S RETENCAO', 'S/RETENCAO', 'SEM RETENCAO', 'NAO RETIDOS', 'NAO RETIDO'])
+                
+                # PIS a pagar (não retido) - coluna AG "Valor PIS"
+                billing.tax_pis = get_val(['VALOR PIS'])
+                    
+                # COFINS a pagar (não retido) - coluna AJ "Valor COFINS"  
+                billing.tax_cofins = get_val(['VALOR COFINS'])
+                    
+                # IRPJ a pagar (não retido)
+                billing.tax_irpj = get_val(['VALOR IRPJ', 'VLR IRPJ', 'IRPJ', 'IRPJ A PAGAR'])
+                
+                # ISS não retido - coluna N "ISS Valor" -> "ISS VALOR"
+                # Já foi tratado acima na lógica especial do ISS (billing.tax_iss)
+                
+                # Log para debug
+                logs.append(f"  -> S/RETENÇÃO do Excel: {excel_sem_retencao}")
+                logs.append(f"  -> Não Retidos: ISS={billing.tax_iss}, PIS={billing.tax_pis}, COFINS={billing.tax_cofins}, IRPJ={billing.tax_irpj}")
+                
+                # ==== VALOR BRUTO / TOTAL ====
                 excel_total = get_val(['TOTAL', 'VALOR TOTAL', 'VLR TOTAL', 'VALOR BRUTO', 'VALOR SERVICO', 'VLR SERVICO', 'VALOR DA NOTA', 'VALOR CONTABIL', 'VL CONTABIL'])
                 if excel_total > 0 and (billing.gross_value == 0 or billing.gross_value is None):
                      billing.gross_value = excel_total
                 
-                # Tentar ler RETIDOS direto do Excel (já calculado na planilha)
-                excel_retidos = get_val(['RETIDOS', 'TOTAL RETIDOS', 'VALOR RETIDO', 'RETENCOES'])
-                
-                # Tentar ler VALOR LIQUIDO A RECEBER direto do Excel
-                excel_liquido = get_val(['VALOR LIQUIDO A RECEBER', 'VLR LIQUIDO', 'LIQUIDO A RECEBER', 'S/RETENCAO', 'S RETENCAO', 'SEM RETENCAO'])
+                # ==== VALOR LÍQUIDO = TOTAL - RETIDOS ====
+                # Tentar ler diretamente da planilha primeiro
+                excel_liquido = get_val(['VALOR LIQUIDO A RECEBER', 'VLR LIQUIDO', 'LIQUIDO A RECEBER'])
+                excel_retidos = get_val(['RETIDOS', 'TOTAL RETIDOS'])
                 
                 if excel_liquido > 0:
                     billing.net_value = excel_liquido
-                    logs.append(f"  -> Usando VALOR LIQUIDO A RECEBER do Excel: {excel_liquido}")
+                    logs.append(f"  -> LIQUIDO do Excel: {excel_liquido}")
                 elif excel_retidos > 0:
                     billing.net_value = float(billing.gross_value or 0) - excel_retidos
-                    logs.append(f"  -> Calculando: {billing.gross_value} - {excel_retidos} (RETIDOS) = {billing.net_value}")
+                    logs.append(f"  -> LIQUIDO calculado: {billing.gross_value} - {excel_retidos} = {billing.net_value}")
                 else:
                     # Fallback: somar retenções individuais
                     total_retentions = (
@@ -793,7 +836,10 @@ async def import_taxes(
                         billing.retention_csll + billing.retention_pis + billing.retention_cofins
                     )
                     billing.net_value = float(billing.gross_value or 0) - total_retentions
-                    logs.append(f"  -> Calculando via soma individual: {billing.gross_value} - {total_retentions} = {billing.net_value}")
+                    logs.append(f"  -> LIQUIDO (soma): {billing.gross_value} - {total_retentions} = {billing.net_value}")
+                
+                logs.append(f"  -> Retidos: ISS={billing.retention_iss}, PIS={billing.retention_pis}, COFINS={billing.retention_cofins}, CSLL={billing.retention_csll}, INSS={billing.retention_inss}, IRRF={billing.retention_irrf}")
+                logs.append(f"  -> Não Retidos: ISS={billing.tax_iss}, PIS={billing.tax_pis}, COFINS={billing.tax_cofins}")
                 
             elif is_material:
                 billing.category = "MATERIAL"

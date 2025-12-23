@@ -113,13 +113,19 @@ class ProjectBilling(Base):
     net_value = Column(Numeric(10, 2), default=0) # Valor Líquido (Caixa)
     taxes_verified = Column(Boolean, default=False)
 
-    # Retentions (Service)
+    # Retentions (Service) - Impostos retidos pelo cliente (ele paga ao governo)
     retention_iss = Column(Numeric(10, 2), default=0)
     retention_inss = Column(Numeric(10, 2), default=0)
     retention_irrf = Column(Numeric(10, 2), default=0)
     retention_pis = Column(Numeric(10, 2), default=0)
     retention_cofins = Column(Numeric(10, 2), default=0)
     retention_csll = Column(Numeric(10, 2), default=0)
+    
+    # Non-Retained Taxes (Service) - Impostos que a empresa paga (não retidos pelo cliente)
+    tax_pis = Column(Numeric(10, 2), default=0)  # PIS a pagar
+    tax_cofins = Column(Numeric(10, 2), default=0)  # COFINS a pagar
+    tax_iss = Column(Numeric(10, 2), default=0)  # ISS a pagar (quando não retido)
+    tax_irpj = Column(Numeric(10, 2), default=0)  # IRPJ a pagar
 
     # Taxes (Material)
     tax_icms = Column(Numeric(10, 2), default=0)

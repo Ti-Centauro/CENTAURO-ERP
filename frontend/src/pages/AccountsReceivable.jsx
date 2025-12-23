@@ -38,13 +38,19 @@ const AccountsReceivable = () => {
     net_value: '',
     taxes_verified: false,
 
-    // Retentions (Service)
+    // Retentions (Service) - Impostos retidos pelo cliente
     retention_iss: '',
     retention_inss: '',
     retention_irrf: '',
     retention_pis: '',
     retention_cofins: '',
     retention_csll: '',
+
+    // Non-Retained Taxes (Service) - Impostos a pagar pela empresa
+    tax_iss: '',
+    tax_pis: '',
+    tax_cofins: '',
+    tax_irpj: '',
 
     // Taxes (Material)
     tax_icms: '',
@@ -127,6 +133,13 @@ const AccountsReceivable = () => {
       retention_cofins: billing.retention_cofins || 0,
       retention_csll: billing.retention_csll || 0,
 
+      // Non-retained service taxes
+      tax_iss: billing.tax_iss || 0,
+      tax_pis: billing.tax_pis || 0,
+      tax_cofins: billing.tax_cofins || 0,
+      tax_irpj: billing.tax_irpj || 0,
+
+      // Material taxes
       tax_icms: billing.tax_icms || 0,
       tax_ipi: billing.tax_ipi || 0,
       value_st: billing.value_st || 0
@@ -492,34 +505,59 @@ const AccountsReceivable = () => {
               </div>
 
               {formData.category === 'SERVICE' && (
-                <div className="tax-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <h5 style={{ gridColumn: '1 / -1', margin: 0, color: '#64748b' }}>Retenções (Fonte)</h5>
+                <>
+                  {/* Impostos Retidos pelo Cliente */}
+                  <div className="tax-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#fef2f2', padding: '10px', borderRadius: '8px', border: '1px solid #fecaca', marginBottom: '10px' }}>
+                    <h5 style={{ gridColumn: '1 / -1', margin: 0, color: '#991b1b' }}>⛔ Retidos (Cliente paga)</h5>
 
-                  <label className="tax-input">
-                    <span>ISS</span>
-                    <input type="number" step="0.01" value={formData.retention_iss} onChange={e => setFormData({ ...formData, retention_iss: e.target.value })} />
-                  </label>
-                  <label className="tax-input">
-                    <span>INSS</span>
-                    <input type="number" step="0.01" value={formData.retention_inss} onChange={e => setFormData({ ...formData, retention_inss: e.target.value })} />
-                  </label>
-                  <label className="tax-input">
-                    <span>IRRF</span>
-                    <input type="number" step="0.01" value={formData.retention_irrf} onChange={e => setFormData({ ...formData, retention_irrf: e.target.value })} />
-                  </label>
-                  <label className="tax-input">
-                    <span>CSLL</span>
-                    <input type="number" step="0.01" value={formData.retention_csll} onChange={e => setFormData({ ...formData, retention_csll: e.target.value })} />
-                  </label>
-                  <label className="tax-input">
-                    <span>PIS</span>
-                    <input type="number" step="0.01" value={formData.retention_pis} onChange={e => setFormData({ ...formData, retention_pis: e.target.value })} />
-                  </label>
-                  <label className="tax-input">
-                    <span>COFINS</span>
-                    <input type="number" step="0.01" value={formData.retention_cofins} onChange={e => setFormData({ ...formData, retention_cofins: e.target.value })} />
-                  </label>
-                </div>
+                    <label className="tax-input">
+                      <span>ISS</span>
+                      <input type="number" step="0.01" value={formData.retention_iss} onChange={e => setFormData({ ...formData, retention_iss: e.target.value })} />
+                    </label>
+                    <label className="tax-input">
+                      <span>PIS</span>
+                      <input type="number" step="0.01" value={formData.retention_pis} onChange={e => setFormData({ ...formData, retention_pis: e.target.value })} />
+                    </label>
+                    <label className="tax-input">
+                      <span>COFINS</span>
+                      <input type="number" step="0.01" value={formData.retention_cofins} onChange={e => setFormData({ ...formData, retention_cofins: e.target.value })} />
+                    </label>
+                    <label className="tax-input">
+                      <span>CSLL</span>
+                      <input type="number" step="0.01" value={formData.retention_csll} onChange={e => setFormData({ ...formData, retention_csll: e.target.value })} />
+                    </label>
+                    <label className="tax-input">
+                      <span>INSS</span>
+                      <input type="number" step="0.01" value={formData.retention_inss} onChange={e => setFormData({ ...formData, retention_inss: e.target.value })} />
+                    </label>
+                    <label className="tax-input">
+                      <span>IRRF</span>
+                      <input type="number" step="0.01" value={formData.retention_irrf} onChange={e => setFormData({ ...formData, retention_irrf: e.target.value })} />
+                    </label>
+                  </div>
+
+                  {/* Impostos Não Retidos (Empresa Paga) */}
+                  <div className="tax-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#fffbeb', padding: '10px', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                    <h5 style={{ gridColumn: '1 / -1', margin: 0, color: '#92400e' }}>💰 Não Retidos (Empresa paga)</h5>
+
+                    <label className="tax-input">
+                      <span>ISS</span>
+                      <input type="number" step="0.01" value={formData.tax_iss} onChange={e => setFormData({ ...formData, tax_iss: e.target.value })} />
+                    </label>
+                    <label className="tax-input">
+                      <span>PIS</span>
+                      <input type="number" step="0.01" value={formData.tax_pis} onChange={e => setFormData({ ...formData, tax_pis: e.target.value })} />
+                    </label>
+                    <label className="tax-input">
+                      <span>COFINS</span>
+                      <input type="number" step="0.01" value={formData.tax_cofins} onChange={e => setFormData({ ...formData, tax_cofins: e.target.value })} />
+                    </label>
+                    <label className="tax-input">
+                      <span>IRPJ</span>
+                      <input type="number" step="0.01" value={formData.tax_irpj} onChange={e => setFormData({ ...formData, tax_irpj: e.target.value })} />
+                    </label>
+                  </div>
+                </>
               )}
 
               {formData.category === 'MATERIAL' && (
