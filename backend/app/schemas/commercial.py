@@ -54,6 +54,7 @@ class ContractBase(BaseModel):
     monthly_value: Optional[Decimal] = None
     due_day: Optional[int] = None
     readjustment_index: Optional[str] = None
+    company_id: Optional[int] = None
 
 class ContractCreate(ContractBase):
     pass

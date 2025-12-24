@@ -130,7 +130,10 @@ async def create_contract(contract: schemas.ContractCreate, db: AsyncSession = D
 
     # 3. Determine Prefix and Count existing contracts
     # Prefix: CEL for LPU, CEC for Recorrente (or others)
-    prefix = "CEL" if contract.contract_type == "LPU" else "CEC"
+    prefix_type = "CEL" if contract.contract_type == "LPU" else "CEC"
+    
+    # Append Company ID if present (e.g., CEL1, CEC2)
+    prefix = f"{prefix_type}{contract.company_id}" if contract.company_id else prefix_type
     
     # Pattern: {PREFIX}_{YY}%
     pattern = f"{prefix}_{yy}%"
@@ -295,15 +298,19 @@ async def create_project(project: schemas.ProjectCreate, db: AsyncSession = Depe
         tag = f"{contract_tag}_P{next_number:02d}"
         
     else:
-        # Standalone Project: CEP_{YY}{MM}_{Seq}_{Client}
-        # Count standalone projects for this year
-        pattern = f"CEP_{yy}%"
+        # Standalone Project: CEP{CNPJ}_{YY}{MM}_{Seq}_{Client}
+        # Determine Prefix based on Company ID (CNPJ)
+        # 1 -> CEP1_, 2 -> CEP2_, None -> CEP_
+        prefix_base = f"CEP{project.company_id}" if project.company_id else "CEP"
+        
+        # Count standalone projects for this year AND this specific prefix
+        pattern = f"{prefix_base}_{yy}%"
         result = await db.execute(select(func.count(models.Project.id)).where(models.Project.tag.like(pattern)))
         count = result.scalar() or 0
         next_number = count + 1
         
         nn = f"{next_number:02d}"
-        tag = f"CEP_{yy}{mm}_{nn}_{ccc}"
+        tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
     
     # Create DB object
     db_project = models.Project(**project.model_dump(exclude={"tag"}))

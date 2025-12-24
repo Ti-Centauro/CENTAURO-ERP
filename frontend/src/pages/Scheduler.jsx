@@ -399,12 +399,6 @@ const Scheduler = () => {
             )}
           </div>
 
-          {canEdit && (
-            <button className="btn btn-primary" onClick={handleAddAllocation}>
-              <Plus size={20} />
-              Nova Alocação
-            </button>
-          )}
           <div className="view-toggle">
             <button
               className={`btn-toggle ${viewMode === 'week' ? 'active' : ''}`}
@@ -419,6 +413,13 @@ const Scheduler = () => {
               Mês
             </button>
           </div>
+
+          {canEdit && (
+            <button className="btn btn-primary" onClick={handleAddAllocation}>
+              <Plus size={20} />
+              Nova Alocação
+            </button>
+          )}
         </div>
       </div>
 

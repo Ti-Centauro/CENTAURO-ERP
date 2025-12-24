@@ -41,6 +41,7 @@ class Contract(Base):
     monthly_value = Column(Numeric(10, 2), nullable=True)
     due_day = Column(Integer, nullable=True)
     readjustment_index = Column(String, nullable=True)
+    company_id = Column(Integer, nullable=True) # 1=Engenharia, 2=Telecom, etc.
 
     client = relationship("Client", back_populates="contracts")
     projects = relationship("Project", back_populates="contract")

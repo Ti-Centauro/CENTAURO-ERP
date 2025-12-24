@@ -7,13 +7,39 @@ from app.models import teams as models
 from app.models import operational as op_models
 from app.models.collaborator_teams import collaborator_teams
 from app.schemas import teams as schemas
+from app.auth import get_current_active_user
+from app.models.users import User
 
 router = APIRouter()
 
 @router.get("/teams", response_model=List[schemas.TeamResponse])
-async def get_teams(db: AsyncSession = Depends(get_db)):
-    # Fetch teams
-    result = await db.execute(select(models.Team))
+async def get_teams(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    from app.auth import get_current_active_user # Ensure import
+    
+    # Base query
+    query = select(models.Team)
+    
+    # Permission Check
+    if not current_user.is_superuser:
+        if not current_user.collaborator_id:
+            # User not linked to collaborator -> Should see nothing (unless we default to something else)
+            return []
+            
+        # Filter: Teams where user is Leader OR Member
+        # Subquery for membership
+        member_subquery = select(collaborator_teams.c.team_id).where(
+            collaborator_teams.c.collaborator_id == current_user.collaborator_id
+        )
+        
+        query = query.where(
+            (models.Team.leader_id == current_user.collaborator_id) |
+            (models.Team.id.in_(member_subquery))
+        ).distinct()
+
+    result = await db.execute(query)
     teams = result.scalars().all()
     
     response = []

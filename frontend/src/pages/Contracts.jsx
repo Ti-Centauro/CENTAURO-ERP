@@ -26,7 +26,11 @@ const Contracts = () => {
     contract_type: 'LPU',
     monthly_value: '',
     due_day: '',
+    contract_type: 'LPU',
+    monthly_value: '',
+    due_day: '',
     readjustment_index: '',
+    company_id: '',
   });
 
   // State for editing
@@ -119,7 +123,9 @@ const Contracts = () => {
         value: formData.contract_type === 'LPU' && formData.value ? parseFloat(formData.value) : null,
         monthly_value: formData.contract_type === 'RECORRENTE' && formData.monthly_value ? parseFloat(formData.monthly_value) : null,
         due_day: formData.contract_type === 'RECORRENTE' && formData.due_day ? parseInt(formData.due_day) : null,
+        due_day: formData.contract_type === 'RECORRENTE' && formData.due_day ? parseInt(formData.due_day) : null,
         readjustment_index: formData.contract_type === 'RECORRENTE' ? formData.readjustment_index : null,
+        company_id: formData.company_id ? parseInt(formData.company_id) : null,
       };
 
       if (editingId) {
@@ -148,7 +154,9 @@ const Contracts = () => {
       contract_type: 'LPU',
       monthly_value: '',
       due_day: '',
+      due_day: '',
       readjustment_index: '',
+      company_id: '',
     });
   };
 
@@ -168,7 +176,9 @@ const Contracts = () => {
       contract_type: contract.contract_type || 'LPU',
       monthly_value: contract.monthly_value || '',
       due_day: contract.due_day || '',
+      due_day: contract.due_day || '',
       readjustment_index: contract.readjustment_index || '',
+      company_id: contract.company_id || '',
     });
     setEditingId(contract.id);
     setShowForm(true);
@@ -318,6 +328,25 @@ const Contracts = () => {
                   </div>
 
                   <div className="form-group">
+                    <label className="label">CNPJ (Empresa)</label>
+                    <select
+                      name="company_id"
+                      className="input"
+                      value={formData.company_id}
+                      onChange={handleChange}
+                      disabled={!!editingId} // Disable editing CNPJ once created, as it affects TAG
+                      style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="1">1 - Engenharia</option>
+                      <option value="2">2 - Telecom</option>
+                      <option value="3">3 - ES</option>
+                      <option value="4">4 - MA</option>
+                      <option value="5">5 - SP</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
                     <label className="label">Título/Descrição *</label>
                     <input
                       type="text"
@@ -380,6 +409,9 @@ const Contracts = () => {
                         className="input"
                         value={formData.signature_date}
                         onChange={handleChange}
+                        readOnly={!!editingId}
+                        disabled={!!editingId}
+                        style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
                       />
                     </div>
                     <div className="form-group">

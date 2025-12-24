@@ -15,14 +15,66 @@ router = APIRouter()
 @router.get("/allocations", response_model=List[schemas.AllocationResponse])
 async def get_allocations(
     team_ids: List[int] = Query(None, description="Filter by team IDs"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     from app.models.teams import Team
     from app.models.collaborator_teams import collaborator_teams
     
-    if team_ids:
-        # Filter allocations where collaborator belongs to at least one of the specified teams
-        # Only applies to PERSON resource type
+    # Permission Check: Filter allowed teams for non-superusers
+    allowed_team_ids = None
+    if not current_user.is_superuser:
+        if not current_user.collaborator_id:
+            # Not a collaborator, sees nothing (or only non-person resources if we decide)
+             return [] # Or return empty list of allocations
+             
+        # Find teams where user is member OR leader
+        # 1. Member
+        stmt_member = select(collaborator_teams.c.team_id).where(collaborator_teams.c.collaborator_id == current_user.collaborator_id)
+        result_member = await db.execute(stmt_member)
+        member_ids = set(result_member.scalars().all())
+        
+        # 2. Leader
+        stmt_leader = select(Team.id).where(Team.leader_id == current_user.collaborator_id)
+        result_leader = await db.execute(stmt_leader)
+        leader_ids = set(result_leader.scalars().all())
+        
+        allowed_ids = member_ids.union(leader_ids)
+        
+        if not allowed_ids:
+            # User belongs to NO teams. Only shared resources (Cars/Tools) might be visible?
+            # If we pass empty list to IN clause, it matches nothing.
+            # But the logic below handles "OR resource_type != PERSON".
+            # So if we force team_ids=[] (empty filter), it might mean "No teams".
+            allowed_team_ids = []
+        else:
+            allowed_team_ids = list(allowed_ids)
+            
+        # Apply restriction
+        if team_ids:
+            # User wants specific teams. Intersect with allowed.
+            team_ids = [tid for tid in team_ids if tid in allowed_team_ids]
+            if not team_ids:
+                 # If intersection is empty, it means they asked for teams they can't see.
+                 # Return empty for PERSON, keeping logic for CAR/TOOL active below?
+                 # If we pass an empty list to the query below, we need to ensure it handles it.
+                 # Logic below: (collaborator_teams.c.team_id.in_(team_ids))
+                 # If team_ids is empty list, .in_([]) is usually false.
+                 # So it will match NO Persons. Perfect.
+                 pass
+        else:
+            # User didn't specify. Restrict to ALL allowed.
+            team_ids = allowed_team_ids
+            # Note: If allowed_team_ids is empty, team_ids is empty.
+    
+    # Logic to build query
+    if team_ids is not None:
+        # If team_ids is provided (or forced by permission logic)
+        # We perform the filtering
+        
+        # If team_ids is empty list (user has no teams), we still want to show CAR/TOOL?
+        # Yes, standard behavior.
+        
         stmt = (
             select(models.Allocation)
             .distinct()
@@ -43,7 +95,8 @@ async def get_allocations(
         )
         result = await db.execute(stmt)
     else:
-        # No filter - return all allocations (Global View)
+        # No filter (Superuser ONLY now, as non-superusers force a filter above)
+        # return all allocations (Global View)
         result = await db.execute(select(models.Allocation))
     
     allocations = result.scalars().all()
@@ -285,13 +338,48 @@ async def delete_allocation(allocation_id: int, db: AsyncSession = Depends(get_d
     return {"message": "Allocation deleted"}
 
 @router.get("/collaborators", response_model=List[schemas.CollaboratorResponse])
-async def get_collaborators(db: AsyncSession = Depends(get_db)):
+async def get_collaborators(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
     from app.models.teams import Team
-    result = await db.execute(select(models.Collaborator).options(
+    from app.models.collaborator_teams import collaborator_teams
+    
+    query = select(models.Collaborator).options(
         selectinload(models.Collaborator.certifications),
         selectinload(models.Collaborator.education),
-        selectinload(models.Collaborator.teams)  # Load N:N teams
-    ))
+        selectinload(models.Collaborator.teams)
+    )
+
+    if not current_user.is_superuser:
+        if not current_user.collaborator_id:
+            return []
+            
+        # 1. Get Allowed Teams (Member or Leader)
+        # Member
+        stmt_member = select(collaborator_teams.c.team_id).where(collaborator_teams.c.collaborator_id == current_user.collaborator_id)
+        result_member = await db.execute(stmt_member)
+        member_ids = set(result_member.scalars().all())
+        
+        # Leader
+        stmt_leader = select(Team.id).where(Team.leader_id == current_user.collaborator_id)
+        result_leader = await db.execute(stmt_leader)
+        leader_ids = set(result_leader.scalars().all())
+        
+        allowed_team_ids = member_ids.union(leader_ids)
+        
+        if allowed_team_ids:
+             # Show collaborators who are members of these teams OR the user themselves
+             # We join with collaborator_teams to filter
+             query = query.join(models.Collaborator.teams).where(
+                 (models.Collaborator.id == current_user.collaborator_id) |
+                 (Team.id.in_(allowed_team_ids))
+             ).distinct()
+        else:
+             # User has no teams. Only show themselves.
+             query = query.where(models.Collaborator.id == current_user.collaborator_id)
+
+    result = await db.execute(query)
     collaborators = result.scalars().all()
     return collaborators
 
