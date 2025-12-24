@@ -381,6 +381,45 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
     return acc;
   }, 0);
 
+  // Calculate Real Financials (Tax Breakdown) based on PAID billings
+  const financialSummary = billings.reduce((acc, curr) => {
+    if (curr.status === 'PAGO') {
+      const gross = parseFloat(curr.gross_value || curr.value || 0);
+
+      // Calculate Retained Taxes (Deducted by client)
+      // Note: Logic matches the backend/frontend edit modal
+      let retentions = 0;
+      if (curr.category === 'SERVICE') {
+        retentions = (
+          (parseFloat(curr.retention_iss) || 0) +
+          (parseFloat(curr.retention_inss) || 0) +
+          (parseFloat(curr.retention_irrf) || 0) +
+          (parseFloat(curr.retention_pis) || 0) +
+          (parseFloat(curr.retention_cofins) || 0) +
+          (parseFloat(curr.retention_csll) || 0)
+        );
+      }
+
+      // Calculate Taxes to Pay (Paid by company later)
+      const taxesToPay = (
+        (parseFloat(curr.tax_iss) || 0) +
+        (parseFloat(curr.tax_pis) || 0) +
+        (parseFloat(curr.tax_cofins) || 0) +
+        (parseFloat(curr.tax_irpj) || 0) +
+        (parseFloat(curr.tax_icms) || 0) +
+        (parseFloat(curr.tax_ipi) || 0) +
+        (parseFloat(curr.value_st) || 0)
+      );
+
+      acc.retained += retentions;
+      acc.taxes_to_pay += taxesToPay;
+    }
+    return acc;
+  }, { retained: 0, taxes_to_pay: 0 });
+
+  const totalImpostos = financialSummary.retained + financialSummary.taxes_to_pay;
+  const liquidoReal = totalFaturadoPago - totalImpostos;
+
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
     if (!feedbackInput.trim()) return;
@@ -587,7 +626,7 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                     const getColor = (val) => val >= 0 ? '#16a34a' : '#dc2626';
                     return (
                       <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr', gap: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0', alignItems: 'center' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155' }}>Saldo</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155' }}>Economia</div>
                         <div style={{ fontSize: '0.95rem', fontWeight: '600', color: getColor(saldoMaterial), textAlign: 'right' }}>
                           R$ {saldoMaterial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </div>
@@ -1134,18 +1173,49 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                   )}
                 </div>
 
-                <div className="billing-summary card">
-                  <div className="summary-item">
-                    <label>Total Orçado</label>
-                    <span>R$ {projectDetails.budget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}</span>
+                <div className="billing-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                  {/* Card 1: Orçamento */}
+                  <div className="card" style={{ padding: '1rem' }}>
+                    <h4 style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 0.5rem 0' }}>Orçamento Total</h4>
+                    <span style={{ fontSize: '1.25rem', fontWeight: '600', color: '#0f172a' }}>
+                      R$ {projectDetails.budget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                    </span>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                      A Faturar: R$ {((projectDetails.budget || 0) - totalFaturadoPago)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
                   </div>
-                  <div className="summary-item">
-                    <label>Total Faturado</label>
-                    <span className="text-success">R$ {totalFaturadoPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+
+                  {/* Card 2: Faturado Bruto */}
+                  <div className="card" style={{ padding: '1rem' }}>
+                    <h4 style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 0.5rem 0' }}>Faturado (Bruto)</h4>
+                    <span style={{ fontSize: '1.25rem', fontWeight: '600', color: '#3b82f6' }}>
+                      R$ {totalFaturadoPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                      {((totalFaturadoPago / (projectDetails.budget || 1)) * 100).toFixed(1)}% do total
+                    </div>
                   </div>
-                  <div className="summary-item">
-                    <label>Restante</label>
-                    <span className="text-warning">R$ {((projectDetails.budget || 0) - totalFaturadoPago)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+
+                  {/* Card 3: Impostos */}
+                  <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #f87171' }}>
+                    <h4 style={{ fontSize: '0.85rem', color: '#ef4444', margin: '0 0 0.5rem 0' }}>Impostos Totais</h4>
+                    <span style={{ fontSize: '1.25rem', fontWeight: '600', color: '#dc2626' }}>
+                      R$ {totalImpostos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <div style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>
+                      {totalFaturadoPago > 0 ? ((totalImpostos / totalFaturadoPago) * 100).toFixed(1) : 0}% da receita
+                    </div>
+                  </div>
+
+                  {/* Card 4: Líquido Real */}
+                  <div className="card" style={{ padding: '1rem', borderLeft: '4px solid #22c55e', backgroundColor: '#f0fdf4' }}>
+                    <h4 style={{ fontSize: '0.85rem', color: '#15803d', margin: '0 0 0.5rem 0' }}>Receita Líquida Real</h4>
+                    <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#166534' }}>
+                      R$ {liquidoReal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <div style={{ fontSize: '0.75rem', color: '#166534', marginTop: '0.25rem' }}>
+                      Entra no caixa da empresa
+                    </div>
                   </div>
                 </div>
 
