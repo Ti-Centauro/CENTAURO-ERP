@@ -152,8 +152,10 @@ const AccountsReceivable = () => {
 
     const gross = parseFloat(formData.gross_value) || 0;
 
+    let retentions = 0;
+
     if (formData.category === 'SERVICE') {
-      const retentions = (
+      retentions = (
         (parseFloat(formData.retention_iss) || 0) +
         (parseFloat(formData.retention_inss) || 0) +
         (parseFloat(formData.retention_irrf) || 0) +
@@ -161,15 +163,16 @@ const AccountsReceivable = () => {
         (parseFloat(formData.retention_cofins) || 0) +
         (parseFloat(formData.retention_csll) || 0)
       );
-      const net = gross - retentions;
-      // avoid infinite loop if value hasn't changed
-      if (Math.abs(net - (parseFloat(formData.net_value) || 0)) > 0.01) {
-        setFormData(prev => ({ ...prev, net_value: net.toFixed(2) }));
-      }
+    }
+    const net = gross - retentions;
+    // avoid infinite loop if value hasn't changed
+    if (Math.abs(net - (parseFloat(formData.net_value) || 0)) > 0.01) {
+      setFormData(prev => ({ ...prev, net_value: net.toFixed(2) }));
     }
     // For MATERIAL, usually Net = Gross + ST or just Gross (taxes are inside). 
     // Keeping simple: if Material, user edits Net manually or we assume Net = Gross for now unless specified.
   }, [
+    editingBilling,
     formData.gross_value,
     formData.category,
     formData.retention_iss,
@@ -487,7 +490,31 @@ const AccountsReceivable = () => {
 
               <div className="form-group">
                 <label>Categoria</label>
-                <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                <select value={formData.category} onChange={(e) => {
+                  const newCategory = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    category: newCategory,
+                    // Shared fields (used in both but with different context) - Reset on any change
+                    retention_pis: 0,
+                    retention_cofins: 0,
+
+                    // Reset fields based on new category to avoid ghost taxes
+                    retention_iss: newCategory === 'MATERIAL' ? 0 : prev.retention_iss,
+                    retention_inss: newCategory === 'MATERIAL' ? 0 : prev.retention_inss,
+                    retention_irrf: newCategory === 'MATERIAL' ? 0 : prev.retention_irrf,
+                    retention_csll: newCategory === 'MATERIAL' ? 0 : prev.retention_csll,
+                    // Zerar Impostos Não Retidos (Empresa paga) ao mudar para Material
+                    tax_iss: newCategory === 'MATERIAL' ? 0 : prev.tax_iss,
+                    tax_irpj: newCategory === 'MATERIAL' ? 0 : prev.tax_irpj,
+                    tax_pis: newCategory === 'MATERIAL' ? 0 : prev.tax_pis,
+                    tax_cofins: newCategory === 'MATERIAL' ? 0 : prev.tax_cofins,
+                    // Reset material specific taxes if switching to Service
+                    tax_icms: newCategory === 'SERVICE' ? 0 : prev.tax_icms,
+                    tax_ipi: newCategory === 'SERVICE' ? 0 : prev.tax_ipi,
+                    value_st: newCategory === 'SERVICE' ? 0 : prev.value_st
+                  }));
+                }}>
                   <option value="SERVICE">Serviço</option>
                   <option value="MATERIAL">Material</option>
                 </select>
@@ -500,10 +527,19 @@ const AccountsReceivable = () => {
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Valor Líquido (R$)</label>
-                  <input type="number" step="0.01" value={formData.net_value} onChange={e => setFormData({ ...formData, net_value: e.target.value })} required />
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.net_value}
+                    onChange={e => setFormData({ ...formData, net_value: e.target.value })}
+                    readOnly
+                    style={{ backgroundColor: '#e9ecef', cursor: 'not-allowed' }}
+                    required
+                  />
                 </div>
               </div>
 
+              {/* Impostos Retidos pelo Cliente (SERVICE) */}
               {formData.category === 'SERVICE' && (
                 <>
                   {/* Impostos Retidos pelo Cliente */}
