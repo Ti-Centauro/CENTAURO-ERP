@@ -547,72 +547,171 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
         <div className="project-modal-content">
           {/* TAB: INFO */}
           {activeTab === 'info' && (
-            <div className="tab-content">
-              <div className="tab-header">
-                <h3>Informações do Projeto</h3>
+            <div className="tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem' }}>
+
+              {/* Header / Actions */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#1e293b' }}>Visão Geral</h3>
+                  <span style={{ fontSize: '0.875rem', color: '#64748b' }}>#{project.project_number} • {project.tag || 'Sem Tag'}</span>
+                </div>
                 {canEdit && (
                   <button className="btn btn-primary btn-sm" onClick={() => onEdit(project)}>
-                    <Edit size={16} /> Editar
+                    <Edit size={16} /> Editar Dados
                   </button>
                 )}
               </div>
-              <div className="info-grid">
-                <div className="info-item">
-                  <label>Nº Projeto:</label>
-                  <span>{project.project_number || 'N/A'}</span>
-                </div>
-                <div className="info-item">
-                  <label>Tag:</label>
-                  <span>{project.tag || 'N/A'}</span>
-                </div>
-                <div className="info-item">
-                  <label>Cliente:</label>
-                  <span>{getClientName(project.client_id)}</span>
-                </div>
-                <div className="info-item">
-                  <label>Orçamento:</label>
-                  <span>R$ {projectDetails.budget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}</span>
+
+              {/* Data Cards Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+
+                {/* 1. Project & Team Data */}
+                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Users size={14} /> Dados & Equipe
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Cliente</label>
+                      <span style={{ fontWeight: '500', color: '#334155' }}>{getClientName(project.client_id)}</span>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Coordenador</label>
+                      <span style={{ fontWeight: '500', color: '#334155' }}>{project.coordinator || 'Não definido'}</span>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Tamanho da Equipe</label>
+                      <span style={{ fontWeight: '500', color: '#334155' }}>{project.team_size ? `${project.team_size} pessoas` : '-'}</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Cost Breakdown */}
-                <div style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#64748b' }}>Detalhamento de Custos</h4>
+                {/* 2. Timeline */}
+                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Calendar size={14} /> Prazos
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
+                    {/* Grid for Dates */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
+
+                      {/* Headers */}
+                      <div></div>
+                      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>Início</div>
+                      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>Fim</div>
+
+                      {/* Predicted Row */}
+                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b' }}>Previsto</div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', textAlign: 'center' }}>
+                        {formatDateUTC(project.estimated_start_date)}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', textAlign: 'center' }}>
+                        {formatDateUTC(project.estimated_end_date)}
+                      </div>
+
+                      {/* Real Row */}
+                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#0f172a' }}>Real</div>
+                      <div style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: '500', background: '#dcfce7', padding: '2px 6px', borderRadius: '4px', textAlign: 'center' }}>
+                        {formatDateUTC(project.start_date) || '-'}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: '500', background: '#dbeafe', padding: '2px 6px', borderRadius: '4px', textAlign: 'center' }}>
+                        {formatDateUTC(project.end_date) || '-'}
+                      </div>
+
+                    </div>
+
+                    {project.warranty_months && project.end_date && (
+                      <div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px dashed #cbd5e1' }}>
+                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Garantia ({project.warranty_months} m)</label>
+                        <span style={{
+                          fontSize: '0.85rem', fontWeight: '600',
+                          color: (() => {
+                            const endDate = new Date(project.end_date + 'T12:00:00');
+                            const warrantyEnd = new Date(endDate);
+                            warrantyEnd.setMonth(warrantyEnd.getMonth() + project.warranty_months);
+                            return warrantyEnd < new Date() ? '#ef4444' : '#10b981';
+                          })()
+                        }}>
+                          Até {(() => {
+                            const endDate = new Date(project.end_date + 'T12:00:00');
+                            const warrantyEnd = new Date(endDate);
+                            warrantyEnd.setMonth(warrantyEnd.getMonth() + project.warranty_months);
+                            return warrantyEnd.toLocaleDateString('pt-BR');
+                          })()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Contract Financials */}
+                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <DollarSign size={14} /> Contrato
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <label style={{ fontSize: '0.8rem', color: '#64748b' }}>Orçamento Total</label>
+                      <span style={{ fontWeight: '600', color: '#0f172a' }}>R$ {Number(projectDetails.budget || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <label style={{ fontSize: '0.8rem', color: '#64748b' }}>Já Faturado</label>
+                      <span style={{ fontWeight: '600', color: '#16a34a' }}>R$ {totalFaturadoPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem' }}>
+                      <label style={{ fontSize: '0.8rem', color: '#64748b' }}>Saldo a Faturar</label>
+                      <span style={{ fontWeight: '600', color: '#f59e0b' }}>R$ {((Number(projectDetails.budget) || 0) - totalFaturadoPago)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Cost Breakdown (Operational) */}
+              <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                <div style={{ background: '#f1f5f9', padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#475569', fontWeight: '600' }}>Detalhamento de Custos (Material & Mão de Obra)</h4>
+                </div>
+                <div style={{ padding: '1rem' }}>
                   {/* Header Row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#94a3b8' }}></div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#94a3b8', textAlign: 'right' }}>Material</div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#94a3b8', textAlign: 'right' }}>Mão de Obra</div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#94a3b8', textAlign: 'right' }}>Total</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr 1fr', gap: '1rem', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '2px solid #f1f5f9' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' }}>Tipo</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Material</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Mão de Obra</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Total</div>
                   </div>
 
                   {/* Previsto Row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: '500', color: '#64748b' }}>Previsto</div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: '500', color: '#475569', textAlign: 'right' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr 1fr', gap: '1rem', marginBottom: '0.75rem', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Previsto</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '500', color: '#475569', textAlign: 'right' }}>
                       R$ {(Number(projectDetails.material_value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: '500', color: '#475569', textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '500', color: '#475569', textAlign: 'right' }}>
                       R$ {(Number(projectDetails.service_value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: '600', color: '#334155', textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#334155', textAlign: 'right', background: '#f8fafc', padding: '4px', borderRadius: '4px' }}>
                       R$ {((Number(projectDetails.material_value) || 0) + (Number(projectDetails.service_value) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
 
                   {/* Realizado Row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem', alignItems: 'center' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: '500', color: '#64748b' }}>Realizado</div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: '500', color: '#475569', textAlign: 'right' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr 1fr', gap: '1rem', marginBottom: '0.75rem', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Realizado</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '500', color: '#475569', textAlign: 'right' }}>
                       R$ {(purchases.reduce((acc, p) => acc + (p.items?.reduce((iAcc, item) => iAcc + (item.total_price || 0), 0) || 0) + (p.shipping_cost || 0), 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: '500', color: '#475569', textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '500', color: '#475569', textAlign: 'right' }}>
                       R$ {(Number(projectDetails.total_labor_cost) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: '600', color: '#334155', textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#334155', textAlign: 'right', background: '#f8fafc', padding: '4px', borderRadius: '4px' }}>
                       R$ {((purchases.reduce((acc, p) => acc + (p.items?.reduce((iAcc, item) => iAcc + (item.total_price || 0), 0) || 0) + (p.shipping_cost || 0), 0)) + (Number(projectDetails.total_labor_cost) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
+
+                  {/* Separator */}
+                  <div style={{ borderTop: '1px dashed #cbd5e1', marginBottom: '0.75rem' }}></div>
 
                   {/* Saldo Row */}
                   {(() => {
@@ -625,82 +724,35 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                     const saldoTotal = saldoMaterial + saldoMO;
                     const getColor = (val) => val >= 0 ? '#16a34a' : '#dc2626';
                     return (
-                      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr', gap: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0', alignItems: 'center' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155' }}>Economia</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr 1fr', gap: '1rem', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>Economia</div>
                         <div style={{ fontSize: '0.95rem', fontWeight: '600', color: getColor(saldoMaterial), textAlign: 'right' }}>
                           R$ {saldoMaterial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </div>
                         <div style={{ fontSize: '0.95rem', fontWeight: '600', color: getColor(saldoMO), textAlign: 'right' }}>
                           R$ {saldoMO.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '700', color: getColor(saldoTotal), textAlign: 'right' }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '700', color: getColor(saldoTotal), textAlign: 'right', background: val => val >= 0 ? '#f0fdf4' : '#fef2f2', padding: '4px', borderRadius: '4px' }}>
                           R$ {saldoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </div>
                       </div>
                     );
                   })()}
                 </div>
-
-                <div className="info-item">
-                  <label>Coordenador:</label>
-                  <span>{project.coordinator || 'N/A'}</span>
-                </div>
-                <div className="info-item">
-                  <label>Tamanho Equipe:</label>
-                  <span>{project.team_size || 'N/A'}</span>
-                </div>
-                <div className="info-item">
-                  <label>Faturado:</label>
-                  <span>R$ {totalFaturadoPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="info-item">
-                  <label>Início Estimado:</label>
-                  <span>{formatDateUTC(project.estimated_start_date)}</span>
-                </div>
-                <div className="info-item">
-                  <label>Fim Estimado:</label>
-                  <span>{formatDateUTC(project.estimated_end_date)}</span>
-                </div>
-                <div className="info-item">
-                  <label>A Faturar:</label>
-                  <span>R$ {((projectDetails.budget || 0) - totalFaturadoPago)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="info-item">
-                  <label>Início Real:</label>
-                  <span>{formatDateUTC(project.start_date)}</span>
-                </div>
-                <div className="info-item">
-                  <label>Fim Real:</label>
-                  <span>{formatDateUTC(project.end_date)}</span>
-                </div>
-                {project.warranty_months && project.end_date && (
-                  <div className="info-item">
-                    <label>Garantia até:</label>
-                    <span style={{
-                      color: (() => {
-                        const endDate = new Date(project.end_date + 'T12:00:00');
-                        const warrantyEnd = new Date(endDate);
-                        warrantyEnd.setMonth(warrantyEnd.getMonth() + project.warranty_months);
-                        return warrantyEnd < new Date() ? '#ef4444' : '#10b981';
-                      })()
-                    }}>
-                      {(() => {
-                        const endDate = new Date(project.end_date + 'T12:00:00');
-                        const warrantyEnd = new Date(endDate);
-                        warrantyEnd.setMonth(warrantyEnd.getMonth() + project.warranty_months);
-                        return warrantyEnd.toLocaleDateString('pt-BR');
-                      })()} ({project.warranty_months} meses)
-                    </span>
-                  </div>
-                )}
-                <div className="info-item" style={{ gridColumn: '1 / -1' }}>
-                  <label>Escopo:</label>
-                  <span className="scope-text">{project.scope || 'N/A'}</span>
-                </div>
               </div>
+
+              {/* Scope Section */}
+              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#475569', fontWeight: '700', textTransform: 'uppercase' }}>
+                  <FileText size={14} style={{ display: 'inline', marginRight: '6px' }} /> Escopo do Projeto
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
+                  {project.scope || 'Nenhum escopo definido para este projeto.'}
+                </p>
+              </div>
+
             </div>
-          )
-          }
+          )}
 
           {/* TAB: FEEDBACK (DIARY) */}
           {activeTab === 'feedback' && (
