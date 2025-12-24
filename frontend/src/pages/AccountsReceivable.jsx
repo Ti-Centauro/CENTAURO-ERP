@@ -363,8 +363,30 @@ const AccountsReceivable = () => {
                       R$ {parseFloat(billing.gross_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
                     <div style={{ fontSize: '0.75em', color: '#64748b' }}>
-                      Liq: R$ {parseFloat(billing.net_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      Caixa: R$ {parseFloat(billing.net_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
+                    {(() => {
+                      const net = parseFloat(billing.net_value || billing.value);
+                      const taxToPay = (
+                        (parseFloat(billing.tax_iss) || 0) +
+                        (parseFloat(billing.tax_pis) || 0) +
+                        (parseFloat(billing.tax_cofins) || 0) +
+                        (parseFloat(billing.tax_irpj) || 0) +
+                        (parseFloat(billing.tax_icms) || 0) +
+                        (parseFloat(billing.tax_ipi) || 0) +
+                        (parseFloat(billing.value_st) || 0)
+                      );
+                      const real = net - taxToPay;
+                      // Only show if there are taxes to pay, otherwise it's redundant
+                      if (taxToPay > 0) {
+                        return (
+                          <div style={{ fontSize: '0.75em', color: '#166534', fontWeight: '600' }}>
+                            Real: R$ {real.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </td>
                   <td className="text-right">{billing.invoice_number || '-'}</td>
                 </tr>
