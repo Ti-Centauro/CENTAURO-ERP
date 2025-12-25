@@ -67,7 +67,6 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
   const [collabFormData, setCollabFormData] = useState({
     collaborator_id: '',
     role: '',
-    role: '',
     start_date: '',
     end_date: '',
     include_weekends: false
@@ -663,12 +662,12 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                       <span style={{ fontWeight: '600', color: '#0f172a' }}>R$ {Number(projectDetails.budget || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <label style={{ fontSize: '0.8rem', color: '#64748b' }}>Já Faturado</label>
-                      <span style={{ fontWeight: '600', color: '#16a34a' }}>R$ {totalFaturadoPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem' }}>
                       <label style={{ fontSize: '0.8rem', color: '#64748b' }}>Saldo a Faturar</label>
                       <span style={{ fontWeight: '600', color: '#f59e0b' }}>R$ {((Number(projectDetails.budget) || 0) - totalFaturadoPago)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem' }}>
+                      <label style={{ fontSize: '0.8rem', color: '#64748b' }}>Já Faturado</label>
+                      <span style={{ fontWeight: '600', color: '#16a34a' }}>R$ {totalFaturadoPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>
@@ -1237,7 +1236,7 @@ const ProjectModal = ({ project, onClose, onEdit, onDelete, canEdit = true }) =>
                   <div className="card" style={{ padding: '1rem' }}>
                     <h4 style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 0.5rem 0' }}>Orçamento Total</h4>
                     <span style={{ fontSize: '1.25rem', fontWeight: '600', color: '#0f172a' }}>
-                      R$ {projectDetails.budget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                      R$ {Number(projectDetails.budget || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
                       A Faturar: R$ {((projectDetails.budget || 0) - totalFaturadoPago)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

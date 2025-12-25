@@ -26,9 +26,6 @@ const Contracts = () => {
     contract_type: 'LPU',
     monthly_value: '',
     due_day: '',
-    contract_type: 'LPU',
-    monthly_value: '',
-    due_day: '',
     readjustment_index: '',
     company_id: '',
   });
@@ -145,7 +142,6 @@ const Contracts = () => {
         value: formData.contract_type === 'LPU' && formData.value ? parseFloat(formData.value) : null,
         monthly_value: formData.contract_type === 'RECORRENTE' && formData.monthly_value ? parseFloat(formData.monthly_value) : null,
         due_day: formData.contract_type === 'RECORRENTE' && formData.due_day ? parseInt(formData.due_day) : null,
-        due_day: formData.contract_type === 'RECORRENTE' && formData.due_day ? parseInt(formData.due_day) : null,
         readjustment_index: formData.contract_type === 'RECORRENTE' ? formData.readjustment_index : null,
         company_id: formData.company_id ? parseInt(formData.company_id) : null,
       };
@@ -176,7 +172,6 @@ const Contracts = () => {
       contract_type: 'LPU',
       monthly_value: '',
       due_day: '',
-      due_day: '',
       readjustment_index: '',
       company_id: '',
     });
@@ -197,7 +192,6 @@ const Contracts = () => {
       value: contract.value || '',
       contract_type: contract.contract_type || 'LPU',
       monthly_value: contract.monthly_value || '',
-      due_day: contract.due_day || '',
       due_day: contract.due_day || '',
       readjustment_index: contract.readjustment_index || '',
       company_id: contract.company_id || '',

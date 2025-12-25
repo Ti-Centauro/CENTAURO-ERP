@@ -626,8 +626,9 @@ async def delete_project_feedback(feedback_id: int, db: AsyncSession = Depends(g
     return {"message": "Feedback deleted successfully"}
 
 # Import Taxes Endpoint
-@router.post("/billings/import-taxes")
-async def import_taxes(
+# Import Taxes Endpoints
+@router.post("/billings/import-taxes/preview", response_model=schemas.TaxImportPreviewResponse)
+async def preview_taxes_import(
     file: UploadFile = File(...), 
     db: AsyncSession = Depends(get_db)
 ):
@@ -680,9 +681,10 @@ async def import_taxes(
         
         df.columns = pd.Index([normalize_col(col) for col in df.columns])
         
-        updates_count = 0
-        errors = []
+        preview_items = []
         logs = []
+        found_count = 0
+        total_value = 0.0
         
         if found_header:
             logs.append(f"Header identificado na linha {header_row_index + 1}.")
@@ -723,7 +725,7 @@ async def import_taxes(
                 continue
             
             # Find Billing in DB
-            result = await db.execute(select(models.ProjectBilling).where(models.ProjectBilling.invoice_number == invoice_number))
+            result = await db.execute(select(models.ProjectBilling).options(selectinload(models.ProjectBilling.project).selectinload(models.Project.client)).where(models.ProjectBilling.invoice_number == invoice_number))
             billing = result.scalar_one_or_none()
             
             if not billing:
@@ -735,6 +737,8 @@ async def import_taxes(
             # Determine Type (Service vs Material)
             is_service = False
             is_material = False
+            
+            billing_category = billing.category or "SERVICE"
             
             # Heuristics for Service (Look for ISS)
             service_keywords = ['ISS RETIDO', 'VALOR ISS', 'RETENCAO ISS', 'RETENCOES', 'VLR ISS', 'VI ISS', 'VL ISS', 'VALOR DO ISS', 'ISS VALOR RETIDO', 'ISS VALOR', 'ISS ALIQUOTA']
@@ -750,14 +754,14 @@ async def import_taxes(
                 
             # Default to existing category if ambiguous or if neither was detected
             if not is_service and not is_material:
-                logs.append(f"  -> Tipo não detectado automaticamente, usando categoria existente: {billing.category}")
+                logs.append(f"  -> Tipo não detectado automaticamente, usando categoria existente: {billing_category}")
                 if billing.category == "MATERIAL":
                     is_material = True
                 elif billing.category == "SERVICE":
                     is_service = True
             elif is_service and is_material:
                 # Both detected - use existing category
-                logs.append(f"  -> Ambos tipos detectados, usando categoria existente: {billing.category}")
+                logs.append(f"  -> Ambos tipos detectados, usando categoria existente: {billing_category}")
                 if billing.category == "MATERIAL":
                     is_service = False
                 else:
@@ -774,117 +778,139 @@ async def import_taxes(
                                 pass
                 return 0.0
 
-            # Update Logic
+            # Prepare Update Dict
+            update_data = {}
+            
             if is_service:
-                billing.category = "SERVICE"
+                update_data["category"] = "SERVICE"
                 
                 # ==== IMPOSTOS RETIDOS (Cliente desconta e paga ao governo) ====
-                # Fórmula: RETIDOS = SOMA(IRRF, INSS, CSLL, COFINS, PIS retidos) + ISS se retido
-                
                 # PIS Retido (coluna R)
-                billing.retention_pis = get_val(['VALOR PIS RETIDO', 'PIS RETIDO', 'VI PIS RETIDO', 'VL PIS RETIDO'])
+                update_data["retention_pis"] = get_val(['VALOR PIS RETIDO', 'PIS RETIDO', 'VI PIS RETIDO', 'VL PIS RETIDO'])
                 # COFINS Retido (coluna U)
-                billing.retention_cofins = get_val(['VALOR COFINS RETIDO', 'COFINS RETIDO', 'VI COFINS RETIDO', 'VL COFINS RETIDO'])
+                update_data["retention_cofins"] = get_val(['VALOR COFINS RETIDO', 'COFINS RETIDO', 'VI COFINS RETIDO', 'VL COFINS RETIDO'])
                 # CSLL Retido (coluna X)
-                billing.retention_csll = get_val(['VALOR CSSL RETIDO', 'VALOR CSLL RETIDO', 'CSLL RETIDO', 'VI CSLL RETIDO', 'VL CSLL RETIDO'])
+                update_data["retention_csll"] = get_val(['VALOR CSSL RETIDO', 'VALOR CSLL RETIDO', 'CSLL RETIDO', 'VI CSLL RETIDO', 'VL CSLL RETIDO'])
                 # INSS Retido (coluna Y)
-                billing.retention_inss = get_val(['VALOR INSS RETIDO', 'INSS RETIDO', 'VI INSS RETIDO', 'VL INSS RETIDO'])
+                update_data["retention_inss"] = get_val(['VALOR INSS RETIDO', 'INSS RETIDO', 'VI INSS RETIDO', 'VL INSS RETIDO'])
                 # IRRF Retido (coluna AB)
-                billing.retention_irrf = get_val(['VALOR IRRF RETIDO', 'IRRF RETIDO', 'VI IRRF RETIDO', 'VL IRRF RETIDO'])
+                update_data["retention_irrf"] = get_val(['VALOR IRRF RETIDO', 'IRRF RETIDO', 'VI IRRF RETIDO', 'VL IRRF RETIDO'])
                 
-                # ISS - lógica especial: se ISS VALOR RETIDO > 0, usa ISS VALOR como retenção
+                # ISS - lógica especial
                 iss_valor_retido = get_val(['ISS VALOR RETIDO', 'ISS RETIDO'])  # Coluna O - flag
                 iss_valor = get_val(['ISS VALOR', 'VALOR ISS'])  # Coluna N - valor
                 if iss_valor_retido > 0:
-                    billing.retention_iss = iss_valor  # ISS foi retido pelo cliente
-                    billing.tax_iss = 0
+                    update_data["retention_iss"] = iss_valor
+                    update_data["tax_iss"] = 0.0
                 else:
-                    billing.retention_iss = 0
-                    billing.tax_iss = iss_valor  # ISS a pagar pela empresa
+                    update_data["retention_iss"] = 0.0
+                    update_data["tax_iss"] = iss_valor
                 
                 # ==== IMPOSTOS NÃO RETIDOS (Empresa paga ao governo) ====
-                # Fórmula: NÃO RETIDOS = PIS (AG) + COFINS (AJ) + ISS se não retido + IRPJ
-                # Colunas do Excel: N="ISS Valor", AG="Valor PIS", AJ="Valor COFINS"
-                # Após normalização: "ISS VALOR", "VALOR PIS", "VALOR COFINS"
-                
-                # Tentar ler S/RETENÇÃO direto do Excel (coluna calculada)
-                excel_sem_retencao = get_val(['S RETENCAO', 'S/RETENCAO', 'SEM RETENCAO', 'NAO RETIDOS', 'NAO RETIDO'])
-                
-                # PIS a pagar (não retido) - coluna AG "Valor PIS"
-                billing.tax_pis = get_val(['VALOR PIS'])
-                    
-                # COFINS a pagar (não retido) - coluna AJ "Valor COFINS"  
-                billing.tax_cofins = get_val(['VALOR COFINS'])
-                    
+                # PIS a pagar (não retido)
+                update_data["tax_pis"] = get_val(['VALOR PIS'])
+                # COFINS a pagar (não retido)
+                update_data["tax_cofins"] = get_val(['VALOR COFINS'])
                 # IRPJ a pagar (não retido)
-                billing.tax_irpj = get_val(['VALOR IRPJ', 'VLR IRPJ', 'IRPJ', 'IRPJ A PAGAR'])
-                
-                # ISS não retido - coluna N "ISS Valor" -> "ISS VALOR"
-                # Já foi tratado acima na lógica especial do ISS (billing.tax_iss)
-                
-                # Log para debug
-                logs.append(f"  -> S/RETENÇÃO do Excel: {excel_sem_retencao}")
-                logs.append(f"  -> Não Retidos: ISS={billing.tax_iss}, PIS={billing.tax_pis}, COFINS={billing.tax_cofins}, IRPJ={billing.tax_irpj}")
+                update_data["tax_irpj"] = get_val(['VALOR IRPJ', 'VLR IRPJ', 'IRPJ', 'IRPJ A PAGAR'])
                 
                 # ==== VALOR BRUTO / TOTAL ====
                 excel_total = get_val(['TOTAL', 'VALOR TOTAL', 'VLR TOTAL', 'VALOR BRUTO', 'VALOR SERVICO', 'VLR SERVICO', 'VALOR DA NOTA', 'VALOR CONTABIL', 'VL CONTABIL'])
-                if excel_total > 0 and (billing.gross_value == 0 or billing.gross_value is None):
-                     billing.gross_value = excel_total
                 
-                # ==== VALOR LÍQUIDO = TOTAL - RETIDOS ====
-                # Tentar ler diretamente da planilha primeiro
-                excel_liquido = get_val(['VALOR LIQUIDO A RECEBER', 'VLR LIQUIDO', 'LIQUIDO A RECEBER'])
-                excel_retidos = get_val(['RETIDOS', 'TOTAL RETIDOS'])
+                gross_value = float(billing.gross_value or 0)
+                if excel_total > 0 and (gross_value == 0 or billing.gross_value is None):
+                     gross_value = excel_total
+                update_data["gross_value"] = gross_value
                 
-                if excel_liquido > 0:
-                    billing.net_value = excel_liquido
-                    logs.append(f"  -> LIQUIDO do Excel: {excel_liquido}")
-                elif excel_retidos > 0:
-                    billing.net_value = float(billing.gross_value or 0) - excel_retidos
-                    logs.append(f"  -> LIQUIDO calculado: {billing.gross_value} - {excel_retidos} = {billing.net_value}")
-                else:
-                    # Fallback: somar retenções individuais
-                    total_retentions = (
-                        billing.retention_iss + billing.retention_inss + billing.retention_irrf + 
-                        billing.retention_csll + billing.retention_pis + billing.retention_cofins
-                    )
-                    billing.net_value = float(billing.gross_value or 0) - total_retentions
-                    logs.append(f"  -> LIQUIDO (soma): {billing.gross_value} - {total_retentions} = {billing.net_value}")
+                # ==== VALOR LÍQUIDO (CALCULADO) ====
+                total_retentions = (
+                    (update_data.get("retention_iss", 0) or 0) + 
+                    (update_data.get("retention_inss", 0) or 0) + 
+                    (update_data.get("retention_irrf", 0) or 0) + 
+                    (update_data.get("retention_csll", 0) or 0) + 
+                    (update_data.get("retention_pis", 0) or 0) + 
+                    (update_data.get("retention_cofins", 0) or 0)
+                )
                 
-                logs.append(f"  -> Retidos: ISS={billing.retention_iss}, PIS={billing.retention_pis}, COFINS={billing.retention_cofins}, CSLL={billing.retention_csll}, INSS={billing.retention_inss}, IRRF={billing.retention_irrf}")
-                logs.append(f"  -> Não Retidos: ISS={billing.tax_iss}, PIS={billing.tax_pis}, COFINS={billing.tax_cofins}")
+                net_value = gross_value - total_retentions
+                update_data["net_value"] = net_value
+                update_data["taxes_verified"] = True
                 
+                logs.append(f"  -> LIQUIDO (soma): {gross_value} - {total_retentions} = {net_value}")
+
             elif is_material:
-                billing.category = "MATERIAL"
+                update_data["category"] = "MATERIAL"
                 
-                billing.tax_icms = get_val(['ICMS', 'VALOR ICMS', 'VLR ICMS', 'VI ICMS', 'VL ICMS', 'VL ICMS TOTAL'])
-                billing.tax_ipi = get_val(['IPI', 'VALOR IPI', 'VLR IPI', 'VI IPI', 'VL IPI'])
-                billing.value_st = get_val(['ST', 'VALOR ST', 'SUBST TRIBUTARIA', 'VI ST', 'VL ST', 'VALOR ST'])
+                update_data["tax_icms"] = get_val(['ICMS', 'VALOR ICMS', 'VLR ICMS', 'VI ICMS', 'VL ICMS', 'VL ICMS TOTAL'])
+                update_data["tax_ipi"] = get_val(['IPI', 'VALOR IPI', 'VLR IPI', 'VI IPI', 'VL IPI'])
+                update_data["value_st"] = get_val(['ST', 'VALOR ST', 'SUBST TRIBUTARIA', 'VI ST', 'VL ST', 'VALOR ST'])
                 
-                billing.retention_pis = get_val(['PIS', 'VI PIS', 'VL PIS', 'TOTAL PIS', 'TOTAL PIS TOTAL', 'VALOR PIS'])
-                billing.retention_cofins = get_val(['COFINS', 'VI COFINS', 'VL COFINS', 'TOTAL COFINS', 'VALOR COFINS'])
+                update_data["retention_pis"] = get_val(['PIS', 'VI PIS', 'VL PIS', 'TOTAL PIS', 'TOTAL PIS TOTAL', 'VALOR PIS'])
+                update_data["retention_cofins"] = get_val(['COFINS', 'VI COFINS', 'VL COFINS', 'TOTAL COFINS', 'VALOR COFINS'])
                 
                 excel_gross = get_val(['VALOR BRUTO', 'VALOR PRODUTOS', 'VALOR DA NOTA', 'VALOR CONTABIL', 'VL CONTABIL'])
-                if excel_gross > 0 and (billing.gross_value == 0 or billing.gross_value is None):
-                     billing.gross_value = excel_gross
-
+                
+                gross_value = float(billing.gross_value or 0)
+                if excel_gross > 0 and (gross_value == 0 or billing.gross_value is None):
+                     gross_value = excel_gross
+                update_data["gross_value"] = gross_value
+                
                 # Para Material: Valor Líquido = Bruto - (ICMS + PIS + COFINS)
-                total_taxes = billing.tax_icms + billing.retention_pis + billing.retention_cofins
-                billing.net_value = float(billing.gross_value or 0) - total_taxes 
+                total_taxes = update_data["tax_icms"] + update_data["retention_pis"] + update_data["retention_cofins"]
+                net_value = gross_value - total_taxes 
+                update_data["net_value"] = net_value
+                update_data["taxes_verified"] = True
             
-            logs.append(f"  -> ICMS={billing.tax_icms}, ISS={billing.retention_iss}, PIS={billing.retention_pis}")
-            billing.taxes_verified = True
-            updates_count += 1
+            # Build Preview Item
+            item = schemas.TaxImportItem(
+                billing_id = billing.id,
+                invoice_number = invoice_number,
+                project_tag = billing.project.tag if billing.project else "N/A",
+                client_name = billing.project.client.name if billing.project and billing.project.client else "N/A",
+                category = update_data.get("category", "SERVICE"),
+                gross_value = update_data.get("gross_value", 0.0),
+                net_value = update_data.get("net_value", 0.0),
+                diff_gross = update_data.get("gross_value", 0.0) - float(billing.gross_value or 0),
+                diff_net = update_data.get("net_value", 0.0) - float(billing.net_value or 0),
+                updates = update_data
+            )
             
-        await db.commit()
+            preview_items.append(item)
+            found_count += 1
+            total_value += item.gross_value
+            
         
         # Limit logs for response
         if len(logs) > 30:
             logs = logs[:15] + ["... (logs truncados) ..."] + logs[-5:]
             
-        return {"message": f"Processamento concluido. {updates_count} faturamentos atualizados.", "errors": errors, "debug_logs": logs}
+        return schemas.TaxImportPreviewResponse(
+            items=preview_items,
+            found_count=found_count,
+            total_value=total_value,
+            logs=logs
+        )
 
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/billings/import-taxes/confirm")
+async def confirm_taxes_import(
+    request: schemas.TaxImportConfirmRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    updates_count = 0
+    
+    for item in request.items:
+        result = await db.execute(select(models.ProjectBilling).where(models.ProjectBilling.id == item.billing_id))
+        billing = result.scalar_one_or_none()
+        
+        if billing:
+            for key, value in item.updates.items():
+                setattr(billing, key, value)
+            updates_count += 1
+    
+    await db.commit()
+    return {"message": f"Importação confirmada. {updates_count} faturamentos atualizados."}

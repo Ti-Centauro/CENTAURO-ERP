@@ -33,9 +33,10 @@ export const createProjectBilling = (projectId, data) => api.post(`/commercial/p
 export const deleteProjectBilling = (id) => api.delete(`/commercial/projects/billings/${id}`);
 export const getAllBillings = () => api.get('/commercial/billings');
 export const updateProjectBilling = (id, data) => api.put(`/commercial/billings/${id}`, data);
-export const importTaxes = (formData) => api.post('/commercial/billings/import-taxes', formData, {
+export const previewTaxesImport = (formData) => api.post('/commercial/billings/import-taxes/preview', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
+export const confirmTaxesImport = (data) => api.post('/commercial/billings/import-taxes/confirm', data);
 
 // Assets
 export const getInsurances = () => api.get('/assets/insurances');

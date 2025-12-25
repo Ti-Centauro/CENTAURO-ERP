@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import date as DateType, datetime
 from decimal import Decimal
 
@@ -115,6 +115,28 @@ class ProjectBillingResponse(ProjectBillingBase):
     
     class Config:
         from_attributes = True
+
+# Import Tax Schemas
+class TaxImportItem(BaseModel):
+    billing_id: int
+    invoice_number: str
+    project_tag: str
+    client_name: str
+    category: str
+    gross_value: float
+    net_value: float
+    diff_gross: float # Difference between new gross and old value
+    diff_net: float # Difference between new net and old value (if net existed seems unlikely in legacy, but maybe useful)
+    updates: dict # Dictionary containing all fields to be updated
+
+class TaxImportPreviewResponse(BaseModel):
+    items: List[TaxImportItem]
+    found_count: int
+    total_value: float
+    logs: List[str]
+
+class TaxImportConfirmRequest(BaseModel):
+    items: List[TaxImportItem]
 
 # Project Schemas
 class ProjectBase(BaseModel):

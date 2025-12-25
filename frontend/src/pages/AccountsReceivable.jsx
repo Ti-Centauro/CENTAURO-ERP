@@ -3,7 +3,7 @@ import {
   DollarSign, Calendar, FileText, Tag, Hash, MoreVertical,
   Filter, Download, Upload, Edit, CheckCircle, AlertCircle, XCircle, RefreshCw, Search
 } from 'lucide-react';
-import { getAllBillings, updateProjectBilling, getProjects, getClients, importTaxes } from '../services/api';
+import { getAllBillings, updateProjectBilling, getProjects, getClients, previewTaxesImport, confirmTaxesImport } from '../services/api';
 import './AccountsReceivable.css';
 
 const AccountsReceivable = () => {
@@ -16,6 +16,10 @@ const AccountsReceivable = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [clientFilter, setClientFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Import Preview State
+  const [previewData, setPreviewData] = useState(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   // Edit Modal State
   const [editingBilling, setEditingBilling] = useState(null);
@@ -230,9 +234,9 @@ const AccountsReceivable = () => {
 
     try {
       setLoading(true);
-      await importTaxes(formData);
-      alert('Importação realizada com sucesso!');
-      loadData();
+      const response = await previewTaxesImport(formData);
+      setPreviewData(response.data);
+      setShowPreviewModal(true);
     } catch (error) {
       console.error("Error importing:", error);
       alert('Erro na importação: ' + (error.response?.data?.detail || error.message));
@@ -240,6 +244,27 @@ const AccountsReceivable = () => {
       setLoading(false);
       // Reset input
       e.target.value = '';
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!previewData) return;
+
+    try {
+      setLoading(true);
+      const payload = {
+        items: previewData.items
+      };
+      await confirmTaxesImport(payload);
+      alert('Importação confirmada com sucesso!');
+      setShowPreviewModal(false);
+      setPreviewData(null);
+      loadData();
+    } catch (error) {
+      console.error("Error confirming import:", error);
+      alert('Erro ao confirmar importação: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -683,6 +708,103 @@ const AccountsReceivable = () => {
                 <button type="submit" className="btn btn-primary">Salvar</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Import Preview Modal */}
+      {showPreviewModal && previewData && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '900px', width: '90%' }}>
+            <div className="modal-header">
+              <h3>Prévia da Importação</h3>
+              <button className="close-btn" onClick={() => { setShowPreviewModal(false); setPreviewData(null); }}><XCircle size={24} /></button>
+            </div>
+
+            <div className="modal-body">
+              <div className="summary-banner" style={{ display: 'flex', gap: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', marginBottom: '15px' }}>
+                <div>
+                  <div style={{ fontSize: '0.9em', color: '#64748b' }}>Notas Encontradas</div>
+                  <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}>{previewData.found_count}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.9em', color: '#64748b' }}>Valor Total (Bruto)</div>
+                  <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#16a34a' }}>
+                    R$ {previewData.total_value?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </div>
+
+              {previewData.items.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <AlertCircle size={48} style={{ margin: '0 auto 10px', display: 'block', opacity: 0.5 }} />
+                  Nenhuma nota válida encontrada para importação. Verifique se o arquivo corresponde ao modelo esperado.
+                </div>
+              ) : (
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                  <table className="billings-table">
+                    <thead>
+                      <tr>
+                        <th>Nota</th>
+                        <th>Cliente</th>
+                        <th>Projeto</th>
+                        <th>Categoria (Detectada)</th>
+                        <th>Bruto (Excel)</th>
+                        <th>Líquido (Calc)</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td>{item.invoice_number}</td>
+                          <td>{item.client_name}</td>
+                          <td><Tag size={12} /> {item.project_tag}</td>
+                          <td>
+                            <span className={item.category === 'SERVICE' ? 'badge badge-blue' : 'badge badge-gray'}>
+                              {item.category === 'SERVICE' ? 'SERVIÇO' : 'MATERIAL'}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 500 }}>R$ {item.gross_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td style={{ color: '#16a34a' }}>R$ {item.net_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td>
+                            {item.updates && item.updates.taxes_verified ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '0.85em' }}>
+                                <CheckCircle size={14} /> Ok
+                              </div>
+                            ) : (
+                              <span style={{ color: '#f59e0b' }}>Pendente</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div style={{ marginTop: '15px' }}>
+                <details>
+                  <summary style={{ cursor: 'pointer', color: '#64748b', fontSize: '0.9em' }}>Ver Logs de Processamento</summary>
+                  <pre style={{ background: '#1e293b', color: '#f1f5f9', padding: '10px', borderRadius: '4px', fontSize: '0.8em', maxHeight: '150px', overflow: 'auto', marginTop: '5px' }}>
+                    {previewData.logs.join('\n')}
+                  </pre>
+                </details>
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowPreviewModal(false); setPreviewData(null); }}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleConfirmImport}
+                  disabled={previewData.items.length === 0 || loading}
+                >
+                  {loading ? 'Confirmando...' : 'Confirmar Importação'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
