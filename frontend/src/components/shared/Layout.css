@@ -12,6 +12,7 @@
   height: 100vh;
   overflow-y: auto;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  z-index: 50;
 }
 
 .sidebar-header {
