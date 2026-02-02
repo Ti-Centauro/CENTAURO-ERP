@@ -1,4 +1,9 @@
+"""
+Models Package
+Imports all models to ensure SQLAlchemy can resolve relationships
+"""
 from .commercial import Client, Contract, Project, ProjectFeedback
+from .finance import ProjectBilling, BillingStatus  # NEW - Finance models
 from .client_contacts import ClientContact
 from .assets import Fleet, Tool
 from .collaborator_teams import collaborator_teams  # Must be before operational
@@ -11,4 +16,3 @@ from .project_resources import ProjectCollaborator, ProjectTool, ProjectVehicle
 from .purchases import PurchaseRequest
 from .proposals import CommercialProposal, ProposalTask
 from .users import User
-

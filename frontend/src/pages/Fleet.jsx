@@ -4,9 +4,9 @@ import api, {
   getFleet, createFleet, deleteFleet, updateFleet,
   getInsurances, createInsurance, updateInsurance, deleteInsurance
 } from '../services/api';
-import MaintenanceTab from '../components/MaintenanceTab';
+import MaintenanceTab from '../components/assets/MaintenanceTab';
 import { useAuth } from '../context/AuthContext';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import './Fleet.css';
 
 const formatCNPJ = (value) => {

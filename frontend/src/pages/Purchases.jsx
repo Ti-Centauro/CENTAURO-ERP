@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Filter, Package } from 'lucide-react';
 import { getPurchases, createPurchase, getProjects } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import RequestDetailsModal from '../components/RequestDetailsModal';
+import RequestDetailsModal from '../components/purchases/RequestDetailsModal';
 import './Purchases.css';
 
 const Purchases = () => {

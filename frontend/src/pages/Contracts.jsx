@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, FileText, Upload, Search } from 'lucide-react';
 import { getContracts, createContract, updateContract, deleteContract, getClients, getProjects, getAllBillings } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import './Contracts.css';
 
 const Contracts = () => {

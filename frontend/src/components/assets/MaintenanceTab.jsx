@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Wrench, Calendar, DollarSign, Activity, FileText, Trash2, Edit, CheckSquare, Square, X } from 'lucide-react';
-import { getVehicleMaintenances, createMaintenance, updateMaintenance, deleteMaintenance } from '../services/api';
+import { getVehicleMaintenances, createMaintenance, updateMaintenance, deleteMaintenance } from '../../services/api';
 
 const CATEGORIES_OPTIONS = ["Motor", "Freio", "Suspensão", "Pneus", "Elétrica", "Funilaria", "Óleo/Filtros", "Outros"];
 

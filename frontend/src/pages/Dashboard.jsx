@@ -5,7 +5,7 @@ import {
   DollarSign, Briefcase, FileText, ShoppingCart,
   Users, AlertTriangle, TrendingUp, Wallet, CheckCircle, Clock
 } from 'lucide-react';
-import PurchaseManagerWidget from '../components/PurchaseManagerWidget';
+import PurchaseManagerWidget from '../components/purchases/PurchaseManagerWidget';
 import './Dashboard.css';
 
 const StatCard = ({ title, value, icon: Icon, color, subtext }) => (

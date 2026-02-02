@@ -3,10 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, case, and_
 from typing import Dict, Any, List
 from datetime import date, timedelta
+from decimal import Decimal
 
 from app.database import get_db
 from app.auth import get_current_active_user, check_permission
-from app.models.commercial import Contract, ProjectBilling, BillingStatus, Client, Project, ContractType
+from app.models.commercial import Contract, Client, Project, ContractType
+from app.models.finance import ProjectBilling, BillingStatus
 from app.models.operational import Allocation, Collaborator, Certification, CertificationType
 from app.models.assets import Fleet, Tool
 from app.models.tickets import Ticket, TicketStatus
@@ -61,7 +63,7 @@ async def get_commercial_dashboard(
         total_consumed = (s_val or 0) + (m_val or 0)
         
         contract_val = contract.value or 0
-        if contract_val > 0 and total_consumed >= (0.9 * contract_val):
+        if contract_val > 0 and total_consumed >= (Decimal("0.9") * contract_val):
             budget_alerts.append({
                 "contract_number": contract.contract_number,
                 "consumed": total_consumed,
@@ -84,6 +86,7 @@ async def get_commercial_dashboard(
         "budget_alerts": budget_alerts, # List of high consumption LPUs
         "total_clients": total_clients
     }
+
 
 @router.get("/dashboard/finance")
 async def get_finance_dashboard(

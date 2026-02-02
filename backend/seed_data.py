@@ -16,7 +16,8 @@ from app.models.roles import Role
 from app.models.teams import Team
 from app.models.collaborator_teams import collaborator_teams
 from app.models.operational import Collaborator, Certification, CertificationType, Allocation, ResourceType, AllocationType, CollaboratorEducation, EducationType, CollaboratorReview
-from app.models.commercial import Client, Contract, Project, ProjectBilling, ProjectFeedback, FeedbackType
+from app.models.commercial import Client, Contract, Project, ProjectFeedback, FeedbackType
+from app.models.finance import ProjectBilling, BillingStatus
 from app.models.project_resources import ProjectCollaborator, ProjectVehicle, ProjectTool
 from app.models.assets import Fleet, FuelType, Insurance, Tool, ToolStatus
 from app.models.tickets import Ticket, TicketStatus, TicketPriority
@@ -806,7 +807,7 @@ async def seed_billings(db, projects):
     """Cria faturamentos com diversos status"""
     print("🔍 Criando faturamentos (Contas a Receber)...")
     
-    from app.models.commercial import BillingStatus
+    from app.models.finance import BillingStatus
     
     created_billings = []
     

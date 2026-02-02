@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Briefcase, Plus, Edit, Trash2, Users } from 'lucide-react';
 import api from '../services/api';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import './Roles.css';
 
 const Roles = () => {

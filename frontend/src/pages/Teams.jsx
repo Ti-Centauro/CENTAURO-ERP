@@ -1,7 +1,7 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Users, Plus, Edit, Trash2, Crown } from 'lucide-react';
 import api, { getCollaborators } from '../services/api'; // Ensure getCollaborators is exported
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import './Teams.css';
 
 const Teams = forwardRef(({ embedded = false }, ref) => {

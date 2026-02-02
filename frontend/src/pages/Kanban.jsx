@@ -18,7 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Plus, GripVertical, Trash2, Edit, X, User, Briefcase } from 'lucide-react';
 import { getTasks, createTask, updateTask, deleteTask, getProjects, getCollaborators } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import './Kanban.css';
 
 // --- COMPONENTS ---

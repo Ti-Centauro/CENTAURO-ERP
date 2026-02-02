@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send, X, Trash2, MessageSquare } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import api from '../services/api';
+import api from '../../services/api';
 import './AICopilotWidget.css';
 
 const AICopilotWidget = () => {

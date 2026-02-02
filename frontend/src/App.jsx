@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import AICopilotWidget from './components/AICopilotWidget';
-import Layout from './components/Layout';
+import AICopilotWidget from './components/shared/AICopilotWidget';
+import Layout from './components/shared/Layout';
 import Dashboard from './pages/Dashboard';
 import Scheduler from './pages/Scheduler';
 import Kanban from './pages/Kanban';
@@ -18,7 +18,7 @@ import AccountsReceivable from './pages/AccountsReceivable';
 import Payroll from './pages/Finance/Payroll';
 
 import Login from './pages/Login';
-import PrivateRoute from './components/PrivateRoute';
+import PrivateRoute from './components/shared/PrivateRoute';
 import { AuthProvider } from './context/AuthContext';
 
 

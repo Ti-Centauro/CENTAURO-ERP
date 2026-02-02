@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit, Eye } from 'lucide-react';
 import { getProjects, createProject, updateProject, deleteProject, getContracts, getClients, getCollaborators } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import ConfirmModal from '../components/ConfirmModal';
-import ProjectModal from '../components/ProjectModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
+import ProjectModal from '../components/projects/ProjectModal';
 import './Projects.css';
 
 const Projects = () => {

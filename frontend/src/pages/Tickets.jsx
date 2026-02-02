@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Ticket as TicketIcon, AlertCircle, Edit } from 'lucide-react';
 import { getTickets, createTicket, deleteTicket, updateTicket, getContracts } from '../services/api';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import './Tickets.css';
 
 const Tickets = () => {

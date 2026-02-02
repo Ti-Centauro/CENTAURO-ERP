@@ -10,7 +10,7 @@ import { Star, UserCheck, Shield, Clock as ClockIcon, TrendingUp } from 'lucide-
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../context/AuthContext';
 import Teams from './Teams';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import './Clients.css';
 
 const Collaborators = () => {

@@ -10,8 +10,8 @@ import {
   Truck,
   Target
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { getPurchases, getProjects } from '../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { getPurchases, getProjects } from '../../services/api';
 import RequestDetailsModal from './RequestDetailsModal';
 import './PurchaseManagerWidget.css';
 

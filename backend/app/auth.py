@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.users import User
 from app.schemas.auth import TokenData
@@ -50,7 +51,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 from sqlalchemy.future import select
 
-async def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
     # BYPASS AUTH FOR DEVELOPMENT
     # Force auto-login as admin if no token or hardcoded bypass
     
@@ -109,7 +110,7 @@ async def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Se
         raise credentials_exception
     return user
 
-async def authenticate_user(db: Session, email: str, password: str):
+async def authenticate_user(db: AsyncSession, email: str, password: str):
     result = await db.execute(select(User).filter(User.email == email))
     user = result.scalars().first()
     if not user:

@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import commercial, assets, operational, tickets, kanban, project_resources, purchases, roles, auth, teams, maintenance, finance_payroll, proposals
+from app.routers import assets, operational, tickets, kanban, project_resources, purchases, roles, auth, teams, maintenance, finance_payroll, proposals
+from app.routers import commercial  # Package import
+from app.routers import finance     # Package import
 from app.database import engine, Base
+from sqlalchemy import text
 
 app = FastAPI(title="Centauro ERP")
 
@@ -15,8 +18,16 @@ app.add_middleware(
 )
 
 # Include Routers
+# Commercial Package (Clients, Contracts, Projects)
 app.include_router(commercial.router, prefix="/commercial", tags=["Commercial"])
+
+# Finance Package (Billings, Tax Import)
+app.include_router(finance.router, prefix="/commercial", tags=["Finance"])  # Keep /commercial prefix for backwards compatibility
+
+# CRM
 app.include_router(proposals.router) # Prefix defined in router
+
+# Other modules
 app.include_router(assets.router, prefix="/assets", tags=["Assets"])
 app.include_router(operational.router, prefix="/operational", tags=["Operational"])
 app.include_router(tickets.router, prefix="/tickets", tags=["Tickets"])
@@ -29,6 +40,7 @@ app.include_router(roles.router, prefix="/roles", tags=["Roles"])
 app.include_router(auth.router, tags=["Authentication"])
 app.include_router(teams.router, prefix="/teams", tags=["Teams"])
 app.include_router(maintenance.router, prefix="/maintenance", tags=["Maintenance"])
+
 from app.routers import dashboard, ai
 app.include_router(dashboard.router, tags=["Dashboard"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
@@ -39,6 +51,56 @@ async def startup():
     # For prototype, create tables on startup.
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+        # Schema Migration: Add missing columns if they don't exist
+        # This is a manual migration for the prototype phase
+        columns_to_add = [
+            # Table, Column, SQL Type
+            ("contracts", "contract_type", "VARCHAR DEFAULT 'LPU'"),
+            ("contracts", "monthly_value", "NUMERIC(10, 2)"),
+            ("contracts", "due_day", "INTEGER"),
+            ("contracts", "readjustment_index", "VARCHAR"),
+            ("contracts", "company_id", "INTEGER"),
+            ("projects", "service_value", "NUMERIC(10, 2) DEFAULT 0"),
+            ("projects", "material_value", "NUMERIC(10, 2) DEFAULT 0"),
+            ("projects", "budget", "NUMERIC(10, 2) DEFAULT 0"),
+            ("projects", "company_id", "INTEGER"),
+            ("projects", "estimated_days", "INTEGER"),
+            ("projects", "warranty_months", "INTEGER"),
+            
+            # Project Billings Migrations
+            ("project_billings", "substitution_reason", "VARCHAR"),
+            ("project_billings", "category", "VARCHAR DEFAULT 'SERVICE'"),
+            ("project_billings", "gross_value", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "net_value", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "taxes_verified", "BOOLEAN DEFAULT 0"),
+            
+            # Retentions
+            ("project_billings", "retention_iss", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "retention_inss", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "retention_irrf", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "retention_pis", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "retention_cofins", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "retention_csll", "NUMERIC(10, 2) DEFAULT 0"),
+            
+            # Non-ZRetained Taxes
+            ("project_billings", "tax_pis", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "tax_cofins", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "tax_iss", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "tax_irpj", "NUMERIC(10, 2) DEFAULT 0"),
+            
+            # Material Taxes
+            ("project_billings", "tax_icms", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "tax_ipi", "NUMERIC(10, 2) DEFAULT 0"),
+            ("project_billings", "value_st", "NUMERIC(10, 2) DEFAULT 0")
+        ]
+
+        for table, col, dtype in columns_to_add:
+            try:
+                await conn.execute(text(f"SELECT {col} FROM {table} LIMIT 1"))
+            except Exception:
+                print(f"Migrating: Adding {col} to {table}")
+                await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {dtype}"))
 
 @app.get("/")
 async def root():

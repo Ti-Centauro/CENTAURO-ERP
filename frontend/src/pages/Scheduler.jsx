@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Plus, X, Trash2, Edit, Filter } from 'lucide
 import { getAllocations, getCollaborators, getFleet, getTools, getProjects, getClients, createAllocation, updateAllocation, deleteAllocation } from '../services/api';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import './Scheduler.css';
 
 // Feriados nacionais brasileiros (fixos)

@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, Wrench, MapPin, User, Edit } from 'lucide-react';
 import { getTools, createTool, deleteTool, updateTool, getCollaborators, getProjects } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import ConfirmModal from '../components/ConfirmModal';
-import SearchableSelect from '../components/SearchableSelect';
+import ConfirmModal from '../components/shared/ConfirmModal';
+import SearchableSelect from '../components/shared/SearchableSelect';
 import './Tools.css';
 
 const Tools = () => {

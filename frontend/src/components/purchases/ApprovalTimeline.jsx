@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CheckCircle, Clock, XCircle, AlertTriangle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { approvePurchase, rejectPurchase, clearPurchaseRejection } from '../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { approvePurchase, rejectPurchase, clearPurchaseRejection } from '../../services/api';
 import './ApprovalTimeline.css';
 
 const ApprovalTimeline = ({ request, onUpdate }) => {
