@@ -15,6 +15,7 @@ from app.models.users import User
 from app.models.finance import BillingStatus, ProjectBilling
 from app.schemas import commercial as schemas
 from app.auth import get_current_active_user
+from app.services.commercial.project_service import ProjectService
 
 router = APIRouter()
 
@@ -92,46 +93,12 @@ async def create_project(project: schemas.ProjectCreate, db: AsyncSession = Depe
         raise HTTPException(status_code=404, detail="Client not found")
     
     # 2. Determine Project Number and TAG
-    today = date.today()
-    ref_date = project.start_date or today
-    yy = ref_date.strftime("%y")
-    mm = ref_date.strftime("%m")
-    ccc = client.client_number if client.client_number else "00"
+    # 2. Determine Project Number and TAG
+    try:
+        tag, next_number, _ = await ProjectService.generate_tag(project, db)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    tag = ""
-    next_number = 0
-
-    if project.contract_id:
-        # Linked Project: CEC_(...)_{Contract}_P{Seq}
-        # Get Contract TAG
-        result = await db.execute(select(models.Contract).where(models.Contract.id == project.contract_id))
-        contract = result.scalar_one_or_none()
-        if not contract:
-             raise HTTPException(status_code=404, detail="Contract not found")
-        
-        contract_tag = contract.contract_number
-        
-        # Count projects for this contract
-        result = await db.execute(select(func.count(models.Project.id)).where(models.Project.contract_id == project.contract_id))
-        count = result.scalar() or 0
-        next_number = count + 1
-        
-        tag = f"{contract_tag}_P{next_number:02d}"
-        
-    else:
-        # Standalone Project: CEP{CNPJ}_{YY}{MM}_{Seq}_{Client}
-        # Determine Prefix based on Company ID (CNPJ)
-        # 1 -> CEP1_, 2 -> CEP2_, None -> CEP_
-        prefix_base = f"CEP{project.company_id}" if project.company_id else "CEP"
-        
-        # Count standalone projects for this year AND this specific prefix
-        pattern = f"{prefix_base}_{yy}%"
-        result = await db.execute(select(func.count(models.Project.id)).where(models.Project.tag.like(pattern)))
-        count = result.scalar() or 0
-        next_number = count + 1
-        
-        nn = f"{next_number:02d}"
-        tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
     
     # Create DB object
     db_project = models.Project(**project.model_dump(exclude={"tag"}))
