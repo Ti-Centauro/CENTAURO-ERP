@@ -15,7 +15,7 @@ from typing import List
 from app.database import get_db
 from app.models import commercial as commercial_models
 from app.models.finance import ProjectBilling, BillingStatus
-from app.schemas import commercial as schemas
+from app.schemas import finance as schemas
 
 router = APIRouter()
 

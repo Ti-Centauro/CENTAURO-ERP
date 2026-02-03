@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { X, LayoutDashboard, Users, FileText, DollarSign, Wrench, Package, Truck, MessageSquare, Edit } from 'lucide-react';
 import {
   getProject, updateProject, getClients, getCollaborators, getTools, getFleet,
@@ -10,12 +10,13 @@ import ConfirmModal from '../shared/ConfirmModal';
 import RequestDetailsModal from '../purchases/RequestDetailsModal';
 
 // Tabs
+// Tabs (Lazy Loaded)
 import ProjectInfoTab from './tabs/ProjectInfoTab';
-import ProjectFinancialTab from './tabs/ProjectFinancialTab';
-import ProjectTeamTab from './tabs/ProjectTeamTab';
-import ProjectAssetsTab from './tabs/ProjectAssetsTab';
-import ProjectPurchasesTab from './tabs/ProjectPurchasesTab';
-import ProjectFeedbackTab from './tabs/ProjectFeedbackTab';
+const ProjectFinancialTab = lazy(() => import('./tabs/ProjectFinancialTab'));
+const ProjectTeamTab = lazy(() => import('./tabs/ProjectTeamTab'));
+const ProjectAssetsTab = lazy(() => import('./tabs/ProjectAssetsTab'));
+const ProjectPurchasesTab = lazy(() => import('./tabs/ProjectPurchasesTab'));
+const ProjectFeedbackTab = lazy(() => import('./tabs/ProjectFeedbackTab'));
 
 import './ProjectModal.css';
 
@@ -158,65 +159,66 @@ const ProjectModal = ({ project: initialProject, onClose, onUpdate, onEdit }) =>
 
         {/* Tab Content */}
         <div className="project-modal-content scrollable-content">
-          {activeTab === 'info' && (
-            <ProjectInfoTab
-              project={project}
-              clients={clients}
-              purchases={purchases} // For cost breakdown
-              totalInvoiced={totalInvoiced}
-              canEdit={canEdit}
-              onEdit={handleEditClick}
-            />
-          )}
-          {activeTab === 'financial' && (
-            <ProjectFinancialTab
-              project={project}
-              projectDetails={projectDetails}
-              billings={billings}
-              canEdit={canEdit}
-              onUpdate={loadAllData}
-            />
-          )}
-          {/* MERGE Team and Assets? No, keeping separate as per my previous thought */}
-          {activeTab === 'team' && (
-            <ProjectTeamTab
-              project={project}
-              projectCollaborators={projectCollaborators}
-              availableCollaborators={availableCollaborators}
-              canEdit={canEdit}
-              onUpdate={loadAllData}
-            />
-          )}
-          {activeTab === 'assets' && (
-            <ProjectAssetsTab
-              project={project}
-              projectTools={projectTools}
-              projectVehicles={projectVehicles}
-              availableTools={availableTools}
-              availableVehicles={availableVehicles}
-              canEdit={canEdit}
-              onUpdate={loadAllData}
-            />
-          )}
-          {activeTab === 'purchases' && (
-            <ProjectPurchasesTab
-              project={project}
-              purchases={purchases}
-              canEdit={canEdit}
-              onSelectRequest={(req) => setSelectedRequest(req)}
-              onCreateRequest={() => alert("Criar solicitação - Implementar Modal ou Redirecionamento")} // Placeholder
-              getClientName={(id) => clients.find(c => c.id === id)?.name}
-              onUpdate={loadAllData}
-            />
-          )}
-          {activeTab === 'feedback' && (
-            <ProjectFeedbackTab
-              project={project}
-              feedbacks={feedbacks}
-              canEdit={canEdit}
-              onUpdate={loadAllData}
-            />
-          )}
+          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Carregando aba...</div>}>
+            {activeTab === 'info' && (
+              <ProjectInfoTab
+                project={project}
+                clients={clients}
+                purchases={purchases} // For cost breakdown
+                totalInvoiced={totalInvoiced}
+                canEdit={canEdit}
+                onEdit={handleEditClick}
+              />
+            )}
+            {activeTab === 'financial' && (
+              <ProjectFinancialTab
+                project={project}
+                projectDetails={projectDetails}
+                billings={billings}
+                canEdit={canEdit}
+                onUpdate={loadAllData}
+              />
+            )}
+            {activeTab === 'team' && (
+              <ProjectTeamTab
+                project={project}
+                projectCollaborators={projectCollaborators}
+                availableCollaborators={availableCollaborators}
+                canEdit={canEdit}
+                onUpdate={loadAllData}
+              />
+            )}
+            {activeTab === 'assets' && (
+              <ProjectAssetsTab
+                project={project}
+                projectTools={projectTools}
+                projectVehicles={projectVehicles}
+                availableTools={availableTools}
+                availableVehicles={availableVehicles}
+                canEdit={canEdit}
+                onUpdate={loadAllData}
+              />
+            )}
+            {activeTab === 'purchases' && (
+              <ProjectPurchasesTab
+                project={project}
+                purchases={purchases}
+                canEdit={canEdit}
+                onSelectRequest={(req) => setSelectedRequest(req)}
+                onCreateRequest={() => { }} // Now handled internally by ProjectPurchasesTab
+                getClientName={(id) => clients.find(c => c.id === id)?.name}
+                onUpdate={loadAllData}
+              />
+            )}
+            {activeTab === 'feedback' && (
+              <ProjectFeedbackTab
+                project={project}
+                feedbacks={feedbacks}
+                canEdit={canEdit}
+                onUpdate={loadAllData}
+              />
+            )}
+          </Suspense>
         </div>
 
 
