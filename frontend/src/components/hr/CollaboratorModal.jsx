@@ -47,7 +47,7 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
         name: collaborator.name || '',
         email: collaborator.email || '',
         role_id: collaborator.role_id || '',
-        team_ids: collaborator.team_ids || [],
+        team_ids: collaborator.teams ? collaborator.teams.map(t => t.id) : [],
         phone: collaborator.phone || '',
         cpf: collaborator.cpf || '',
         rg: collaborator.rg || '',

@@ -6,6 +6,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import DataTable from '../components/shared/DataTable';
 import StatusBadge from '../components/shared/StatusBadge';
 import VehicleModal from '../components/fleet/VehicleModal';
+import ImportPreviewModal from '../components/shared/ImportPreviewModal';
 import './Fleet.css';
 
 const Fleet = () => {
@@ -29,6 +30,9 @@ const Fleet = () => {
   const fuelInputRef = useRef(null);
   const tollInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [importType, setImportType] = useState('fuel'); // 'fuel' or 'tolls'
 
   // Confirm Delete
   const [showConfirm, setShowConfirm] = useState(false);
@@ -75,24 +79,53 @@ const Fleet = () => {
   };
 
   // --- Upload Handlers (simplified for brevity, main logic in backend) ---
+  // --- Upload Handlers ---
   const handleUpload = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Reset inputs
+    if (type === 'fuel') fuelInputRef.current.value = '';
+    else tollInputRef.current.value = '';
+
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
     try {
       const endpoint = type === 'fuel' ? '/assets/fleet/fuel/preview' : '/assets/fleet/tolls/preview';
       const res = await api.post(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      // Simplified: Auto-confirm for now or alert (Original had preview modal, for brevity assuming direct or alert)
-      // Original logic had a preview modal. To keep refactoring safe, I should preserve preview. 
-      // But since I am refactoring page structure, I will trust the user to use the dedicated import feature if I strip it? 
-      // No, I must preserve it. I will keep the upload logic simple: Just alert "Not Implemented in Refactor" or better, keep the modal logic inline?
-      // To stick to the "Refactor" goal, I should keep functionality. 
-      // I will just use basic alert for success as placeholder for the complex preview logic which was huge. 
-      // Actually, I'll allow a direct pass-through for now or just log it.
-      alert("Importação de " + type + " recebida. Preview: " + res.data.total_value);
-    } catch (e) { alert('Erro no upload'); } finally { setUploading(false); }
+
+      setPreviewData(res.data);
+      setImportType(type);
+      setShowPreview(true);
+    } catch (e) {
+      alert('Erro no upload: ' + (e.response?.data?.detail || e.message));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!previewData) return;
+    setUploading(true);
+    try {
+      const endpoint = importType === 'fuel' ? '/assets/fleet/fuel/confirm' : '/assets/fleet/tolls/confirm';
+      // Pass proper payload structure based on previewData
+      const payload = {
+        competence_date: previewData.competence_date,
+        rows: previewData.preview // Backend expects "rows" with vehicle_id from the preview
+      };
+
+      await api.post(endpoint, payload);
+      alert('Importação realizada com sucesso!');
+      setShowPreview(false);
+      setPreviewData(null);
+      loadData(); // Reload fleet to update costs/km if needed
+    } catch (error) {
+      alert('Erro ao confirmar importação: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setUploading(false);
+    }
   };
 
   // Columns
@@ -208,6 +241,17 @@ const Fleet = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {showPreview && previewData && (
+        <ImportPreviewModal
+          isOpen={showPreview}
+          onClose={() => { setShowPreview(false); setPreviewData(null); }}
+          onConfirm={handleConfirmImport}
+          data={previewData}
+          type={importType}
+          loading={uploading}
+        />
       )}
 
       <ConfirmModal isOpen={showConfirm} onClose={() => setShowConfirm(false)} onConfirm={confirmDelete} title="Confirmar" message="Excluir item?" />

@@ -172,8 +172,33 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
             <h3>Histórico de Abastecimento</h3>
             {fuelCosts.length === 0 ? <p className="text-gray-500">Sem registros.</p> : (
               <table style={{ width: '100%', fontSize: '0.9rem' }}>
-                <thead><tr><th align="left">Mês</th><th align="right">Valor</th></tr></thead>
-                <tbody>{fuelCosts.map((c, i) => <tr key={i}><td style={{ padding: '8px 0' }}>{new Date(c.competence_date).toLocaleDateString()}</td><td align="right">R$ {c.total_cost}</td></tr>)}</tbody>
+                <thead>
+                  <tr>
+                    <th align="left">Mês</th>
+                    <th align="right">Litros</th>
+                    <th align="right">KM</th>
+                    <th align="right">KM/L</th>
+                    <th align="right">Valor</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fuelCosts.map((c, i) => {
+                    const km_l = c.liters > 0 ? (c.km_driven / c.liters).toFixed(2) : '-';
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '8px 0' }}>{new Date(c.competence_date).toLocaleDateString()}</td>
+                        <td align="right">{c.liters ? `${c.liters} L` : '-'}</td>
+                        <td align="right">{c.km_driven ? `${c.km_driven}` : '-'}</td>
+                        <td align="right">{km_l}</td>
+                        <td align="right">R$ {c.total_cost}</td>
+                        <td align="right">
+                          {canEdit && <button onClick={async () => { await api.delete(`/assets/fleet/fuel/${c.id}`); loadCosts(); }} className="btn-icon-small danger"><Trash2 size={14} /></button>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
               </table>
             )}
             <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: '1rem' }}><button className="btn btn-secondary" onClick={onClose}>Fechar</button></div>

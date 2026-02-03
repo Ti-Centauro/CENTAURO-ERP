@@ -113,7 +113,14 @@ const Collaborators = () => {
         </div>
       )
     },
-    { header: 'Cargo', accessor: 'role', render: (row) => <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Briefcase size={14} className="text-gray-400" /> {row.role}</div> },
+    {
+      header: 'Cargo',
+      accessor: 'role',
+      render: (row) => {
+        const roleName = roles.find(r => r.id === row.role_id)?.name || row.role || '-';
+        return <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Briefcase size={14} className="text-gray-400" /> {roleName}</div>;
+      }
+    },
     {
       header: 'CNH',
       accessor: 'cnh_validity',
