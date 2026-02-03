@@ -3,6 +3,7 @@ import { Plus, Trash2, Edit, Users, MapPin, Phone, Mail, Search, UserPlus, Build
 import api, { getClients, createClient, deleteClient, updateClient } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import DataTable from '../components/shared/DataTable';
 import './Clients.css';
 
 // Department colors
@@ -233,9 +234,19 @@ const Clients = () => {
 
   const getDeptStyle = (dept) => DEPARTMENT_COLORS[dept] || DEPARTMENT_COLORS['Geral'];
 
+  const columns = [
+    { header: 'Cod', accessor: 'client_number', render: row => <span className="font-bold">#{row.client_number}</span> },
+    { header: 'Nome / Razão Social', accessor: 'name' },
+    { header: 'CNPJ', accessor: 'cnpj' },
+    { header: 'Email', accessor: 'email', render: row => row.email || '-' },
+    { header: 'Telefone', accessor: 'phone', render: row => row.phone || '-' },
+    { header: 'Contatos', accessor: 'contacts', render: row => row.contacts?.length || 0 },
+  ];
+
   return (
     <div className="clients">
       <header className="clients-header">
+        {/* ... header content kept same ... */}
         <div className="header-content">
           <div>
             <h1>Gestão de Clientes</h1>
@@ -281,7 +292,14 @@ const Clients = () => {
 
       {showForm && (
         <div className="clients-form-modal">
+          {/* Modal content preserved exactly as is, just wrapped or rendered here. 
+                Wait, I can't just comment out the modal content in replace_file_content. 
+                I need to keep the modal rendering logic. 
+                The user instruction says "Replace with <DataTable />: Define columns, Pass data". 
+                I will replace the `.clients-grid` block with `<DataTable />`.
+            */}
           <div className="clients-form card" style={{ maxWidth: editingId ? '800px' : '600px' }} onClick={(e) => e.stopPropagation()}>
+            {/* ... Modal Content Copied/States as is ... */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Cliente' : 'Cadastrar Cliente'}</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -605,62 +623,15 @@ const Clients = () => {
         </div>
       )}
 
-      <div className="clients-grid">
-        {loading ? (
-          <div className="loading">Carregando clientes...</div>
-        ) : filteredClients.length === 0 ? (
-          <div className="empty-state card">
-            <Users size={48} color="#94a3b8" />
-            <p>{clients.length === 0 ? "Nenhum cliente cadastrado ainda." : "Nenhum cliente encontrado."}</p>
-          </div>
-        ) : (
-          filteredClients.map((client) => (
-            <div
-              key={client.id}
-              className="client-card card clickable"
-              onClick={() => handleEdit(client)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="client-card-header">
-                <div className="client-icon">
-                  <Users size={24} />
-                </div>
-                {client.client_number && (
-                  <span className="client-number-badge">#{client.client_number}</span>
-                )}
-              </div>
-              <h3 className="client-name">{client.name}</h3>
-              <p className="client-cnpj">{client.cnpj}</p>
-              <div className="client-details">
-                {client.contacts && client.contacts.length > 0 && (
-                  <div className="detail-item">
-                    <Users size={16} color="#64748b" />
-                    <span>{client.contacts.length} contato(s)</span>
-                  </div>
-                )}
-                {client.email && (
-                  <div className="detail-item">
-                    <Mail size={16} color="#64748b" />
-                    <span>{client.email}</span>
-                  </div>
-                )}
-                {client.phone && (
-                  <div className="detail-item">
-                    <Phone size={16} color="#64748b" />
-                    <span>{client.phone}</span>
-                  </div>
-                )}
-                {client.address && (
-                  <div className="detail-item">
-                    <MapPin size={16} color="#64748b" />
-                    <span>{client.address}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
+      <div style={{ padding: '0 2rem 2rem' }}>
+        <DataTable
+          columns={columns}
+          data={filteredClients}
+          actions={false}
+          onRowClick={(client) => handleEdit(client)}
+        />
       </div>
+
 
       <ConfirmModal
         isOpen={showConfirmModal}

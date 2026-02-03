@@ -4,6 +4,8 @@ import { getProjects, createProject, updateProject, deleteProject, getContracts,
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import ProjectModal from '../components/projects/ProjectModal';
+import DataTable from '../components/shared/DataTable';
+import StatusBadge from '../components/shared/StatusBadge';
 import './Projects.css';
 
 const Projects = () => {
@@ -288,6 +290,24 @@ const Projects = () => {
     }).format(value);
   };
 
+  const columns = [
+    { header: 'Nº', accessor: 'project_number', render: row => row.project_number || '-' },
+    { header: 'Tag', accessor: 'tag', render: row => <code>{row.tag}</code> },
+    { header: 'Nome', accessor: 'name' },
+    { header: 'Cliente', accessor: 'client_name', render: row => row.client_name || '-' },
+    { header: 'Coordenador', accessor: 'coordinator', render: row => row.coordinator || '-' },
+    { header: 'Orçamento', accessor: 'budget', render: row => formatCurrency(row.budget) },
+    { header: 'Faturado', accessor: 'invoiced', render: row => formatCurrency(row.invoiced) },
+    { header: 'A Faturar', accessor: 'pending', render: row => formatCurrency((row.budget || 0) - (row.invoiced || 0)) },
+    { header: 'Início', accessor: 'start_date', render: row => row.start_date ? new Date(row.start_date).toLocaleDateString('pt-BR') : '-' },
+    { header: 'Fim', accessor: 'end_date', render: row => row.end_date ? new Date(row.end_date).toLocaleDateString('pt-BR') : '-' },
+    {
+      header: 'Status', accessor: 'status', render: row => (
+        <StatusBadge status={row.status || 'Em Andamento'} />
+      )
+    },
+  ];
+
   return (
     <div className="projects" >
       <header className="projects-header">
@@ -305,6 +325,7 @@ const Projects = () => {
 
       {showForm && (
         <div className="project-form-modal">
+          {/* Form Content Preserved */}
           <div className="project-form card">
             <h3>{editingId ? 'Editar Projeto' : 'Novo Projeto'}</h3>
             <form onSubmit={handleSubmit}>
@@ -592,8 +613,7 @@ const Projects = () => {
             </form>
           </div>
         </div>
-      )
-      }
+      )}
 
       {/* Search and Filters */}
       <div className="card" style={{ marginBottom: '1rem' }}>
@@ -655,60 +675,16 @@ const Projects = () => {
         </div>
       </div>
 
-      <div className="projects-table card">
-        {loading ? (
-          <div className="loading">Carregando projetos...</div>
-        ) : filteredProjects.length === 0 ? (
-          <div className="empty-state">
-            <p>{projects.length === 0 ? 'Nenhum projeto cadastrado ainda.' : 'Nenhum projeto encontrado com os filtros aplicados.'}</p>
-          </div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Nº</th>
-                <th>Tag</th>
-                <th>Nome</th>
-                <th>Cliente</th>
-                <th>Coordenador</th>
-                <th>Orçamento</th>
-                <th>Faturado</th>
-                <th>A Faturar</th>
-                <th>Início</th>
-                <th>Fim</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProjects.map((project) => (
-                <tr
-                  key={project.id}
-                  onClick={() => {
-                    setSelectedProject(project);
-                    setShowProjectModal(true);
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <td>{project.project_number || '-'}</td>
-                  <td><code>{project.tag}</code></td>
-                  <td>{project.name}</td>
-                  <td>{project.client_name || '-'}</td>
-                  <td>{project.coordinator || '-'}</td>
-                  <td>{formatCurrency(project.budget)}</td>
-                  <td>{formatCurrency(project.invoiced)}</td>
-                  <td>{formatCurrency((project.budget || 0) - (project.invoiced || 0))}</td>
-                  <td>{project.start_date ? new Date(project.start_date).toLocaleDateString('pt-BR') : '-'}</td>
-                  <td>{project.end_date ? new Date(project.end_date).toLocaleDateString('pt-BR') : '-'}</td>
-                  <td>
-                    <span className={`status-badge ${project.status?.toLowerCase().replace(' ', '-') || 'em-andamento'}`}>
-                      {project.status || 'Em Andamento'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <div style={{ paddingBottom: '2rem' }}>
+        <DataTable
+          columns={columns}
+          data={filteredProjects}
+          actions={false}
+          onRowClick={(project) => {
+            setSelectedProject(project);
+            setShowProjectModal(true);
+          }}
+        />
       </div>
 
       <ConfirmModal

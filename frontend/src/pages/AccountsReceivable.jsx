@@ -4,6 +4,7 @@ import {
   Filter, Download, Upload, Edit, CheckCircle, AlertCircle, XCircle, RefreshCw, Search
 } from 'lucide-react';
 import { getAllBillings, updateProjectBilling, getProjects, getClients, previewTaxesImport, confirmTaxesImport } from '../services/api';
+import DataTable from '../components/shared/DataTable';
 import './AccountsReceivable.css';
 
 const AccountsReceivable = () => {
@@ -354,71 +355,55 @@ const AccountsReceivable = () => {
       </div>
 
       <div className="billings-table-container">
-        <table className="billings-table">
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>Vencimento</th>
-              <th>Cliente</th>
-              <th>Descrição</th>
-              <th>Vínculo (TAG)</th>
-              <th className="text-right">Valor</th>
-              <th className="text-right">Nº Nota</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="7" className="text-center">Carregando...</td></tr>
-            ) : filteredBillings.length === 0 ? (
-              <tr><td colSpan="7" className="text-center">Nenhum registro encontrado.</td></tr>
-            ) : (
-              filteredBillings.map(billing => (
-                <tr
-                  key={billing.id}
-                  onClick={() => handleEdit(billing)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <td>{getStatusBadge(billing.status)}</td>
-                  <td>{billing.date ? new Date(billing.date).toLocaleDateString('pt-BR') : '-'}</td>
-                  <td>{getClientName(billing.project_id)}</td>
-                  <td>{billing.description}</td>
-                  <td><Tag size={14} /> {getProjectTag(billing.project_id)}</td>
-                  <td className="text-right font-medium">
-                    <div>
-                      R$ {parseFloat(billing.gross_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                    <div style={{ fontSize: '0.75em', color: '#64748b' }}>
-                      Caixa: R$ {parseFloat(billing.net_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                    {(() => {
-                      const net = parseFloat(billing.net_value || billing.value);
-                      const taxToPay = (
-                        (parseFloat(billing.tax_iss) || 0) +
-                        (parseFloat(billing.tax_pis) || 0) +
-                        (parseFloat(billing.tax_cofins) || 0) +
-                        (parseFloat(billing.tax_irpj) || 0) +
-                        (parseFloat(billing.tax_icms) || 0) +
-                        (parseFloat(billing.tax_ipi) || 0) +
-                        (parseFloat(billing.value_st) || 0)
+        <DataTable
+          columns={[
+            { header: 'Status', accessor: 'status', render: row => getStatusBadge(row.status) },
+            { header: 'Vencimento', accessor: 'date', render: row => row.date ? new Date(row.date).toLocaleDateString('pt-BR') : '-' },
+            { header: 'Cliente', accessor: 'client_name', render: row => getClientName(row.project_id) },
+            { header: 'Descrição', accessor: 'description' },
+            { header: 'Vínculo (TAG)', accessor: 'tag', render: row => <><Tag size={14} /> {getProjectTag(row.project_id)}</> },
+            {
+              header: 'Valor',
+              accessor: 'value',
+              render: billing => (
+                <div className="text-right font-medium">
+                  <div>
+                    R$ {parseFloat(billing.gross_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div style={{ fontSize: '0.75em', color: '#64748b' }}>
+                    Caixa: R$ {parseFloat(billing.net_value || billing.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  {(() => {
+                    const net = parseFloat(billing.net_value || billing.value);
+                    const taxToPay = (
+                      (parseFloat(billing.tax_iss) || 0) +
+                      (parseFloat(billing.tax_pis) || 0) +
+                      (parseFloat(billing.tax_cofins) || 0) +
+                      (parseFloat(billing.tax_irpj) || 0) +
+                      (parseFloat(billing.tax_icms) || 0) +
+                      (parseFloat(billing.tax_ipi) || 0) +
+                      (parseFloat(billing.value_st) || 0)
+                    );
+                    const real = net - taxToPay;
+                    // Only show if there are taxes to pay, otherwise it's redundant
+                    if (taxToPay > 0) {
+                      return (
+                        <div style={{ fontSize: '0.75em', color: '#166534', fontWeight: '600' }}>
+                          Real: R$ {real.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
                       );
-                      const real = net - taxToPay;
-                      // Only show if there are taxes to pay, otherwise it's redundant
-                      if (taxToPay > 0) {
-                        return (
-                          <div style={{ fontSize: '0.75em', color: '#166534', fontWeight: '600' }}>
-                            Real: R$ {real.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </td>
-                  <td className="text-right">{billing.invoice_number || '-'}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                    }
+                    return null;
+                  })()}
+                </div>
+              )
+            },
+            { header: 'Nº Nota', accessor: 'invoice_number', className: 'text-right', render: row => row.invoice_number || '-' }
+          ]}
+          data={filteredBillings}
+          actions={false}
+          onRowClick={(billing) => handleEdit(billing)}
+        />
       </div>
 
       {/* Edit Modal */}

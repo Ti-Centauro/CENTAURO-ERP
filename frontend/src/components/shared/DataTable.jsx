@@ -8,7 +8,8 @@ const DataTable = ({
   onDelete,
   actions = true,
   searchable = false, // If handled externally, usually false here or implement internal search
-  rowKey = 'id'
+  rowKey = 'id',
+  onRowClick
 }) => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
@@ -101,10 +102,12 @@ const DataTable = ({
                 key={row[rowKey] || rowIndex}
                 style={{
                   borderBottom: rowIndex === currentData.length - 1 ? 'none' : '1px solid #f1f5f9',
-                  transition: 'background 0.1s'
+                  transition: 'background 0.1s',
+                  cursor: onRowClick ? 'pointer' : 'default'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                onClick={() => onRowClick && onRowClick(row)}
               >
                 {columns.map((col, colIndex) => (
                   <td key={colIndex} style={{ padding: '0.75rem 1rem', color: '#334155' }}>

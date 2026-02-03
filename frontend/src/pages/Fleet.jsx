@@ -162,17 +162,19 @@ const Fleet = () => {
           <DataTable
             columns={fleetColumns}
             data={filteredFleet}
-            actions={canEdit}
+            actions={false}
             onEdit={(row) => { setEditingVehicle(row); setShowVehicleModal(true); }}
             onDelete={(row) => handleDelete(row.id, 'fleet')}
+            onRowClick={(row) => { setEditingVehicle(row); setShowVehicleModal(true); }}
           />
         ) : (
           <DataTable
             columns={insuranceColumns}
             data={insurances}
-            actions={canEdit}
+            actions={false}
             onEdit={(row) => { setEditingInsurance(row); setInsuranceFormData(row); setShowInsuranceForm(true); }}
             onDelete={(row) => handleDelete(row.id, 'insurance')}
+            onRowClick={(row) => { setEditingInsurance(row); setInsuranceFormData(row); setShowInsuranceForm(true); }}
           />
         )}
       </div>
@@ -184,6 +186,7 @@ const Fleet = () => {
           onClose={() => setShowVehicleModal(false)}
           onSuccess={() => { setShowVehicleModal(false); loadData(); }}
           canEdit={canEdit}
+          onDelete={() => handleDelete(editingVehicle.id, 'fleet')}
         />
       )}
 

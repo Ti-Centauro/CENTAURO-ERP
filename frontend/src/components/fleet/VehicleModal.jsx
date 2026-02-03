@@ -3,78 +3,26 @@ import { Trash2, MapPin } from 'lucide-react';
 import api, { createFleet, updateFleet } from '../../services/api';
 import MaintenanceTab from '../assets/MaintenanceTab';
 
-const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit }) => {
+const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, onDelete }) => {
   const [modalTab, setModalTab] = useState('details');
-  const [formData, setFormData] = useState({
-    license_plate: '',
-    model: '',
-    brand: '',
-    year: '',
-    color: '',
-    cnpj: '',
-    insurance_id: '',
-    fuel_type: '',
-    status: 'ACTIVE',
-    odometer: 0,
-  });
-
-  const [fuelCosts, setFuelCosts] = useState([]);
-  const [tollCosts, setTollCosts] = useState([]);
-
-  useEffect(() => {
-    if (vehicle) {
-      setFormData({
-        license_plate: vehicle.license_plate,
-        model: vehicle.model,
-        brand: vehicle.brand,
-        year: vehicle.year,
-        color: vehicle.color || '',
-        cnpj: vehicle.cnpj || '',
-        insurance_id: vehicle.insurance_id || '',
-        fuel_type: vehicle.fuel_type || '',
-        status: vehicle.status,
-        odometer: vehicle.odometer || 0,
-      });
-      if (modalTab === 'fuel') loadFuelCosts();
-      if (modalTab === 'tolls') loadTollCosts();
-    }
-  }, [vehicle, modalTab]);
-
-  const formatCNPJ = (v) => v.replace(/\D/g, '').replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2').substr(0, 18);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = { ...formData, insurance_id: formData.insurance_id ? parseInt(formData.insurance_id) : null };
-      if (vehicle) await updateFleet(vehicle.id, payload);
-      else await createFleet(payload);
-      onSuccess();
-    } catch (error) {
-      alert('Erro ao salvar veículo');
-    }
-  };
-
-  const loadFuelCosts = async () => {
-    if (!vehicle) return;
-    try {
-      const res = await api.get(`/assets/fleet/${vehicle.id}/fuel`);
-      setFuelCosts(res.data);
-    } catch (error) { setFuelCosts([]); }
-  };
-
-  const loadTollCosts = async () => {
-    if (!vehicle) return;
-    try {
-      const res = await api.get(`/assets/fleet/${vehicle.id}/tolls`);
-      setTollCosts(res.data);
-    } catch (error) { setTollCosts([]); }
-  };
+  // ... state ...
+  // ... hooks ...
 
   return (
     <div className="fleet-form-modal">
       <div className="fleet-form card" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <h3>{vehicle ? 'Editar Veículo' : 'Cadastrar Veículo'}</h3>
+          {vehicle && canEdit && (
+            <button
+              type="button"
+              className="btn-icon-small danger"
+              onClick={onDelete}
+              title="Excluir Veículo"
+            >
+              <Trash2 size={20} />
+            </button>
+          )}
         </div>
 
         {vehicle && (

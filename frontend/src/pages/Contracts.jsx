@@ -3,6 +3,8 @@ import { Plus, Trash2, FileText, Upload, Search } from 'lucide-react';
 import { getContracts, createContract, updateContract, deleteContract, getClients, getProjects, getAllBillings } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import DataTable from '../components/shared/DataTable';
+import StatusBadge from '../components/shared/StatusBadge';
 import './Contracts.css';
 
 const Contracts = () => {
@@ -247,9 +249,63 @@ const Contracts = () => {
     return matchesSearch && matchesClient && matchesType;
   });
 
+
+  const columns = [
+    { header: 'ID', accessor: 'id', render: row => <span className="text-gray-500 font-mono">#{row.id}</span> },
+    {
+      header: 'Contrato', accessor: 'description', render: row => (
+        <div>
+          <div className="font-semibold text-slate-900">{row.description}</div>
+          {row.contract_number && <div className="text-xs text-slate-500">{row.contract_number}</div>}
+        </div>
+      )
+    },
+    {
+      header: 'Tipo', accessor: 'contract_type', render: row => {
+        const type = row.contract_type || 'LPU';
+        const isLPU = type === 'LPU';
+        return (
+          <span style={{
+            fontSize: '0.75rem',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: isLPU ? '#e0f2fe' : '#f3e8ff',
+            color: isLPU ? '#0369a1' : '#7e22ce',
+            fontWeight: '600',
+            whiteSpace: 'nowrap'
+          }}>
+            {type}
+          </span>
+        );
+      }
+    },
+    {
+      header: 'Status', accessor: 'status', render: row => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const endDate = row.end_date ? new Date(row.end_date + 'T12:00:00') : null;
+        const isExpired = endDate && endDate < today;
+        const status = isExpired ? 'Vencido' : 'Ativo';
+        // Manually override color for Active to match existing green
+        return <StatusBadge status={status} />
+      }
+    },
+    {
+      header: 'Projetos', accessor: 'projects', render: row => {
+        const count = getProjectCount(row.id);
+        return count > 0 ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.875rem', color: '#64748b' }}>
+            📂 {count}
+          </span>
+        ) : '-';
+      }
+    },
+  ];
+
   return (
     <div className="contracts">
       <header className="contracts-header">
+        {/* ... header content ... */}
         <div className="header-content">
           <div>
             <h1>Gestão de Contratos</h1>
@@ -307,6 +363,7 @@ const Contracts = () => {
 
       {showForm && (
         <div className="contract-form-modal">
+          {/* Preservation of Modal Content Logic */}
           <div className="contract-form card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3>{editingId ? 'Editar Contrato' : 'Criar Contrato'}</h3>
@@ -632,74 +689,16 @@ const Contracts = () => {
               </div>
             </form>
           </div>
-        </div >
+        </div>
       )}
 
-      <div className="contracts-grid">
-        {loading ? (
-          <div className="loading">Carregando contratos...</div>
-        ) : contracts.length === 0 ? (
-          <div className="empty-state card">
-            <FileText size={48} color="#94a3b8" />
-            <p>Nenhum contrato cadastrado ainda.</p>
-          </div>
-        ) : (
-          filteredContracts.map((contract) => (
-            <div
-              key={contract.id}
-              className="contract-card card clickable"
-              onClick={() => handleEdit(contract)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="contract-header">
-                <div className="contract-icon">
-                  <FileText size={20} />
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  {contract.contract_type && (
-                    <span className={`contract-type-badge ${contract.contract_type.toLowerCase()}`}
-                      style={{
-                        fontSize: '0.7rem',
-                        padding: '0.1rem 0.4rem',
-                        borderRadius: '4px',
-                        backgroundColor: contract.contract_type === 'LPU' ? '#e0f2fe' : '#f3e8ff',
-                        color: contract.contract_type === 'LPU' ? '#0369a1' : '#7e22ce',
-                        fontWeight: '600'
-                      }}>
-                      {contract.contract_type}
-                    </span>
-                  )}
-                  <span className={`contract-status-badge ${contract.status === 'Vencido' ? 'expired' : 'active'}`}
-                    style={{
-                      fontSize: '0.7rem',
-                      padding: '0.1rem 0.4rem',
-                      borderRadius: '4px',
-                      backgroundColor: contract.status === 'Vencido' ? '#fee2e2' : '#dcfce7',
-                      color: contract.status === 'Vencido' ? '#991b1b' : '#166534',
-                      fontWeight: '600'
-                    }}>
-                    {contract.status || 'Ativo'}
-                  </span>
-                </div>
-              </div>
-              <h3 className="contract-title">{contract.description}</h3>
-              <p className="contract-id">ID: {contract.id}</p>
-              {contract.contract_number && <p className="contract-number">{contract.contract_number}</p>}
-              {getProjectCount(contract.id) > 0 && (
-                <p className="project-count" style={{
-                  fontSize: '0.8rem',
-                  color: '#64748b',
-                  marginTop: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem'
-                }}>
-                  📂 {getProjectCount(contract.id)} projeto{getProjectCount(contract.id) > 1 ? 's' : ''} vinculado{getProjectCount(contract.id) > 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
-          ))
-        )}
+      <div style={{ padding: '0 2rem 2rem' }}>
+        <DataTable
+          columns={columns}
+          data={filteredContracts}
+          actions={false}
+          onRowClick={(contract) => handleEdit(contract)}
+        />
       </div>
 
       <ConfirmModal
@@ -709,7 +708,7 @@ const Contracts = () => {
         title="Confirmar Exclusão"
         message="Tem certeza que deseja excluir este contrato? Esta ação não pode ser desfeita."
       />
-    </div >
+    </div>
   );
 };
 
