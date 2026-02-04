@@ -94,12 +94,28 @@ const AICopilotWidget = () => {
 
   return (
     <>
-      {/* Floating Button - Premium Style */}
+      {/* Floating Button - Premium Style - Semi-Hidden */}
       {!isOpen && (
         <button
           onClick={toggleChat}
-          className="group relative flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-full shadow-[0_8px_30px_rgb(79,70,229,0.3)] hover:shadow-[0_8px_40px_rgb(79,70,229,0.5)] hover:-translate-y-1 transition-all duration-300 border-4 border-white/20"
-          style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999 }}
+          className="group relative flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-full shadow-[0_8px_30px_rgb(79,70,229,0.3)] hover:shadow-[0_8px_40px_rgb(79,70,229,0.5)] transition-all duration-300 border-4 border-white/20"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 9999,
+            transform: 'translateX(50%)',
+            opacity: 0.4,
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateX(0)';
+            e.currentTarget.style.opacity = '1';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateX(50%)';
+            e.currentTarget.style.opacity = '0.4';
+          }}
         >
           {/* Ping animation */}
           <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-20"></div>
