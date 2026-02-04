@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import api, { createFleet, updateFleet } from '../../services/api';
+import { formatDateUTC } from '../../utils/formatters';
 import MaintenanceTab from '../assets/MaintenanceTab';
 import Input from '../shared/Input';
 import Select from '../shared/Select';
 import Button from '../shared/Button';
+import ConfirmModal from '../shared/ConfirmModal';
 
 const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, onDelete }) => {
   const [modalTab, setModalTab] = useState('details');
@@ -24,6 +26,7 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
 
   const [fuelCosts, setFuelCosts] = useState([]);
   const [tollCosts, setTollCosts] = useState([]);
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, id: null, type: null });
 
   useEffect(() => {
     if (vehicle) {
@@ -74,6 +77,26 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
       const res = await api.get(`/assets/fleet/${vehicle.id}/tolls`);
       setTollCosts(res.data);
     } catch (error) { console.error(error); }
+  };
+
+  const handleDeleteRequest = (id, type) => {
+    setConfirmDelete({ open: true, id, type });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete.id || !confirmDelete.type) return;
+    try {
+      if (confirmDelete.type === 'fuel') {
+        await api.delete(`/assets/fleet/fuel/${confirmDelete.id}`);
+        loadCosts();
+      } else if (confirmDelete.type === 'toll') {
+        await api.delete(`/assets/fleet/tolls/${confirmDelete.id}`);
+        loadTollCosts();
+      }
+      setConfirmDelete({ open: false, id: null, type: null });
+    } catch (error) {
+      alert('Erro ao excluir registro');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -174,7 +197,11 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
                 placeholder="Sem seguro"
                 wrapperClassName="full-width"
               >
-                {insurances.map(i => <option key={i.id} value={i.id}>{i.insurance_company} - {i.policy_number}</option>)}
+                {insurances.map(i => (
+                  <option key={i.id} value={i.id}>
+                    {i.insurance_company} - {i.policy_number} {i.validity ? `(Vencimento: ${formatDateUTC(i.validity)})` : ''}
+                  </option>
+                ))}
               </Select>
             </div>
             <div className="form-actions">
@@ -219,7 +246,7 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
                         <td align="right">{km_l}</td>
                         <td align="right">R$ {c.total_cost}</td>
                         <td align="right">
-                          {canEdit && <button onClick={async () => { await api.delete(`/assets/fleet/fuel/${c.id}`); loadCosts(); }} className="btn-icon-small danger"><Trash2 size={14} /></button>}
+                          {canEdit && <button onClick={() => handleDeleteRequest(c.id, 'fuel')} className="btn-icon-small danger"><Trash2 size={14} /></button>}
                         </td>
                       </tr>
                     );
@@ -245,7 +272,7 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
                       <td style={{ padding: '8px 0' }}>{new Date(tc.competence_date).toLocaleDateString()}</td>
                       <td align="right">R$ {tc.total_cost}</td>
                       <td align="right">
-                        {canEdit && <button onClick={async () => { await api.delete(`/assets/fleet/tolls/${tc.id}`); loadTollCosts(); }} className="btn-icon-small danger"><Trash2 size={14} /></button>}
+                        {canEdit && <button onClick={() => handleDeleteRequest(tc.id, 'toll')} className="btn-icon-small danger"><Trash2 size={14} /></button>}
                       </td>
                     </tr>
                   ))}
@@ -258,6 +285,13 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
           </div>
         )}
 
+        <ConfirmModal
+          isOpen={confirmDelete.open}
+          onClose={() => setConfirmDelete({ open: false, id: null, type: null })}
+          onConfirm={handleConfirmDelete}
+          title="Excluir Registro"
+          message="Tem certeza que deseja excluir este registro de custo? Esta ação não pode ser desfeita."
+        />
       </div>
     </div>
   );
