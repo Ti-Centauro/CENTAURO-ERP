@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
 import ProjectPopover from './ProjectPopover';
 
 /**
@@ -8,6 +9,7 @@ import ProjectPopover from './ProjectPopover';
  * - Click empty cell: Opens Quick Allocation Popover
  * - Click allocation bar: Opens edit modal
  * - Drag-to-Fill: Grab handle to extend allocation to adjacent days
+ * - Quick Delete: X button on hover to delete allocation
  */
 const SchedulerCell = ({
   date,
@@ -24,6 +26,7 @@ const SchedulerCell = ({
   onCellClick,
   onAllocationClick,
   onQuickAllocate,
+  onDelete,
   onDragStart,
   onDragEnter,
   canEdit = true
@@ -82,6 +85,13 @@ const SchedulerCell = ({
     }
   };
 
+  const handleDeleteClick = (e, allocId) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(allocId);
+    }
+  };
+
   const cellClasses = [
     'allocation-cell',
     isWeekend ? 'weekend' : '',
@@ -122,6 +132,17 @@ const SchedulerCell = ({
           >
             <span className="allocation-tag">{projectInfo.tag}</span>
             <span className="allocation-client">{projectInfo.clientName}</span>
+
+            {/* Delete Button */}
+            {canEdit && (
+              <button
+                className="allocation-delete-btn"
+                onClick={(e) => handleDeleteClick(e, alloc.id)}
+                title="Excluir alocação"
+              >
+                <X size={10} />
+              </button>
+            )}
 
             {/* Drag Handle */}
             {canEdit && (

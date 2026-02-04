@@ -543,6 +543,7 @@ const Scheduler = () => {
                 onAllocationClick={handleEditAllocation}
                 onQuickAllocate={handleQuickAllocation}
                 onBatchAllocate={handleBatchAllocate}
+                onDelete={handleDeleteAllocation}
                 canEdit={canEdit}
               />
             ))

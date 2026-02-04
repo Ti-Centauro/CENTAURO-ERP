@@ -267,6 +267,34 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Delete button on allocation bar - visible on hover */
+.allocation-delete-btn {
+  position: absolute;
+  top: 2px;
+  right: 10px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.allocation-bar:hover .allocation-delete-btn {
+  display: flex;
+}
+
+.allocation-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.9);
+}
+
 .allocation-tag {
   font-weight: 700;
   white-space: nowrap;

@@ -20,6 +20,7 @@ const ResourceRow = ({
   onAllocationClick,
   onQuickAllocate,
   onBatchAllocate,
+  onDelete,
   canEdit = true
 }) => {
   // Drag-to-Fill State
@@ -135,6 +136,7 @@ const ResourceRow = ({
             onCellClick={onCellClick}
             onAllocationClick={onAllocationClick}
             onQuickAllocate={onQuickAllocate}
+            onDelete={onDelete}
             onDragStart={handleDragStart}
             onDragEnter={handleDragEnter}
             canEdit={canEdit}
