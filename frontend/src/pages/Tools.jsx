@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Wrench, MapPin, User, Edit } from 'lucide-react';
+import { Plus, Trash2, Wrench, MapPin, User, Edit, LayoutGrid, List, Search } from 'lucide-react';
 import { getTools, createTool, deleteTool, updateTool, getCollaborators, getProjects } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
@@ -9,10 +9,16 @@ import './Tools.css';
 const Tools = () => {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('tools', 'edit');
+
   const [tools, setTools] = useState([]);
   const [collaborators, setCollaborators] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // View & Search State
+  const [viewMode, setViewMode] = useState('grid');
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -124,7 +130,7 @@ const Tools = () => {
       await deleteTool(itemToDelete);
       setShowConfirmModal(false);
       setItemToDelete(null);
-      setShowForm(false); // Close edit modal
+      setShowForm(false);
       loadTools();
     } catch (error) {
       console.error('Error deleting tool:', error);
@@ -168,6 +174,12 @@ const Tools = () => {
     ...projects.map(p => ({ value: p.name, label: p.name }))
   ];
 
+  // Filtering Logic
+  const filteredTools = tools.filter(tool =>
+    tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tool.serial_number.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="tools">
       <header className="tools-header">
@@ -175,22 +187,54 @@ const Tools = () => {
           <h1>Gestão de Ferramentas</h1>
           <p>Rastreamento de ferramentas e equipamentos</p>
         </div>
-        {canEdit && (
-          <button className="btn btn-primary" onClick={() => {
-            setEditingId(null);
-            setFormData({
-              name: '',
-              serial_number: '',
-              current_holder: '',
-              current_location: '',
-              status: 'AVAILABLE',
-            });
-            setShowForm(true);
-          }}>
-            <Plus size={20} />
-            Nova Ferramenta
-          </button>
-        )}
+
+        <div className="tools-header-actions">
+          {/* Search Box */}
+          <div className="search-box">
+            <Search size={18} className="search-icon" />
+            <input
+              type="text"
+              placeholder="Buscar por nome ou patrimônio..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* View Toggle */}
+          <div className="view-toggle">
+            <button
+              className={viewMode === 'grid' ? 'active' : ''}
+              onClick={() => setViewMode('grid')}
+              title="Visualização em Grade"
+            >
+              <LayoutGrid size={20} />
+            </button>
+            <button
+              className={viewMode === 'list' ? 'active' : ''}
+              onClick={() => setViewMode('list')}
+              title="Visualização em Lista"
+            >
+              <List size={20} />
+            </button>
+          </div>
+
+          {canEdit && (
+            <button className="btn btn-primary" onClick={() => {
+              setEditingId(null);
+              setFormData({
+                name: '',
+                serial_number: '',
+                current_holder: '',
+                current_location: '',
+                status: 'AVAILABLE',
+              });
+              setShowForm(true);
+            }}>
+              <Plus size={20} />
+              Nova Ferramenta
+            </button>
+          )}
+        </div>
       </header>
 
       {showForm && (
@@ -286,57 +330,103 @@ const Tools = () => {
         </div>
       )}
 
-      <div className="tools-grid">
-        {loading ? (
-          <div className="loading">Carregando ferramentas...</div>
-        ) : tools.length === 0 ? (
-          <div className="empty-state card">
-            <Wrench size={48} color="#94a3b8" />
-            <p>Nenhuma ferramenta cadastrada ainda.</p>
-          </div>
-        ) : (
-          tools.map((tool) => (
-            <div
-              key={tool.id}
-              className="tool-card card clickable"
-              onClick={() => handleEdit(tool)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="tool-card-header">
-                <div className="tool-icon">
-                  <Wrench size={24} />
-                </div>
-                <span
-                  className="status-badge"
-                  style={getStatusColor(tool.status)}
+      {loading ? (
+        <div className="loading">Carregando ferramentas...</div>
+      ) : filteredTools.length === 0 ? (
+        <div className="empty-state card">
+          {searchTerm ? (
+            <>
+              <Search size={48} color="#94a3b8" />
+              <p>Nenhuma ferramenta encontrada para "{searchTerm}".</p>
+            </>
+          ) : (
+            <>
+              <Wrench size={48} color="#94a3b8" />
+              <p>Nenhuma ferramenta cadastrada ainda.</p>
+            </>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* GRID VIEW */}
+          {viewMode === 'grid' && (
+            <div className="tools-grid">
+              {filteredTools.map((tool) => (
+                <div
+                  key={tool.id}
+                  className="tool-card card clickable"
+                  onClick={() => handleEdit(tool)}
+                  style={{ cursor: 'pointer' }}
                 >
-                  {getStatusLabel(tool.status)}
-                </span>
-              </div>
-              <h3 className="tool-name">{tool.name}</h3>
-              <p className="tool-serial">Patrimônio: {tool.serial_number}</p>
-              <div className="tool-details">
-                <div className="detail-item">
-                  <User size={16} color="#64748b" />
-                  <div>
-                    <span className="detail-label">Com quem:</span>
-                    <span className="detail-value">{tool.current_holder}</span>
+                  <div className="tool-card-header">
+                    <div className="tool-icon">
+                      <Wrench size={24} />
+                    </div>
+                    <span
+                      className="status-badge"
+                      style={getStatusColor(tool.status)}
+                    >
+                      {getStatusLabel(tool.status)}
+                    </span>
+                  </div>
+                  <h3 className="tool-name">{tool.name}</h3>
+                  <p className="tool-serial">Patrimônio: {tool.serial_number}</p>
+                  <div className="tool-details">
+                    <div className="detail-item">
+                      <User size={16} color="#64748b" />
+                      <div>
+                        <span className="detail-label">Com quem:</span>
+                        <span className="detail-value">{tool.current_holder}</span>
+                      </div>
+                    </div>
+                    {tool.current_location && (
+                      <div className="detail-item">
+                        <MapPin size={16} color="#64748b" />
+                        <div>
+                          <span className="detail-label">Onde:</span>
+                          <span className="detail-value">{tool.current_location}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {tool.current_location && (
-                  <div className="detail-item">
-                    <MapPin size={16} color="#64748b" />
-                    <div>
-                      <span className="detail-label">Onde:</span>
-                      <span className="detail-value">{tool.current_location}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+              ))}
             </div>
-          ))
-        )}
-      </div>
+          )}
+
+          {/* LIST VIEW */}
+          {viewMode === 'list' && (
+            <div className="tools-list">
+              <table className="tools-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Nome</th>
+                    <th>Patrimônio</th>
+                    <th>Com Quem</th>
+                    <th>Onde</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTools.map(tool => (
+                    <tr key={tool.id} onClick={() => handleEdit(tool)}>
+                      <td>
+                        <span className="status-badge" style={getStatusColor(tool.status)}>
+                          {getStatusLabel(tool.status)}
+                        </span>
+                      </td>
+                      <td><strong>{tool.name}</strong></td>
+                      <td style={{ fontFamily: 'monospace' }}>{tool.serial_number}</td>
+                      <td>{tool.current_holder}</td>
+                      <td>{tool.current_location || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
 
       <ConfirmModal
         isOpen={showConfirmModal}
