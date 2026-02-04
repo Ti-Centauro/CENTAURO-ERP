@@ -7,20 +7,25 @@ import ProjectPopover from './ProjectPopover';
  * Features:
  * - Click empty cell: Opens Quick Allocation Popover
  * - Click allocation bar: Opens edit modal
- * - Future: Drag-to-Fill support
+ * - Drag-to-Fill: Grab handle to extend allocation to adjacent days
  */
 const SchedulerCell = ({
   date,
+  dayIndex,
   resourceId,
   resourceType,
   allocations = [],
   isWeekend = false,
   isHoliday = false,
+  isHighlighted = false,
+  isDragging = false,
   projects = [],
   clients = [],
   onCellClick,
   onAllocationClick,
   onQuickAllocate,
+  onDragStart,
+  onDragEnter,
   canEdit = true
 }) => {
   const [showPopover, setShowPopover] = useState(false);
@@ -63,16 +68,32 @@ const SchedulerCell = ({
     }
   };
 
+  const handleDragHandleMouseDown = (e, alloc) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onDragStart) {
+      onDragStart(alloc, dayIndex, date);
+    }
+  };
+
+  const handleCellMouseEnter = () => {
+    if (isDragging && onDragEnter) {
+      onDragEnter(dayIndex, date);
+    }
+  };
+
   const cellClasses = [
     'allocation-cell',
     isWeekend ? 'weekend' : '',
-    isHoliday ? 'holiday' : ''
+    isHoliday ? 'holiday' : '',
+    isHighlighted ? 'cell-drag-highlight' : ''
   ].filter(Boolean).join(' ');
 
   return (
     <div
       className={cellClasses}
       onClick={handleCellClick}
+      onMouseEnter={handleCellMouseEnter}
       style={{
         cursor: canEdit ? 'pointer' : 'default',
         position: 'relative' // For popover positioning
@@ -101,6 +122,15 @@ const SchedulerCell = ({
           >
             <span className="allocation-tag">{projectInfo.tag}</span>
             <span className="allocation-client">{projectInfo.clientName}</span>
+
+            {/* Drag Handle */}
+            {canEdit && (
+              <div
+                className="drag-handle"
+                onMouseDown={(e) => handleDragHandleMouseDown(e, alloc)}
+                title="Arraste para estender"
+              />
+            )}
           </div>
         );
       })}

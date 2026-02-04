@@ -222,6 +222,51 @@
   line-height: 1.2;
 }
 
+/* Drag Handle - Right edge of allocation bar */
+.drag-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  border-radius: 0 4px 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drag-handle::before {
+  content: '';
+  width: 2px;
+  height: 60%;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 1px;
+}
+
+.allocation-bar:hover .drag-handle {
+  opacity: 1;
+}
+
+.drag-handle:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Cell Drag Highlight - When dragging over empty cells */
+.allocation-cell.cell-drag-highlight {
+  background: rgba(59, 130, 246, 0.15) !important;
+  border: 2px dashed rgba(59, 130, 246, 0.4);
+}
+
+/* Active dragging state on the source bar */
+.allocation-bar.is-dragging {
+  opacity: 0.7;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 .allocation-tag {
   font-weight: 700;
   white-space: nowrap;

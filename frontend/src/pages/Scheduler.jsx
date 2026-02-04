@@ -325,6 +325,34 @@ const Scheduler = () => {
     }
   };
 
+  // Batch Allocation: Create allocations for multiple days (drag-to-fill)
+  const handleBatchAllocate = async (sourceAllocation, datesToFill, resourceId, resourceType) => {
+    if (!canEdit || !datesToFill.length) return;
+
+    try {
+      // Create allocation for each date in the range
+      const promises = datesToFill.map(date => {
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+        return createAllocation({
+          resource_id: resourceId,
+          resource_type: resourceType,
+          project_id: sourceAllocation.project_id,
+          start_date: dateStr,
+          end_date: dateStr,
+          include_weekends: true,
+          type: 'RESERVATION'
+        });
+      });
+
+      await Promise.all(promises);
+      loadData(); // Refresh data
+    } catch (error) {
+      console.error('Error creating batch allocations:', error);
+      alert('Erro ao criar alocações em lote');
+    }
+  };
+
   return (
     <div className="scheduler">
       <header className="scheduler-header">
@@ -514,6 +542,7 @@ const Scheduler = () => {
                 onCellClick={handleCellClick}
                 onAllocationClick={handleEditAllocation}
                 onQuickAllocate={handleQuickAllocation}
+                onBatchAllocate={handleBatchAllocate}
                 canEdit={canEdit}
               />
             ))

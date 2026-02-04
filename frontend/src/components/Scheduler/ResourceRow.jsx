@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import SchedulerCell from './SchedulerCell';
 
 /**
@@ -6,6 +6,8 @@ import SchedulerCell from './SchedulerCell';
  * 
  * CRITICAL: Uses React.Fragment (<>) to preserve CSS Grid layout.
  * The parent grid in Scheduler.jsx expects flat cell elements.
+ * 
+ * Also manages drag-to-fill state for this row.
  */
 const ResourceRow = ({
   resource,
@@ -17,8 +19,15 @@ const ResourceRow = ({
   onCellClick,
   onAllocationClick,
   onQuickAllocate,
+  onBatchAllocate,
   canEdit = true
 }) => {
+  // Drag-to-Fill State
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragSource, setDragSource] = useState(null); // The allocation being dragged
+  const [dragStartIndex, setDragStartIndex] = useState(null);
+  const [dragCurrentIndex, setDragCurrentIndex] = useState(null);
+
   // Get allocations for a specific resource and day
   const getAllocationsForCell = (day) => {
     const dayStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
@@ -29,6 +38,68 @@ const ResourceRow = ({
         alloc.resource_type === resource.type &&
         alloc.resource_id === resource.originalId;
     });
+  };
+
+  // Handle drag start from allocation bar
+  const handleDragStart = (alloc, dayIndex, date) => {
+    setIsDragging(true);
+    setDragSource(alloc);
+    setDragStartIndex(dayIndex);
+    setDragCurrentIndex(dayIndex);
+  };
+
+  // Handle mouse entering a cell during drag
+  const handleDragEnter = (dayIndex, date) => {
+    if (isDragging && dayIndex > dragStartIndex) {
+      setDragCurrentIndex(dayIndex);
+    }
+  };
+
+  // Handle drag end (mouse up anywhere)
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseUp = () => {
+      if (isDragging && dragSource && dragStartIndex !== null && dragCurrentIndex !== null) {
+        // Calculate the date range to fill
+        const startIdx = dragStartIndex + 1; // Start from next day
+        const endIdx = dragCurrentIndex;
+
+        if (endIdx > dragStartIndex && onBatchAllocate) {
+          const datesToFill = [];
+          for (let i = startIdx; i <= endIdx; i++) {
+            if (days[i]) {
+              datesToFill.push(days[i]);
+            }
+          }
+
+          if (datesToFill.length > 0) {
+            onBatchAllocate(
+              dragSource,
+              datesToFill,
+              resource.originalId,
+              resource.type
+            );
+          }
+        }
+      }
+
+      // Reset drag state
+      setIsDragging(false);
+      setDragSource(null);
+      setDragStartIndex(null);
+      setDragCurrentIndex(null);
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, [isDragging, dragSource, dragStartIndex, dragCurrentIndex, days, onBatchAllocate, resource]);
+
+  // Calculate which cells should be highlighted
+  const isHighlighted = (dayIndex) => {
+    if (!isDragging || dragStartIndex === null || dragCurrentIndex === null) return false;
+    // Highlight cells between start (exclusive) and current (inclusive)
+    return dayIndex > dragStartIndex && dayIndex <= dragCurrentIndex;
   };
 
   return (
@@ -51,16 +122,21 @@ const ResourceRow = ({
           <SchedulerCell
             key={`${resource.id}-${dayIndex}`}
             date={day}
+            dayIndex={dayIndex}
             resourceId={resource.originalId}
             resourceType={resource.type}
             allocations={cellAllocations}
             isWeekend={isWeekend}
             isHoliday={!!holidayInfo}
+            isHighlighted={isHighlighted(dayIndex)}
+            isDragging={isDragging}
             projects={projects}
             clients={clients}
             onCellClick={onCellClick}
             onAllocationClick={onAllocationClick}
             onQuickAllocate={onQuickAllocate}
+            onDragStart={handleDragStart}
+            onDragEnter={handleDragEnter}
             canEdit={canEdit}
           />
         );
