@@ -147,11 +147,29 @@ const ProjectModal = ({ project: initialProject, onClose, onUpdate, onEdit }) =>
               <FileText size={24} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{project.name}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>{project.name}</h2>
+                {project.tag && (
+                  <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>
+                    {project.tag}
+                  </span>
+                )}
+              </div>
               <span style={{ fontSize: '0.875rem', color: '#64748b' }}>{project.description}</span>
             </div>
           </div>
-          <button className="close-btn" onClick={onClose}><X size={20} /></button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {canEdit && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => handleEditClick(project)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+              >
+                <Edit size={16} /> Editar Dados
+              </button>
+            )}
+            <button className="close-btn" onClick={onClose}><X size={20} /></button>
+          </div>
         </div>
 
         {/* Tabs Navigation */}
