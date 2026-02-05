@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, Clock, XCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, XCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { approvePurchase, rejectPurchase, clearPurchaseRejection } from '../../services/api';
 import './ApprovalTimeline.css';
@@ -9,6 +9,10 @@ const ApprovalTimeline = ({ request, onUpdate }) => {
   const [loading, setLoading] = useState(null); // Which step is loading
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+
+  // Auto-collapse if already approved or later
+  const isFinalStatus = ['approved', 'ordered', 'received', 'bought', 'in_stock', 'delivered'].includes(request.status);
+  const [isExpanded, setIsExpanded] = useState(!isFinalStatus);
 
   // Check user permissions from role-based approvals
   const approvalPermissions = user?.permissions?.approvals || {};
@@ -99,89 +103,119 @@ const ApprovalTimeline = ({ request, onUpdate }) => {
 
   const isRejected = request.status === 'rejected';
 
+  // Styles for accordion header
+  const headerStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    cursor: 'pointer',
+    padding: '0.5rem 0',
+    marginBottom: isExpanded ? '1rem' : '0'
+  };
+
   return (
     <div className="approval-timeline">
-      <h4 className="approval-title">Fluxo de Aprovação</h4>
-
-      {/* Rejection Banner */}
-      {isRejected && (
-        <div className="rejection-banner">
-          <AlertTriangle size={20} />
-          <div className="rejection-info">
-            <strong>Solicitação Rejeitada</strong>
-            <p>Motivo: {request.rejection_reason}</p>
-            <p className="rejection-meta">
-              Por {request.rejected_by_name || 'Desconhecido'} em {formatDate(request.rejected_at)}
-            </p>
-          </div>
-          <button
-            className="btn btn-sm btn-secondary"
-            onClick={handleClearRejection}
-            disabled={loading === 'clear'}
-          >
-            {loading === 'clear' ? 'Limpando...' : 'Reabrir'}
-          </button>
-        </div>
-      )}
-
-      {/* Timeline Steps */}
-      <div className="timeline-steps">
-        {steps.map((step, index) => {
-          const isApproved = !!step.approvedAt;
-          const isPending = !isApproved && !isRejected;
-
-          return (
-            <div key={step.key} className={`timeline-step ${isApproved ? 'approved' : ''} ${isRejected ? 'rejected' : ''}`}>
-              <div className="step-connector">
-                {index > 0 && <div className={`connector-line ${isApproved ? 'active' : ''}`} />}
-              </div>
-
-              <div className="step-icon">
-                {isApproved ? (
-                  <CheckCircle size={24} className="icon-approved" />
-                ) : isRejected ? (
-                  <XCircle size={24} className="icon-rejected" />
-                ) : (
-                  <Clock size={24} className="icon-pending" />
-                )}
-              </div>
-
-              <div className="step-content">
-                <div className="step-header">
-                  <span className="step-title">{step.title}</span>
-                  <span className="step-subtitle">{step.subtitle}</span>
-                </div>
-
-                {isApproved && (
-                  <div className="step-approval-info">
-                    <span className="approved-by">
-                      ✓ {step.approverName || 'Aprovador'}
-                    </span>
-                    <span className="approved-at">
-                      {formatDate(step.approvedAt)}
-                    </span>
-                  </div>
-                )}
-
-                {isPending && step.canApprove && (
-                  <div className="step-actions">
-                    <button
-                      className="btn btn-sm btn-success"
-                      onClick={() => handleApprove(step.key)}
-                      disabled={loading === step.key}
-                    >
-                      {loading === step.key ? 'Aprovando...' : 'Aprovar'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      <div style={headerStyle} onClick={() => setIsExpanded(!isExpanded)}>
+        <h4 className="approval-title" style={{ margin: 0 }}>
+          Fluxo de Aprovação
+          {/* Status summary if collapsed */}
+          {!isExpanded && isFinalStatus && (
+            <span style={{ fontSize: '0.8rem', color: '#10b981', marginLeft: '10px', fontWeight: 'normal' }}>
+              ✓ Aprovado
+            </span>
+          )}
+          {!isExpanded && isRejected && (
+            <span style={{ fontSize: '0.8rem', color: '#ef4444', marginLeft: '10px', fontWeight: 'normal' }}>
+              ✕ Rejeitado
+            </span>
+          )}
+        </h4>
+        {isExpanded ? <ChevronUp size={20} color="#64748b" /> : <ChevronDown size={20} color="#64748b" />}
       </div>
 
+      {isExpanded && (
+        <>
+          {/* Rejection Banner */}
+          {isRejected && (
+            <div className="rejection-banner">
+              <AlertTriangle size={20} />
+              <div className="rejection-info">
+                <strong>Solicitação Rejeitada</strong>
+                <p>Motivo: {request.rejection_reason}</p>
+                <p className="rejection-meta">
+                  Por {request.rejected_by_name || 'Desconhecido'} em {formatDate(request.rejected_at)}
+                </p>
+              </div>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={handleClearRejection}
+                disabled={loading === 'clear'}
+              >
+                {loading === 'clear' ? 'Limpando...' : 'Reabrir'}
+              </button>
+            </div>
+          )}
+
+          {/* Timeline Steps */}
+          <div className="timeline-steps">
+            {steps.map((step, index) => {
+              const isApproved = !!step.approvedAt;
+              const isPending = !isApproved && !isRejected;
+
+              return (
+                <div key={step.key} className={`timeline-step ${isApproved ? 'approved' : ''} ${isRejected ? 'rejected' : ''}`}>
+                  <div className="step-connector">
+                    {index > 0 && <div className={`connector-line ${isApproved ? 'active' : ''}`} />}
+                  </div>
+
+                  <div className="step-icon">
+                    {isApproved ? (
+                      <CheckCircle size={24} className="icon-approved" />
+                    ) : isRejected ? (
+                      <XCircle size={24} className="icon-rejected" />
+                    ) : (
+                      <Clock size={24} className="icon-pending" />
+                    )}
+                  </div>
+
+                  <div className="step-content">
+                    <div className="step-header">
+                      <span className="step-title">{step.title}</span>
+                      <span className="step-subtitle">{step.subtitle}</span>
+                    </div>
+
+                    {isApproved && (
+                      <div className="step-approval-info">
+                        <span className="approved-by">
+                          ✓ {step.approverName || 'Aprovador'}
+                        </span>
+                        <span className="approved-at">
+                          {formatDate(step.approvedAt)}
+                        </span>
+                      </div>
+                    )}
+
+                    {isPending && step.canApprove && (
+                      <div className="step-actions">
+                        <button
+                          className="btn btn-sm btn-success"
+                          onClick={() => handleApprove(step.key)}
+                          disabled={loading === step.key}
+                        >
+                          {loading === step.key ? 'Aprovando...' : 'Aprovar'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       {/* Reject Button - Only show if not rejected and user can approve something */}
-      {!isRejected && anyApprovalPermission && (
+      {isExpanded && !isRejected && anyApprovalPermission && (
         <div className="rejection-action">
           <button
             className="btn btn-sm btn-danger-outline"

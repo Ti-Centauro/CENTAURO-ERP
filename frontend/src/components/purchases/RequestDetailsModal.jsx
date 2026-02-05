@@ -6,12 +6,18 @@ import ApprovalTimeline from './ApprovalTimeline';
 import { useAuth } from '../../context/AuthContext';
 import './RequestDetailsModal.css';
 
-const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'projects', readOnly = false }) => {
+const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'projects', readOnly: propReadOnly = false }) => {
   // context: 'projects' = pode editar descrição, solicitante, itens básicos
   // context: 'purchases' = só gerencia preço, fornecedor, pagamento, prazo, status
   // readOnly: quando true, desabilita todas edições e esconde botão salvar
   const isProjectsContext = context === 'projects';
   const { user } = useAuth();
+
+  // Calculate if the form should be locked (read-only)
+  // If in 'projects' context and status is Approved or later, lock it.
+  const isLockedStatus = request?.status && ['approved', 'ordered', 'received', 'bought', 'delivered', 'in_stock'].includes(request.status);
+  const readOnly = propReadOnly || (isProjectsContext && isLockedStatus);
+
   const [formData, setFormData] = useState({
     description: '',
     requester: '',

@@ -7,8 +7,8 @@
 }
 
 .approval-title {
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
+  margin: 0;
+  font-size: 0.9rem;
   color: #1e293b;
   font-weight: 600;
 }
@@ -117,7 +117,7 @@
 .step-title {
   font-weight: 600;
   color: #1e293b;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
 }
 
 .step-subtitle {

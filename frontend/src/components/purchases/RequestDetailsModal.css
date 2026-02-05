@@ -76,17 +76,17 @@
   gap: 0.5rem;
 }
 
-.form-group label {
-  font-size: 0.875rem;
+.request-modal .form-group label {
+  font-size: 0.8rem;
   font-weight: 500;
   color: #64748b;
 }
 
-.input {
-  padding: 0.5rem;
+.request-modal .input {
+  padding: 0.4rem 0.5rem;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
 }
 
 .items-header {
