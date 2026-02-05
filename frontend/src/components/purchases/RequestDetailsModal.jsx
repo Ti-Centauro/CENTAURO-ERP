@@ -4,6 +4,7 @@ import { X, Plus, Trash2, Save } from 'lucide-react';
 import { updatePurchase, deletePurchase, createPurchase } from '../../services/api';
 import ApprovalTimeline from './ApprovalTimeline';
 import { useAuth } from '../../context/AuthContext';
+import ConfirmModal from '../shared/ConfirmModal';
 import './RequestDetailsModal.css';
 
 const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'projects', readOnly: propReadOnly = false }) => {
@@ -30,6 +31,7 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
     items: []
   });
   const [loading, setLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (request) {
@@ -59,19 +61,22 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleDelete = async () => {
-    if (window.confirm('Tem certeza que deseja excluir esta solicitação?')) {
-      setLoading(true);
-      try {
-        await deletePurchase(request.id);
-        onUpdate();
-        onClose();
-      } catch (error) {
-        console.error('Error deleting request:', error);
-        alert('Erro ao excluir solicitação');
-      } finally {
-        setLoading(false);
-      }
+  const handleDelete = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    setLoading(true);
+    try {
+      await deletePurchase(request.id);
+      onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      alert('Erro ao excluir solicitação');
+    } finally {
+      setLoading(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -594,6 +599,14 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
             </button>
           )}
         </div>
+
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={confirmDelete}
+          title="Excluir Solicitação"
+          message="Tem certeza que deseja excluir esta solicitação? Esta ação não pode ser desfeita."
+        />
       </div>
     </div>
   );
