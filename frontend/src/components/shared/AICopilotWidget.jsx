@@ -129,8 +129,7 @@ const AICopilotWidget = () => {
             <path d="M17 19h4" />
           </svg>
 
-          {/* Notification Badge */}
-          <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-white pointer-events-none"></span>
+
         </button>
       )}
 

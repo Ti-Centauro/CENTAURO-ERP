@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save } from 'lucide-react';
 import { updatePurchase, deletePurchase, createPurchase } from '../../services/api';
 import ApprovalTimeline from './ApprovalTimeline';
+import { useAuth } from '../../context/AuthContext';
 import './RequestDetailsModal.css';
 
 const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'projects', readOnly = false }) => {
@@ -10,6 +11,7 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
   // context: 'purchases' = só gerencia preço, fornecedor, pagamento, prazo, status
   // readOnly: quando true, desabilita todas edições e esconde botão salvar
   const isProjectsContext = context === 'projects';
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     description: '',
     requester: '',
@@ -37,8 +39,11 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
         arrival_forecast: request.arrival_forecast || '',
         items: request.items || []
       });
+    } else if ((user?.collaborator_name || user?.email) && !formData.requester) {
+      // Auto-fill requester for new requests
+      setFormData(prev => ({ ...prev, requester: user.collaborator_name || user.email }));
     }
-  }, [request]);
+  }, [request, user]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -250,7 +255,7 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
                 value={formData.requester}
                 onChange={handleHeaderChange}
                 className="input"
-                disabled={!isProjectsContext || readOnly}
+                disabled={true}
               />
             </div>
 
