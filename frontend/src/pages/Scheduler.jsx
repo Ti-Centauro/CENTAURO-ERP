@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, Trash2, Edit, Filter } from 'lucide-react';
-import { getAllocations, getCollaborators, getFleet, getTools, getProjects, getClients, createAllocation, updateAllocation, deleteAllocation } from '../services/api';
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, Edit, Filter, CheckSquare } from 'lucide-react';
+import { getAllocations, getCollaborators, getFleet, getTools, getProjects, getClients, createAllocation, updateAllocation, deleteAllocation, deleteBatchAllocations } from '../services/api';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
@@ -80,6 +80,8 @@ const Scheduler = () => {
   const [editingId, setEditingId] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [selectedAllocationIds, setSelectedAllocationIds] = useState(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [formData, setFormData] = useState({
     resource_id: '',
     resource_type: 'PERSON',
@@ -219,14 +221,45 @@ const Scheduler = () => {
 
   const confirmDelete = async () => {
     try {
-      await deleteAllocation(itemToDelete);
+      if (isSelectionMode && selectedAllocationIds.size > 0) {
+        // Bulk Delete - Using Backend Endpoint
+        const idsToDelete = Array.from(selectedAllocationIds);
+        await deleteBatchAllocations(idsToDelete);
+
+        // Reset selection
+        setIsSelectionMode(false);
+        setSelectedAllocationIds(new Set());
+      } else if (itemToDelete) {
+        await deleteAllocation(itemToDelete);
+        setItemToDelete(null);
+      }
+
       setShowConfirmModal(false);
-      setItemToDelete(null);
       loadData();
     } catch (error) {
-      console.error('Error deleting allocation:', error);
-      alert('Erro ao excluir alocação');
+      console.error('Error deleting allocation(s):', error);
+      alert('Erro ao excluir alocação(ões)');
     }
+  };
+
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    setSelectedAllocationIds(new Set());
+    setShowForm(false); // Close form if open
+  };
+
+  const handleSelectAllocation = (id) => {
+    const newSelected = new Set(selectedAllocationIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedAllocationIds(newSelected);
+  };
+
+  const handleBulkDelete = () => {
+    setShowConfirmModal(true);
   };
 
   const handleSubmit = async (e) => {
@@ -467,6 +500,14 @@ const Scheduler = () => {
             )}
           </div>
 
+          <button
+            className={`btn-toggle-selection ${isSelectionMode ? 'active' : ''}`}
+            onClick={toggleSelectionMode}
+          >
+            <CheckSquare size={18} />
+            Seleção Múltipla
+          </button>
+
           <div className="view-toggle">
             <button
               className={`btn-toggle ${viewMode === 'week' ? 'active' : ''}`}
@@ -490,6 +531,21 @@ const Scheduler = () => {
           )}
         </div>
       </div>
+
+      {/* Floating Action Bar */}
+      {isSelectionMode && selectedAllocationIds.size > 0 && (
+        <div className="bulk-action-bar">
+          <span className="bulk-count">{selectedAllocationIds.size} selecionados</span>
+          <div className="bulk-divider" />
+          <button className="btn-bulk-delete" onClick={handleBulkDelete}>
+            <Trash2 size={16} />
+            Excluir
+          </button>
+          <button className="btn-bulk-cancel" onClick={toggleSelectionMode}>
+            <X size={20} />
+          </button>
+        </div>
+      )}
 
       <div className="scheduler-grid-container">
         <div className="scheduler-grid" style={{ gridTemplateColumns: viewMode === 'week' ? `200px repeat(7, 1fr)` : `200px repeat(${days.length}, 60px)` }}>
@@ -545,6 +601,10 @@ const Scheduler = () => {
                 onBatchAllocate={handleBatchAllocate}
                 onDelete={handleDeleteAllocation}
                 canEdit={canEdit}
+
+                isSelectionMode={isSelectionMode}
+                selectedAllocationIds={selectedAllocationIds}
+                onSelectAllocation={handleSelectAllocation}
               />
             ))
           )}
@@ -694,7 +754,10 @@ const Scheduler = () => {
         onClose={() => setShowConfirmModal(false)}
         onConfirm={confirmDelete}
         title="Confirmar Exclusão"
-        message="Tem certeza que deseja excluir esta alocação? Esta ação não pode ser desfeita."
+        message={isSelectionMode
+          ? `Tem certeza que deseja excluir ${selectedAllocationIds.size} alocações selecionadas?`
+          : "Tem certeza que deseja excluir esta alocação? Esta ação não pode ser desfeita."
+        }
       />
     </div>
   );

@@ -14,6 +14,7 @@ export const getAllocations = (teamIds = []) => {
 export const createAllocation = (data) => api.post('/operational/allocations', data);
 export const updateAllocation = (id, data) => api.put(`/operational/allocations/${id}`, data);
 export const deleteAllocation = (id) => api.delete(`/operational/allocations/${id}`);
+export const deleteBatchAllocations = (ids) => api.post('/operational/allocations/batch-delete', { ids });
 
 // Collaborators
 export const getCollaborators = () => api.get('/operational/collaborators');

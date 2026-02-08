@@ -64,6 +64,7 @@ export {
   createAllocation,
   updateAllocation,
   deleteAllocation,
+  deleteBatchAllocations,
   // Collaborators
   getCollaborators,
   createCollaborator,

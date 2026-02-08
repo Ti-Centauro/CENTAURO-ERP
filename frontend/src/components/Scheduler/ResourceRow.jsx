@@ -21,7 +21,10 @@ const ResourceRow = ({
   onQuickAllocate,
   onBatchAllocate,
   onDelete,
-  canEdit = true
+  canEdit = true,
+  isSelectionMode,
+  selectedAllocationIds,
+  onSelectAllocation
 }) => {
   // Drag-to-Fill State
   const [isDragging, setIsDragging] = useState(false);
@@ -140,6 +143,10 @@ const ResourceRow = ({
             onDragStart={handleDragStart}
             onDragEnter={handleDragEnter}
             canEdit={canEdit}
+
+            isSelectionMode={isSelectionMode}
+            selectedAllocationIds={selectedAllocationIds}
+            onSelectAllocation={onSelectAllocation}
           />
         );
       })}

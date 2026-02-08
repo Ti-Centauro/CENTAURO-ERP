@@ -219,6 +219,26 @@ async def create_allocation(allocation: schemas.AllocationCreate, db: AsyncSessi
     await db.commit()
     return created_allocations
 
+@router.post("/allocations/batch-delete")
+async def batch_delete_allocations(payload: dict, db: AsyncSession = Depends(get_db)):
+    """
+    Batch delete allocations by IDs.
+    Expects payload: {"ids": [1, 2, 3]}
+    """
+    from sqlalchemy import delete
+    
+    ids = payload.get("ids", [])
+    if not ids:
+        return {"success": True, "count": 0}
+
+    # Execute delete in a single query
+    await db.execute(
+        delete(models.Allocation).where(models.Allocation.id.in_(ids))
+    )
+    
+    await db.commit()
+    return {"success": True, "count": len(ids)}
+
 @router.put("/allocations/{allocation_id}", response_model=List[schemas.AllocationResponse])
 async def update_allocation(allocation_id: int, allocation: schemas.AllocationCreate, db: AsyncSession = Depends(get_db)):
     from datetime import timedelta
@@ -325,6 +345,8 @@ async def update_allocation(allocation_id: int, allocation: schemas.AllocationCr
     
     await db.commit()
     return created_allocations
+
+
 
 @router.delete("/allocations/{allocation_id}")
 async def delete_allocation(allocation_id: int, db: AsyncSession = Depends(get_db)):

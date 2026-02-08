@@ -29,9 +29,30 @@ const SchedulerCell = ({
   onDelete,
   onDragStart,
   onDragEnter,
-  canEdit = true
+  canEdit = true,
+  isSelectionMode,
+  selectedAllocationIds,
+  onSelectAllocation
 }) => {
   const [showPopover, setShowPopover] = useState(false);
+
+  // ... (getProjectInfo)
+
+  const hasAllocations = allocations.length > 0;
+
+  const handleCellClick = (e) => {
+    e.stopPropagation();
+
+    if (!canEdit) return;
+
+    // If cell is empty, show popover for quick allocation
+    if (!hasAllocations && onQuickAllocate && !isSelectionMode) {
+      setShowPopover(true);
+    } else if (onCellClick && !isSelectionMode) {
+      // Fallback to original behavior (open modal)
+      onCellClick({ date, resourceId, resourceType });
+    }
+  };
 
   // Get project and client info for an allocation
   const getProjectInfo = (projectId) => {
@@ -46,22 +67,6 @@ const SchedulerCell = ({
       clientName,
       fullName: `${client?.name || 'Cliente'} | ${project.tag}`
     };
-  };
-
-  const hasAllocations = allocations.length > 0;
-
-  const handleCellClick = (e) => {
-    e.stopPropagation();
-
-    if (!canEdit) return;
-
-    // If cell is empty, show popover for quick allocation
-    if (!hasAllocations && onQuickAllocate) {
-      setShowPopover(true);
-    } else if (onCellClick) {
-      // Fallback to original behavior (open modal)
-      onCellClick({ date, resourceId, resourceType });
-    }
   };
 
   const handleProjectSelect = (project) => {
@@ -105,18 +110,19 @@ const SchedulerCell = ({
       onClick={handleCellClick}
       onMouseEnter={handleCellMouseEnter}
       style={{
-        cursor: canEdit ? 'pointer' : 'default',
+        cursor: canEdit && !isSelectionMode ? 'pointer' : 'default',
         position: 'relative' // For popover positioning
       }}
     >
       {/* Allocation Bars */}
       {allocations.map((alloc) => {
         const projectInfo = getProjectInfo(alloc.project_id);
+        const isSelected = selectedAllocationIds?.has(alloc.id);
 
         return (
           <div
             key={alloc.id}
-            className="allocation-bar"
+            className={`allocation-bar ${isSelected ? 'selected' : ''} ${isSelectionMode ? 'selection-mode' : ''}`}
             style={{
               left: '0%',
               width: '100%',
@@ -124,7 +130,9 @@ const SchedulerCell = ({
             }}
             onClick={(e) => {
               e.stopPropagation();
-              if (onAllocationClick) {
+              if (isSelectionMode && onSelectAllocation) {
+                onSelectAllocation(alloc.id);
+              } else if (onAllocationClick) {
                 onAllocationClick(alloc);
               }
             }}
@@ -133,8 +141,28 @@ const SchedulerCell = ({
             <span className="allocation-tag">{projectInfo.tag}</span>
             <span className="allocation-client">{projectInfo.clientName}</span>
 
-            {/* Delete Button */}
-            {canEdit && (
+            {/* Selection Checkbox Overlay (Optional, visually helpful) */}
+            {isSelectionMode && (
+              <div style={{
+                position: 'absolute',
+                right: '4px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '14px',
+                height: '14px',
+                borderRadius: '3px',
+                border: '1px solid white',
+                background: isSelected ? '#ef4444' : 'rgba(255,255,255,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {isSelected && <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>✓</span>}
+              </div>
+            )}
+
+            {/* Delete Button - Hide in selection mode */}
+            {canEdit && !isSelectionMode && (
               <button
                 className="allocation-delete-btn"
                 onClick={(e) => handleDeleteClick(e, alloc.id)}
@@ -144,8 +172,8 @@ const SchedulerCell = ({
               </button>
             )}
 
-            {/* Drag Handle */}
-            {canEdit && (
+            {/* Drag Handle - Hide in selection mode */}
+            {canEdit && !isSelectionMode && (
               <div
                 className="drag-handle"
                 onMouseDown={(e) => handleDragHandleMouseDown(e, alloc)}
@@ -157,7 +185,7 @@ const SchedulerCell = ({
       })}
 
       {/* Quick Allocation Popover */}
-      {showPopover && (
+      {showPopover && !isSelectionMode && (
         <ProjectPopover
           projects={projects}
           clients={clients}
