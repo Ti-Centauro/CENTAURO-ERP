@@ -21,6 +21,18 @@ async def get_proposals(skip: int = 0, limit: int = 100, db: AsyncSession = Depe
     return proposals
 
 
+@router.get("/{id}", response_model=schemas.ProposalResponse)
+async def get_proposal(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.CommercialProposal).where(models.CommercialProposal.id == id))
+    proposal = result.scalar_one_or_none()
+    
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposta não encontrada")
+    
+    return proposal
+
+
+
 @router.post("/", response_model=schemas.ProposalResponse)
 async def create_proposal(proposal: schemas.ProposalCreate, db: AsyncSession = Depends(get_db)):
     db_proposal = models.CommercialProposal(**proposal.model_dump())
@@ -144,6 +156,61 @@ async def convert_proposal_to_project(id: int, convert_data: schemas.ProposalCon
     await db.commit()
     
     return {"message": "Projeto criado com sucesso", "project_id": new_project.id, "project_tag": new_project.tag}
+
+
+
+@router.get("/tasks/pending")
+async def get_pending_tasks(db: AsyncSession = Depends(get_db)):
+    """
+    Listar tarefas pendentes (vencidas ou para hoje).
+    Retorna: {id, title, due_date, proposal_title, client_name, is_overdue}
+    """
+    today = datetime.utcnow().date()
+    # End of today
+    end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59)
+
+    # Simple join to get client name if available
+    stmt = (
+        select(models.ProposalTask)
+        .join(models.CommercialProposal)
+        .options(
+            selectinload(models.ProposalTask.proposal).selectinload(models.CommercialProposal.client)
+        )
+        .where(
+            models.ProposalTask.is_completed == False,
+            models.ProposalTask.due_date <= end_of_day
+        )
+        .order_by(models.ProposalTask.due_date)
+    )
+
+    result = await db.execute(stmt)
+    tasks = result.scalars().all()
+
+    response = []
+    for task in tasks:
+        proposal = task.proposal
+        # Client name logic: proposal.client_name OR client.name OR "N/A"
+        client_name = proposal.client_name
+        if not client_name and proposal.client:
+            client_name = proposal.client.name
+        
+        if not client_name:
+            client_name = "N/A"
+
+        is_overdue = task.due_date.date() < today
+
+        response.append({
+            "id": task.id,
+            "title": task.title,
+            "due_date": task.due_date,
+            "recurrence_days": task.recurrence_days,
+            "proposal_id": proposal.id,
+            "proposal_title": proposal.title,
+            "client_name": client_name,
+            "is_overdue": is_overdue
+        })
+
+    return response
 
 
 # --- TASK CRUD ENDPOINTS (Follow-up Recorrente) ---

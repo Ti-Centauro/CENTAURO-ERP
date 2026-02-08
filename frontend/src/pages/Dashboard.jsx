@@ -6,6 +6,8 @@ import {
   Users, AlertTriangle, TrendingUp, Wallet, CheckCircle, Clock
 } from 'lucide-react';
 import PurchaseManagerWidget from '../components/purchases/PurchaseManagerWidget';
+import CrmTaskWidget from '../components/dashboard/CrmTaskWidget';
+import ProposalModal from '../components/commercial/ProposalModal';
 import './Dashboard.css';
 
 const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
@@ -160,6 +162,15 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
 
+  // Proposal Modal State
+  const [showProposalModal, setShowProposalModal] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState(null);
+
+  const handleOpenProposal = (proposal) => {
+    setSelectedProposal(proposal);
+    setShowProposalModal(true);
+  };
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
@@ -207,6 +218,10 @@ const Dashboard = () => {
       <div className="dashboard-grid">
         {data.finance && <FinanceWidget data={data.finance} />}
         {data.commercial && <CommercialWidget data={data.commercial} />}
+
+        {/* CRM Tasks Widget */}
+        <CrmTaskWidget onOpenProposal={handleOpenProposal} />
+
         {data.operations && <OperationsWidget data={data.operations} />}
         {data.hr && <HRWidget data={data.hr} />}
 
@@ -220,6 +235,14 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Proposal Modal */}
+      <ProposalModal
+        isOpen={showProposalModal}
+        onClose={() => setShowProposalModal(false)}
+        proposal={selectedProposal}
+        onSuccess={() => { }}
+      />
     </div>
   );
 };

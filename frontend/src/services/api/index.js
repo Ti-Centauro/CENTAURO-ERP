@@ -12,7 +12,9 @@ export default api;
 // Re-export all from CRM
 export {
   getProposals,
+  getProposal,
   createProposal,
+  getPendingTasks,
   updateProposal,
   deleteProposal,
   convertProposalToProject,
