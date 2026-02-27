@@ -51,9 +51,29 @@ class RAGEngine:
         )
 
     def _connect_db(self):
-        db_path = "sqlite:///./centauro.db"
-        print(f"✅ RAG Engine: Connected to database at {db_path}")
-        return SQLDatabase.from_uri(db_path)
+        # 1. Start with the same logic as database.py to get Railway URL
+        database_url = os.environ.get("DATABASE_URL", "sqlite:///./centauro.db")
+        
+        # 2. Enforce explicit SYNCHRONOUS psycopg2 driver for Langchain
+        # Langchain's SQLDatabase does not support asyncpg
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif database_url.startswith("postgresql://") and not database_url.startswith("postgresql+psycopg2://"):
+            database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        elif database_url.startswith("postgresql+asyncpg://"):
+            database_url = database_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+            
+        print(f"✅ RAG Engine: Connected to database at {database_url}")
+        
+        # 3. Security: Restrict allowed tables so the LLM cannot see passwords or internal systems
+        allowed_tables = [
+            "clients", "contracts", "projects", "project_billings",
+            "collaborators", "teams", "project_collaborators",
+            "tools", "project_tools", "fleet", "project_vehicles", 
+            "tickets", "purchase_requests"
+        ]
+        
+        return SQLDatabase.from_uri(database_url, include_tables=allowed_tables)
 
     def _build_sql_chain(self):
         """
@@ -63,12 +83,17 @@ class RAGEngine:
         # 1. Prompt to generate SQL
         from langchain_core.prompts import PromptTemplate
         sql_prompt = PromptTemplate.from_template(
-            """You are a SQLite expert. Generate a precise SQL query for the question.
+            """You are a PostgreSQL expert. Generate a precise SQL query for the question.
             Unless the user specifies otherwise, obtain 5 results.
             Never query for all columns from a specific table, only ask for a the few relevant columns given the question.
             Pay attention to use only the column names you can see in the schema description. 
             Be careful to not query for columns that do not exist. 
             Pay attention to which column is in which table.
+            
+            SECURITY RULES - CRITICAL:
+            1. You have READ-ONLY access. 
+            2. You MUST NEVER generate or execute INSERT, UPDATE, DELETE, DROP, or ALTER commands.
+            3. Generate ONLY SELECT statements.
 
             IMPORTANT: The 'salary' column in 'collaborators' is a STRING (e.g., 'R$ 2.500,00'). 
             To sort by salary, you might need to try casting or just note that it is text.
@@ -84,9 +109,13 @@ class RAGEngine:
 
         # 2. SQL Cleaner (Handles Markdown artifacts)
         def clean_sql(text):
-            cleaned = text.replace("```sqlite", "").replace("```sql", "").replace("```", "").strip()
-            if cleaned.lower().startswith("sqlite"):
-                cleaned = cleaned[6:].strip()
+            cleaned = text.replace("```postgresql", "").replace("```postgres", "").replace("```sql", "").replace("```sqlite", "").replace("```", "").strip()
+            if cleaned.lower().startswith("postgresql"):
+                cleaned = cleaned[10:].strip()
+            elif cleaned.lower().startswith("postgres"):
+                cleaned = cleaned[8:].strip()
+            elif cleaned.lower().startswith("sql"):
+                cleaned = cleaned[3:].strip()
             print(f"🕵️ Generated SQL: {cleaned}")
             return cleaned
 
