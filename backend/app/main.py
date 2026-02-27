@@ -153,10 +153,14 @@ async def debug_timezone():
 async def trigger_seed_database(confirm: str = "yes"):
     """
     ATENÇÃO: Este endpoint DELETA e repopula todos os dados do banco.
-    Usar apenas uma vez em produção!
+    Usar apenas uma vez ou em ambiente de desenvolvimento/homologação!
     """
     if confirm != "CONFIRMAR_SEED":
         return {"error": "Envie confirm='CONFIRMAR_SEED' para rodar este comando extremamente arriscado."}
+    
+    # Double protection: Only allow if an environment variable is explicitly set
+    if os.environ.get("ALLOW_SEED", "false").lower() != "true":
+        return {"error": "O seed não está autorizado neste ambiente. Defina ALLOW_SEED=true nas variáveis de ambiente do Railway para liberar."}
     
     import seed_data
     try:

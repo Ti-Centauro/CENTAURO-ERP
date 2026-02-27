@@ -1219,6 +1219,39 @@ async def seed_users(db):
     # Assign Lucas Silva to all teams
     await assign_user_to_all_teams(db, lucas_email)
         
+    # Create additional team users
+    extra_emails = [
+        "lucas@centauro.com.br", 
+        "fernando@centauro.com.br", 
+        "yan@centauro.com.br", 
+        "diego@centauro.com.br", 
+        "fabiano@centauro.com.br", 
+        "hugo@centauro.com.br", 
+        "cerdeira@centauro.com.br", 
+        "ivan@centauro.com.br"
+    ]
+    
+    hashed_password = get_password_hash("senha123")
+    
+    for email in extra_emails:
+        stmt = select(User).filter(User.email == email)
+        result = await db.execute(stmt)
+        existing_user = result.scalars().first()
+        
+        if not existing_user:
+            new_user = User(
+                email=email,
+                password_hash=hashed_password,
+                role=UserRole.ADMIN, # Defaulting to admin so they have full access initially
+                is_superuser=False
+            )
+            db.add(new_user)
+            print(f"✅ Adicionado usuário extra: {email} / senha123")
+        else:
+            print(f"ℹ️ Usuário {email} já existia.")
+            
+    await db.flush()
+        
     # Return list of users for other seeds
     stmt_all = select(User)
     result_all = await db.execute(stmt_all)
