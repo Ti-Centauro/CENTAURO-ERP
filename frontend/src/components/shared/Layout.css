@@ -69,7 +69,7 @@
 
 .main-content {
   flex: 1;
-  margin-left: 230px;
+  margin-left: 64px;
   padding: 2rem;
   background: var(--bg-secondary);
   min-height: 100vh;
