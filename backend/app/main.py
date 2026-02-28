@@ -17,8 +17,12 @@ from app.routers import commercial  # Package import
 from app.routers import finance     # Package import
 from app.database import engine, Base
 from sqlalchemy import text
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 app = FastAPI(title="Centauro ERP")
+
+# Trust reverse proxy headers (Railway)
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # CORS Configuration
 app.add_middleware(
