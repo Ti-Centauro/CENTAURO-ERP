@@ -100,7 +100,7 @@ class EmailService:
         Busca tarefas pendentes (vencidas ou para hoje) do banco de dados.
         """
         today = today_brazil()
-        end_of_day = end_of_day_brazil(today)
+        end_of_day = end_of_day_brazil(today).replace(tzinfo=None)  # Make naive for PostgreSQL
 
         async with AsyncSessionLocal() as db:
             stmt = (
