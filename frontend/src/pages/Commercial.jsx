@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   getProposals, createProposal, updateProposal, convertProposalToProject,
@@ -22,10 +22,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
-import {
-  Plus, Search, FileText, CheckCircle, XCircle, RefreshCw,
-  Calendar, Check, StopCircle, Trash2, RotateCcw
-} from 'lucide-react';
+import { Plus, Search, FileText, CheckCircle, XCircle } from 'lucide-react';
 import './Commercial.css';
 import ProposalModal from '../components/commercial/ProposalModal';
 
@@ -62,14 +59,11 @@ const Commercial = () => {
   const [convertFormData, setConvertFormData] = useState({});
   const [pendingLossProposalId, setPendingLossProposalId] = useState(null);
   const [lossReason, setLossReason] = useState('');
-  // Tasks (Tarefas de Follow-up) - MOVED TO MODAL
-  // const [tasks, setTasks] = useState([]);
-  // const [activeTab, setActiveTab] = useState('info'); 
-  // const [newTaskTitle, setNewTaskTitle] = useState('');
-  // const [newTaskDate, setNewTaskDate] = useState('');
-  // const [newTaskRecurrence, setNewTaskRecurrence] = useState(false);
-  // const [newTaskRecurrenceDays, setNewTaskRecurrenceDays] = useState(2);
 
+  // Drag-to-scroll state
+  const boardRef = useRef(null);
+  const dragRef = useRef({ startX: 0, scrollLeft: 0 });
+  const [isDragScrolling, setIsDragScrolling] = useState(false);
 
   // Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,6 +71,54 @@ const Commercial = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // --- DRAG TO SCROLL HANDLERS ---
+  const handleMouseDown = (e) => {
+    // Only drag the board if clicking DIRECTLY on the board container or column headers/background, not on cards
+    if (e.target.closest('.proposal-card')) return;
+
+    dragRef.current.startX = e.clientX;
+    dragRef.current.scrollLeft = boardRef.current.scrollLeft;
+    setIsDragScrolling(true);
+  };
+
+  // Modern horizontal scrolling via mouse wheel
+  const handleWheel = (e) => {
+    if (boardRef.current && e.deltaY !== 0) {
+      if (e.shiftKey) return;
+      // If mouse is over a column with cards, let it scroll vertically normally
+      if (e.target.closest('.column-droppable')) return;
+      e.preventDefault();
+      boardRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
+  // Global event listeners for active drag scroll
+  useEffect(() => {
+    if (!isDragScrolling) return;
+
+    const handleGlobalMouseMove = (e) => {
+      if (!boardRef.current) return;
+      e.preventDefault();
+      const x = e.clientX;
+      const walk = (x - dragRef.current.startX) * 1.5;
+      boardRef.current.scrollLeft = dragRef.current.scrollLeft - walk;
+    };
+
+    const handleGlobalMouseUp = () => {
+      setIsDragScrolling(false);
+    };
+
+    window.addEventListener('mousemove', handleGlobalMouseMove, { passive: false });
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    window.addEventListener('mouseleave', handleGlobalMouseUp); // if mouse leaves window
+
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener('mouseleave', handleGlobalMouseUp);
+    };
+  }, [isDragScrolling]);
 
   const loadData = async () => {
     setLoading(true);
@@ -86,7 +128,7 @@ const Commercial = () => {
         getClients(),
         getCollaborators()
       ]);
-      console.log('Clients loaded:', cliRes.data); // DEBUG
+
       setProposals(propRes.data);
       setClients(cliRes.data);
       setCollaborators(colRes.data);
@@ -273,66 +315,74 @@ const Commercial = () => {
           <h1>Comercial & CRM</h1>
           <p>Gestão de propostas e funil de vendas</p>
         </div>
-        <button className="btn btn-primary" onClick={handleNewProposal}>
-          <Plus size={18} /> Nova Proposta
-        </button>
+        <div className="header-actions">
+          <div className="search-input">
+            <Search size={16} />
+            <input
+              placeholder="Buscar propostas..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button className="btn btn-primary" onClick={handleNewProposal}>
+            <Plus size={18} /> Nova Proposta
+          </button>
+        </div>
       </header>
 
-      <div className="filter-bar">
-        <div className="search-input">
-          <Search size={18} />
-          <input
-            placeholder="Buscar propostas..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
+      {isDragScrolling && <div className="global-drag-overlay" />}
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+      <div
+        className={`kanban-scroll-window ${isDragScrolling ? 'drag-scrolling' : ''}`}
+        ref={boardRef}
+        onMouseDown={handleMouseDown}
+        onWheel={handleWheel}
       >
-        <div className="kanban-board">
-          {COLUMNS.map(col => (
-            <div key={col.id} className="kanban-column">
-              <div className="column-header" style={{ borderTop: `3px solid ${col.color}` }}>
-                <span>{col.title}</span>
-                <span className="count">
-                  {filteredProposals.filter(p => p.status === col.id).length}
-                </span>
-              </div>
-
-              <SortableContext
-                items={filteredProposals.filter(p => p.status === col.id).map(p => p.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="column-droppable" id={col.id}>
-                  <DroppableArea id={col.id}>
-                    {filteredProposals.filter(p => p.status === col.id).map(proposal => (
-                      <SortableProposalCard
-                        key={proposal.id}
-                        proposal={proposal}
-                        onClick={() => handleEditProposal(proposal)}
-                      />
-                    ))}
-                  </DroppableArea>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="kanban-board">
+            {COLUMNS.map(col => (
+              <div key={col.id} className="kanban-column">
+                <div className="column-header" style={{ borderTop: `3px solid ${col.color}` }}>
+                  <span>{col.title}</span>
+                  <span className="count">
+                    {filteredProposals.filter(p => p.status === col.id).length}
+                  </span>
                 </div>
-              </SortableContext>
-            </div>
-          ))}
-        </div>
 
-        <DragOverlay>
-          {activeId ? (
-            <div className="proposal-card overlay">
-              <strong>{proposals.find(p => p.id === activeId)?.title}</strong>
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+                <SortableContext
+                  items={filteredProposals.filter(p => p.status === col.id).map(p => p.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="column-droppable" id={col.id}>
+                    <DroppableArea id={col.id}>
+                      {filteredProposals.filter(p => p.status === col.id).map(proposal => (
+                        <SortableProposalCard
+                          key={proposal.id}
+                          proposal={proposal}
+                          onClick={() => handleEditProposal(proposal)}
+                        />
+                      ))}
+                    </DroppableArea>
+                  </div>
+                </SortableContext>
+              </div>
+            ))}
+          </div>
+
+          <DragOverlay>
+            {activeId ? (
+              <div className="proposal-card overlay">
+                <strong>{proposals.find(p => p.id === activeId)?.title}</strong>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
 
       {/* FORM MODAL (Nova/Editar Proposta) */}
       <ProposalModal
@@ -342,7 +392,6 @@ const Commercial = () => {
         onSuccess={loadData}
         initialClients={clients}
       />
-
 
 
       {/* LOSS MODAL */}
@@ -471,12 +520,12 @@ const SortableProposalCard = ({ proposal, onClick }) => {
     >
       <div className="card-header">
         <span className="internal-id">{proposal.internal_id || 'PROP-???'}</span>
-        {proposal.converted_project_id && <span className="badge-converted">Gerou Obra</span>}
+        <span className="value">R$ {parseFloat(proposal.value || 0).toLocaleString('pt-BR')}</span>
       </div>
       <h4>{proposal.title}</h4>
       <div className="card-details">
-        <span className="client"><FileText size={12} /> {proposal.client_name || 'Prospect'}</span>
-        <span className="value">R$ {parseFloat(proposal.value || 0).toLocaleString('pt-BR')}</span>
+        <span className="client"><FileText size={11} /> {proposal.client_name || 'Prospect'}</span>
+        {proposal.converted_project_id && <span className="badge-converted">Gerou Obra</span>}
       </div>
     </div>
   );

@@ -73,6 +73,10 @@
   padding: 2rem;
   background: var(--bg-secondary);
   min-height: 100vh;
+  overflow: hidden;
+  /* Prevent content from expanding beyond viewport */
+  max-width: calc(100vw - 64px);
+  /* Never exceed viewport minus sidebar */
 }
 
 .logout-button {
