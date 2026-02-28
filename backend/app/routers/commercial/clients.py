@@ -33,13 +33,17 @@ async def create_client(client: schemas.ClientCreate, db: AsyncSession = Depends
     db_client = models.Client(**client.model_dump())
     db.add(db_client)
     await db.commit()
-    await db.refresh(db_client)
-    return db_client
+    
+    # Reload with relationships
+    result = await db.execute(select(models.Client).options(selectinload(models.Client.contacts)).where(models.Client.id == db_client.id))
+    db_client_loaded = result.scalar_one()
+    
+    return db_client_loaded
 
 
 @router.put("/clients/{client_id}", response_model=schemas.ClientResponse)
 async def update_client(client_id: int, client: schemas.ClientCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.Client).where(models.Client.id == client_id))
+    result = await db.execute(select(models.Client).options(selectinload(models.Client.contacts)).where(models.Client.id == client_id))
     db_client = result.scalar_one_or_none()
     if not db_client:
         raise HTTPException(status_code=404, detail=Msg.CLIENT_NOT_FOUND)
@@ -48,8 +52,12 @@ async def update_client(client_id: int, client: schemas.ClientCreate, db: AsyncS
         setattr(db_client, key, value)
     
     await db.commit()
-    await db.refresh(db_client)
-    return db_client
+    
+    # Reload with relationships
+    result = await db.execute(select(models.Client).options(selectinload(models.Client.contacts)).where(models.Client.id == db_client.id))
+    db_client_loaded = result.scalar_one()
+    
+    return db_client_loaded
 
 
 @router.delete("/clients/{client_id}")

@@ -237,9 +237,14 @@ async def create_proposal_task(proposal_id: int, task: schemas.ProposalTaskCreat
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposta não encontrada")
     
+    # Handle timezone aware datetimes for PostgreSQL naive columns
+    task_data = task.model_dump()
+    if task_data.get('due_date') and task_data['due_date'].tzinfo:
+        task_data['due_date'] = task_data['due_date'].replace(tzinfo=None)
+        
     db_task = models.ProposalTask(
         proposal_id=proposal_id,
-        **task.model_dump()
+        **task_data
     )
     db.add(db_task)
     await db.commit()
@@ -257,6 +262,11 @@ async def update_proposal_task(task_id: int, task_update: schemas.ProposalTaskUp
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     
     update_data = task_update.model_dump(exclude_unset=True)
+    
+    # Handle timezone aware datetimes for PostgreSQL
+    if update_data.get('due_date') and update_data['due_date'].tzinfo:
+        update_data['due_date'] = update_data['due_date'].replace(tzinfo=None)
+        
     for key, value in update_data.items():
         setattr(db_task, key, value)
     
