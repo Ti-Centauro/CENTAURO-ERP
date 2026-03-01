@@ -167,8 +167,8 @@ async def get_pending_tasks(db: AsyncSession = Depends(get_db)):
     Retorna: {id, title, due_date, proposal_title, client_name, is_overdue}
     """
     today = today_brazil()
-    # End of today (Brasilia Time)
-    end_of_day = end_of_day_brazil(today)
+    # End of today (Brasilia Time) - strip tzinfo for naive DateTime column (PostgreSQL compat)
+    end_of_day = end_of_day_brazil(today).replace(tzinfo=None)
 
     # Simple join to get client name if available
     stmt = (
