@@ -72,6 +72,17 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
     }
   }, [isOpen, proposal]);
 
+  // Handle Escape Key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const fetchClients = async () => {
     try {
       const res = await getClients();

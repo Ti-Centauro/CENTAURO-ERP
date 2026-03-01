@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   Calendar,
@@ -20,23 +21,25 @@ import {
 } from 'lucide-react';
 
 const Sidebar = ({ onLogout }) => {
+  const { hasPermission } = useAuth();
+
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { name: 'Scheduler', icon: Calendar, path: '/scheduler' },
-    { name: 'Kanban', icon: KanbanSquare, path: '/kanban' },
-    { name: 'Comercial/CRM', icon: TrendingUp, path: '/commercial' },
-    { name: 'Clientes', icon: Users, path: '/clients' },
-    { name: 'Colaboradores', icon: UserCircle, path: '/collaborators' },
-    { name: 'Contratos', icon: FileText, path: '/contracts' },
-    { name: 'Projetos', icon: Briefcase, path: '/projects' },
-    { name: 'Compras', icon: ShoppingCart, path: '/purchases' },
-    { name: 'Frota', icon: Car, path: '/fleet' },
-    { name: 'Ferramentas', icon: Wrench, path: '/tools' },
-    { name: 'Contas a Receber', icon: DollarSign, path: '/accounts-receivable' },
-    { name: 'Folha de Pag.', icon: DollarSign, path: '/payroll' },
-    { name: 'Chamados', icon: Ticket, path: '/tickets' },
-    { name: 'Cargos', icon: Settings, path: '/roles' },
-  ];
+    { name: 'Scheduler', icon: Calendar, path: '/scheduler', permission: 'scheduler' },
+    { name: 'Kanban', icon: KanbanSquare, path: '/kanban', permission: 'kanban' },
+    { name: 'Comercial/CRM', icon: TrendingUp, path: '/commercial', permission: 'projects' },
+    { name: 'Clientes', icon: Users, path: '/clients', permission: 'clients' },
+    { name: 'Colaboradores', icon: UserCircle, path: '/collaborators', permission: 'collaborators' },
+    { name: 'Contratos', icon: FileText, path: '/contracts', permission: 'contracts' },
+    { name: 'Projetos', icon: Briefcase, path: '/projects', permission: 'projects' },
+    { name: 'Compras', icon: ShoppingCart, path: '/purchases', permission: 'purchases' },
+    { name: 'Frota', icon: Car, path: '/fleet', permission: 'fleet' },
+    { name: 'Ferramentas', icon: Wrench, path: '/tools', permission: 'tools' },
+    { name: 'Contas a Receber', icon: DollarSign, path: '/accounts-receivable', permission: 'accounts_receivable' },
+    { name: 'Folha de Pag.', icon: DollarSign, path: '/payroll', permission: 'finance' },
+    { name: 'Chamados', icon: Ticket, path: '/tickets', permission: 'tickets' },
+    { name: 'Cargos', icon: Settings, path: '/roles', permission: 'roles' },
+  ].filter(item => !item.permission || hasPermission(item.permission));
 
   return (
     <aside className="group flex flex-col h-screen bg-[#13151b] border-r border-[#1f212e] transition-all duration-300 ease-in-out w-16 hover:w-64 overflow-hidden shadow-2xl z-50 fixed left-0 top-0">
