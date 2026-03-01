@@ -35,6 +35,10 @@ class Collaborator(Base):
     cnh_category = Column(String, nullable=True)
     cnh_validity = Column(Date, nullable=True)
 
+    # Datas pessoais
+    admission_date = Column(Date, nullable=True)
+    birth_date = Column(Date, nullable=True)
+
 class Allocation(Base):
     __tablename__ = "allocations"
 

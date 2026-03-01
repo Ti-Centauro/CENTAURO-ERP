@@ -408,10 +408,11 @@ async def get_collaborators(
 @router.post("/collaborators", response_model=schemas.CollaboratorResponse)
 async def create_collaborator(collaborator: schemas.CollaboratorCreate, db: AsyncSession = Depends(get_db)):
     from app.models.teams import Team
+    from app.models.collaborator_teams import collaborator_teams as ct_table
     
-    # Extract team_ids from payload
+    # Extract team_ids from payload, exclude 'role' (synced from Role table)
     team_ids = collaborator.team_ids
-    collaborator_data = collaborator.model_dump(exclude={"team_ids"})
+    collaborator_data = collaborator.model_dump(exclude={"team_ids", "role"})
     
     # Create collaborator
     db_collaborator = models.Collaborator(**collaborator_data)
@@ -428,15 +429,17 @@ async def create_collaborator(collaborator: schemas.CollaboratorCreate, db: Asyn
     else:
         db_collaborator.role = None
     
-    # Add teams
+    # Add teams via junction table (avoids lazy-load issue with async)
     if team_ids:
-        result = await db.execute(select(Team).where(Team.id.in_(team_ids)))
-        teams = result.scalars().all()
-        db_collaborator.teams = teams
+        for tid in team_ids:
+            await db.execute(ct_table.insert().values(
+                collaborator_id=db_collaborator.id, team_id=tid
+            ))
     
     await db.commit()
     await db.refresh(db_collaborator, attribute_names=["teams", "certifications", "education"])
     return db_collaborator
+
 
 @router.put("/collaborators/{collaborator_id}", response_model=schemas.CollaboratorResponse)
 async def update_collaborator(collaborator_id: int, collaborator: schemas.CollaboratorCreate, db: AsyncSession = Depends(get_db)):
@@ -451,9 +454,9 @@ async def update_collaborator(collaborator_id: int, collaborator: schemas.Collab
     if not db_collaborator:
         raise HTTPException(status_code=404, detail="Collaborator not found")
     
-    # Extract team_ids from payload
+    # Extract team_ids from payload, exclude 'role' (synced from Role table)
     team_ids = collaborator.team_ids
-    collaborator_data = collaborator.model_dump(exclude={"team_ids"})
+    collaborator_data = collaborator.model_dump(exclude={"team_ids", "role"})
     
     # Update collaborator attributes
     for key, value in collaborator_data.items():

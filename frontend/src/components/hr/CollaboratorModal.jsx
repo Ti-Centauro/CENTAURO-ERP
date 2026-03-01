@@ -100,9 +100,28 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
     }
   };
 
+  const maskCPF = (value) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    return digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  };
+
+  const maskRG = (value) => {
+    const digits = value.replace(/\D/g, '').slice(0, 9);
+    return digits
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1})$/, '$1-$2');
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let maskedValue = value;
+    if (name === 'cpf') maskedValue = maskCPF(value);
+    else if (name === 'rg') maskedValue = maskRG(value);
+    setFormData(prev => ({ ...prev, [name]: maskedValue }));
   };
 
   const getValidityStatus = (dateString) => {
@@ -121,10 +140,18 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
     e.preventDefault();
     setLoading(true);
     try {
+      // Clean payload: convert empty strings to null for optional/date fields
+      const payload = { ...formData };
+      for (const key of Object.keys(payload)) {
+        if (payload[key] === '') {
+          payload[key] = null;
+        }
+      }
+
       if (collaborator) {
-        await updateCollaborator(collaborator.id, formData);
+        await updateCollaborator(collaborator.id, payload);
       } else {
-        await createCollaborator(formData);
+        await createCollaborator(payload);
       }
       onSuccess();
       onClose();
@@ -254,8 +281,8 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
             <div className="form-grid">
               <Input name="registration_number" label="Matrícula" value={formData.registration_number} onChange={handleChange} placeholder="000000" />
               <Input name="name" label="Nome *" value={formData.name} onChange={handleChange} required />
-              <Input name="cpf" label="CPF" value={formData.cpf} onChange={handleChange} />
-              <Input name="rg" label="RG" value={formData.rg} onChange={handleChange} />
+              <Input name="cpf" label="CPF" value={formData.cpf} onChange={handleChange} placeholder="000.000.000-00" maxLength={14} />
+              <Input name="rg" label="RG" value={formData.rg} onChange={handleChange} placeholder="00.000.000-0" maxLength={12} />
               <Select name="role_id" label="Cargo *" value={formData.role_id} onChange={handleChange} required placeholder="Selecione...">
                 {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </Select>
@@ -280,6 +307,14 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
               <Input name="email" label="Email" value={formData.email} onChange={handleChange} type="email" />
               <Input name="phone" label="Telefone" value={formData.phone} onChange={handleChange} />
               <Input name="salary" label="Salário" value={formData.salary} onChange={handleChange} />
+              <div className="form-group">
+                <label className="label">Data de Admissão</label>
+                <input type="date" className="input" name="admission_date" value={formData.admission_date} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="label">Data de Nascimento</label>
+                <input type="date" className="input" name="birth_date" value={formData.birth_date} onChange={handleChange} />
+              </div>
             </div>
 
             <h4 style={{ margin: '1rem 0', borderBottom: '1px solid #eee' }}>Dados CNH</h4>
