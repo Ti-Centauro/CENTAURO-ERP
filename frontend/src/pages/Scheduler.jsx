@@ -151,10 +151,11 @@ const Scheduler = () => {
     reloadAllocations();
   }, [selectedTeamIds]);
 
-  // Combine resources - filter collaborators by selected teams
-  const filteredCollaborators = selectedTeamIds.length > 0
+  // Combine resources - filter collaborators by selected teams AND active status
+  const filteredCollaborators = (selectedTeamIds.length > 0
     ? collaborators.filter(c => c.teams?.some(t => selectedTeamIds.includes(t.id)))
-    : collaborators;
+    : collaborators
+  ).filter(c => !c.termination_date);
 
   const resources = [
     ...filteredCollaborators.map(c => ({ id: `person-${c.id}`, type: 'PERSON', name: c.name, originalId: c.id })),
@@ -673,7 +674,7 @@ const Scheduler = () => {
                 >
                   <option value="">Selecione...</option>
                   {formData.resource_type === 'PERSON' ? (
-                    collaborators.map(c => (
+                    filteredCollaborators.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))
                   ) : formData.resource_type === 'CAR' ? (

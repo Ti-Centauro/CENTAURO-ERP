@@ -30,6 +30,7 @@ const Collaborators = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('');
   const [selectedTeamFilter, setSelectedTeamFilter] = useState('');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('active');
 
   // Delete State
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -94,7 +95,11 @@ const Collaborators = () => {
     const matchesRole = selectedRoleFilter ? collaborator.role_id === parseInt(selectedRoleFilter) : true;
     const matchesTeam = selectedTeamFilter ? collaborator.teams?.some(t => t.id === parseInt(selectedTeamFilter)) : true;
 
-    return matchesSearch && matchesRole && matchesTeam;
+    let matchesStatus = true;
+    if (selectedStatusFilter === 'active') matchesStatus = !collaborator.termination_date;
+    else if (selectedStatusFilter === 'inactive') matchesStatus = !!collaborator.termination_date;
+
+    return matchesSearch && matchesRole && matchesTeam && matchesStatus;
   });
 
   // Table Columns
@@ -105,7 +110,7 @@ const Collaborators = () => {
       accessor: 'name',
       render: (row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#10b981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#10b981', filter: row.termination_date ? 'grayscale(100%)' : 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
             {row.name.charAt(0)}
           </div>
           <div>
@@ -113,6 +118,13 @@ const Collaborators = () => {
             <div style={{ fontSize: '11px', color: '#64748b' }}>{row.email}</div>
           </div>
         </div>
+      )
+    },
+    {
+      header: 'Status',
+      accessor: 'status',
+      render: (row) => (
+        <StatusBadge status={row.termination_date ? 'Inativo' : 'Ativo'} customColors={row.termination_date ? { bg: '#fee2e2', text: '#ef4444' } : { bg: '#dcfce7', text: '#16a34a' }} />
       )
     },
     {
@@ -205,6 +217,18 @@ const Collaborators = () => {
                 >
                   <option value="">Todos os Times</option>
                   {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div className="filter-group">
+                <label className="label">Status</label>
+                <select
+                  className="input"
+                  value={selectedStatusFilter}
+                  onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                >
+                  <option value="all">Todos</option>
+                  <option value="active">Ativos</option>
+                  <option value="inactive">Inativos</option>
                 </select>
               </div>
             </div>

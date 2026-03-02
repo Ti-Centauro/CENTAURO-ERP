@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Wrench, Truck, Plus, Trash2, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
-import { addProjectTool, removeProjectTool, addProjectVehicle, removeProjectVehicle } from '../../../services/api';
+import { Wrench, Truck, Plus, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { addProjectTool, addProjectVehicle } from '../../../services/api';
 import { formatDateUTC } from '../../../utils/formatters';
-import ConfirmModal from '../../shared/ConfirmModal';
 
 const ProjectAssetsTab = ({ project, projectTools, projectVehicles, availableTools, availableVehicles, canEdit, onUpdate }) => {
   // Tools State
@@ -18,8 +17,7 @@ const ProjectAssetsTab = ({ project, projectTools, projectVehicles, availableToo
   const [expandedTools, setExpandedTools] = useState({});
   const [expandedVehicles, setExpandedVehicles] = useState({});
 
-  // Delete Confirmation State
-  const [confirmDelete, setConfirmDelete] = useState({ open: false, id: null, type: null });
+
 
   const toggleToolExpand = (id) => setExpandedTools(prev => ({ ...prev, [id]: !prev[id] }));
   const toggleVehicleExpand = (id) => setExpandedVehicles(prev => ({ ...prev, [id]: !prev[id] }));
@@ -50,24 +48,7 @@ const ProjectAssetsTab = ({ project, projectTools, projectVehicles, availableToo
     } catch (err) { alert('Erro ao adicionar veículo: ' + err.message); }
   };
 
-  const requestDelete = (id, type) => {
-    setConfirmDelete({ open: true, id, type });
-  };
 
-  const executeDelete = async () => {
-    if (!confirmDelete.id) return;
-    try {
-      if (confirmDelete.type === 'tool') {
-        await removeProjectTool(confirmDelete.id);
-      } else {
-        await removeProjectVehicle(confirmDelete.id);
-      }
-      onUpdate();
-      setConfirmDelete({ open: false, id: null, type: null });
-    } catch (e) {
-      alert('Erro ao remover: ' + e.message);
-    }
-  };
 
   return (
     <div className="tab-content" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -193,15 +174,7 @@ const ProjectAssetsTab = ({ project, projectTools, projectVehicles, availableToo
                         </div>
                       ) : <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>Nenhuma alocação ativa.</div>}
 
-                      {canEdit && (
-                        <div className="resource-item-footer" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-                          <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); requestDelete(pt.id, 'tool'); }}
-                            style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#e11d48', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '500' }}>
-                            <Trash2 size={14} /> Desvincular Ferramenta
-                          </button>
-                          <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '6px', marginBottom: 0 }}>Esta ação removerá todas as alocações desta ferramenta neste projeto.</p>
-                        </div>
-                      )}
+
                     </div>
                   )}
                 </div>
@@ -300,15 +273,7 @@ const ProjectAssetsTab = ({ project, projectTools, projectVehicles, availableToo
                         </div>
                       ) : <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>Nenhuma alocação ativa.</div>}
 
-                      {canEdit && (
-                        <div className="resource-item-footer" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-                          <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); requestDelete(pv.id, 'vehicle'); }}
-                            style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#e11d48', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '500' }}>
-                            <Trash2 size={14} /> Desvincular Veículo
-                          </button>
-                          <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '6px', marginBottom: 0 }}>Esta ação removerá todas as alocações deste veículo neste projeto.</p>
-                        </div>
-                      )}
+
                     </div>
                   )}
                 </div>
@@ -319,13 +284,7 @@ const ProjectAssetsTab = ({ project, projectTools, projectVehicles, availableToo
         </div>
       )}
 
-      <ConfirmModal
-        isOpen={confirmDelete.open}
-        onClose={() => setConfirmDelete({ open: false, id: null, type: null })}
-        onConfirm={executeDelete}
-        title={`Desvincular ${confirmDelete.type === 'tool' ? 'Ferramenta' : 'Veículo'}`}
-        message={`Tem certeza que deseja desvincular este ${confirmDelete.type === 'tool' ? 'ferramenta' : 'veículo'}? Todas as alocações serão removidas permanentemente.`}
-      />
+
     </div>
   );
 };

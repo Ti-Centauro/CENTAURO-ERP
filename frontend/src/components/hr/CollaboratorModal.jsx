@@ -30,7 +30,8 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
     cnh_category: '',
     cnh_validity: '',
     admission_date: '',
-    birth_date: ''
+    birth_date: '',
+    termination_date: ''
   });
 
   // Sub-data states
@@ -60,7 +61,8 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
         cnh_category: collaborator.cnh_category || '',
         cnh_validity: collaborator.cnh_validity ? new Date(collaborator.cnh_validity).toISOString().split('T')[0] : '',
         admission_date: collaborator.admission_date ? new Date(collaborator.admission_date).toISOString().split('T')[0] : '',
-        birth_date: collaborator.birth_date ? new Date(collaborator.birth_date).toISOString().split('T')[0] : ''
+        birth_date: collaborator.birth_date ? new Date(collaborator.birth_date).toISOString().split('T')[0] : '',
+        termination_date: collaborator.termination_date ? new Date(collaborator.termination_date).toISOString().split('T')[0] : ''
       });
       loadSubData();
     }
@@ -314,6 +316,10 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
               <div className="form-group">
                 <label className="label">Data de Nascimento</label>
                 <input type="date" className="input" name="birth_date" value={formData.birth_date} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="label" style={{ color: formData.termination_date ? '#ef4444' : 'inherit' }}>Data de Demissão</label>
+                <input type="date" className="input" name="termination_date" value={formData.termination_date} onChange={handleChange} />
               </div>
             </div>
 

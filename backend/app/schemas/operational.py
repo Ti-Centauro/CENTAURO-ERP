@@ -86,6 +86,7 @@ class CollaboratorBase(BaseModel):
     cnh_validity: Optional[date] = None
     admission_date: Optional[date] = None
     birth_date: Optional[date] = None
+    termination_date: Optional[date] = None
 
 class CollaboratorCreate(CollaboratorBase):
     team_ids: list[int] = []  # N:N - list of team IDs

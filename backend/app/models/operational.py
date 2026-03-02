@@ -38,6 +38,7 @@ class Collaborator(Base):
     # Datas pessoais
     admission_date = Column(Date, nullable=True)
     birth_date = Column(Date, nullable=True)
+    termination_date = Column(Date, nullable=True)  # Data de demissão
 
 class Allocation(Base):
     __tablename__ = "allocations"

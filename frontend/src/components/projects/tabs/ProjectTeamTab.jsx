@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Users, Plus, Trash2, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
-import { addProjectCollaborator, removeProjectCollaborator } from '../../../services/api';
+import { Users, Plus, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { addProjectCollaborator } from '../../../services/api';
 // Note: api.js redirects to operational.js which exports these.
 import { formatDateUTC } from '../../../utils/formatters';
-import ConfirmModal from '../../shared/ConfirmModal';
 
 const ProjectTeamTab = ({ project, projectCollaborators, availableCollaborators, canEdit, onUpdate }) => {
   const [showCollabForm, setShowCollabForm] = useState(false);
@@ -17,8 +16,7 @@ const ProjectTeamTab = ({ project, projectCollaborators, availableCollaborators,
 
 
   const [expanded, setExpanded] = useState({});
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [collaboratorToDelete, setCollaboratorToDelete] = useState(null);
+
 
   const toggleExpand = (id) => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -47,22 +45,7 @@ const ProjectTeamTab = ({ project, projectCollaborators, availableCollaborators,
     }
   };
 
-  const handleRemoveCollaborator = (id) => {
-    setCollaboratorToDelete(id);
-    setShowConfirmModal(true);
-  };
 
-  const confirmDelete = async () => {
-    if (!collaboratorToDelete) return;
-    try {
-      await removeProjectCollaborator(collaboratorToDelete);
-      onUpdate();
-      setShowConfirmModal(false);
-      setCollaboratorToDelete(null);
-    } catch (error) {
-      alert('Erro ao remover: ' + error.message);
-    }
-  };
 
   return (
     <div className="tab-content" style={{ padding: '1rem' }}>
@@ -81,7 +64,7 @@ const ProjectTeamTab = ({ project, projectCollaborators, availableCollaborators,
               style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
             >
               <option value="">Selecione...</option>
-              {availableCollaborators.map(c => (
+              {availableCollaborators.filter(c => !c.termination_date).map(c => (
                 <option key={c.id} value={c.id}>{c.name} - {c.role}</option>
               ))}
             </select>
@@ -211,34 +194,7 @@ const ProjectTeamTab = ({ project, projectCollaborators, availableCollaborators,
                     </div>
                   )}
 
-                  {/* Footer: Safe Delete Area */}
-                  {canEdit && (
-                    <div className="resource-item-footer" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-                      <button
-                        className="btn btn-sm"
-                        onClick={(e) => { e.stopPropagation(); handleRemoveCollaborator(pc.id); }}
-                        style={{
-                          background: '#fff1f2',
-                          border: '1px solid #fecdd3',
-                          color: '#e11d48',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          fontSize: '0.8rem',
-                          fontWeight: '500'
-                        }}
-                      >
-                        <Trash2 size={14} />
-                        Desvincular Colaborador
-                      </button>
-                      <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '6px', marginBottom: 0 }}>
-                        Esta ação removerá todas as alocações deste colaborador neste projeto.
-                      </p>
-                    </div>
-                  )}
+
                 </div>
               )}
             </div>
@@ -249,16 +205,7 @@ const ProjectTeamTab = ({ project, projectCollaborators, availableCollaborators,
         )}
       </div>
 
-      <ConfirmModal
-        isOpen={showConfirmModal}
-        onClose={() => {
-          setShowConfirmModal(false);
-          setCollaboratorToDelete(null);
-        }}
-        onConfirm={confirmDelete}
-        title="Desvincular Colaborador"
-        message="Tem certeza que deseja desvincular este colaborador? Todas as alocações dele neste projeto serão removidas permanentemente."
-      />
+
     </div>
   );
 };
