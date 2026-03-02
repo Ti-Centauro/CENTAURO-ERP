@@ -1,16 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    # Email Settings
-    MAIL_USERNAME: str = ""
-    MAIL_PASSWORD: str = ""
-    MAIL_FROM: str = ""
-    MAIL_PORT: int = 587
-    MAIL_SERVER: str = "smtp.gmail.com"
-    MAIL_STARTTLS: bool = True
-    MAIL_SSL_TLS: bool = False
-    USE_CREDENTIALS: bool = True
-    VALIDATE_CERTS: bool = False  # Disabled for development - enable in production
+    # Resend Email Settings
+    RESEND_API_KEY: str = ""
+    MAIL_FROM: str = "onboarding@resend.dev"
 
     model_config = SettingsConfigDict(
         env_file=".env",
