@@ -5,6 +5,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import { ResourceRow } from '../components/Scheduler';
+import { isDeactivated } from '../utils/formatters';
 import './Scheduler.css';
 
 // Feriados nacionais brasileiros (fixos)
@@ -155,12 +156,15 @@ const Scheduler = () => {
   const filteredCollaborators = (selectedTeamIds.length > 0
     ? collaborators.filter(c => c.teams?.some(t => selectedTeamIds.includes(t.id)))
     : collaborators
-  ).filter(c => !c.termination_date);
+  ).filter(c => !isDeactivated(c.termination_date));
+
+  const activeFleet = fleet.filter(f => !isDeactivated(f.deactivation_date));
+  const activeTools = tools.filter(t => !isDeactivated(t.deactivation_date));
 
   const resources = [
     ...filteredCollaborators.map(c => ({ id: `person-${c.id}`, type: 'PERSON', name: c.name, originalId: c.id })),
-    ...fleet.map(f => ({ id: `car-${f.id}`, type: 'CAR', name: `${f.license_plate} (${f.model})`, originalId: f.id })),
-    ...tools.map(t => ({ id: `tool-${t.id}`, type: 'TOOL', name: t.name, originalId: t.id }))
+    ...activeFleet.map(f => ({ id: `car-${f.id}`, type: 'CAR', name: `${f.license_plate} (${f.model})`, originalId: f.id })),
+    ...activeTools.map(t => ({ id: `tool-${t.id}`, type: 'TOOL', name: t.name, originalId: t.id }))
   ];
 
   // Generate days based on view mode
@@ -678,11 +682,11 @@ const Scheduler = () => {
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))
                   ) : formData.resource_type === 'CAR' ? (
-                    fleet.map(f => (
+                    activeFleet.map(f => (
                       <option key={f.id} value={f.id}>{f.model} - {f.license_plate}</option>
                     ))
                   ) : (
-                    tools.map(t => (
+                    activeTools.map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))
                   )}

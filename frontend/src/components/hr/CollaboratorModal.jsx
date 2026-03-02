@@ -158,7 +158,8 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
       onSuccess();
       onClose();
     } catch (error) {
-      alert('Erro ao salvar colaborador');
+      const errorMsg = error.response?.data?.detail || 'Erro ao salvar colaborador';
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }

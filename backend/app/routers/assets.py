@@ -61,6 +61,19 @@ async def update_fleet_item(
     if not db_fleet:
         raise HTTPException(status_code=404, detail="Fleet item not found")
     
+    if fleet.deactivation_date and fleet.deactivation_date != getattr(db_fleet, 'deactivation_date', None):
+        from app.models.project_resources import ProjectVehicle
+        from app.models.commercial import Project
+        from sqlalchemy import or_
+        active_allocations_query = select(ProjectVehicle).join(Project, ProjectVehicle.project_id == Project.id).where(
+            ProjectVehicle.vehicle_id == fleet_id,
+            Project.status == "Em Andamento",
+            or_(ProjectVehicle.end_date >= fleet.deactivation_date, ProjectVehicle.end_date.is_(None))
+        )
+        result_allocations = await db.execute(active_allocations_query)
+        if result_allocations.scalars().first():
+            raise HTTPException(status_code=400, detail="Não é possível desativar este veículo pois ele está alocado em um projeto em andamento.")
+            
     for key, value in fleet.model_dump().items():
         setattr(db_fleet, key, value)
     
@@ -192,6 +205,19 @@ async def update_tool(tool_id: int, tool: schemas.ToolCreate, db: AsyncSession =
     if not db_tool:
         raise HTTPException(status_code=404, detail="Tool not found")
     
+    if tool.deactivation_date and tool.deactivation_date != getattr(db_tool, 'deactivation_date', None):
+        from app.models.project_resources import ProjectTool
+        from app.models.commercial import Project
+        from sqlalchemy import or_
+        active_allocations_query = select(ProjectTool).join(Project, ProjectTool.project_id == Project.id).where(
+            ProjectTool.tool_id == tool_id,
+            Project.status == "Em Andamento",
+            or_(ProjectTool.end_date >= tool.deactivation_date, ProjectTool.end_date.is_(None))
+        )
+        result_allocations = await db.execute(active_allocations_query)
+        if result_allocations.scalars().first():
+            raise HTTPException(status_code=400, detail="Não é possível desativar esta ferramenta pois ela está alocada em um projeto em andamento.")
+
     for key, value in tool.model_dump().items():
         setattr(db_tool, key, value)
     

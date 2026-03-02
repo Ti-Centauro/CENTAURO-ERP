@@ -7,6 +7,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import DataTable from '../components/shared/DataTable';
 import StatusBadge from '../components/shared/StatusBadge';
 import CollaboratorModal from '../components/hr/CollaboratorModal';
+import { isDeactivated } from '../utils/formatters';
 
 import './Clients.css';
 import './Collaborators.css';
@@ -96,8 +97,8 @@ const Collaborators = () => {
     const matchesTeam = selectedTeamFilter ? collaborator.teams?.some(t => t.id === parseInt(selectedTeamFilter)) : true;
 
     let matchesStatus = true;
-    if (selectedStatusFilter === 'active') matchesStatus = !collaborator.termination_date;
-    else if (selectedStatusFilter === 'inactive') matchesStatus = !!collaborator.termination_date;
+    if (selectedStatusFilter === 'active') matchesStatus = !isDeactivated(collaborator.termination_date);
+    else if (selectedStatusFilter === 'inactive') matchesStatus = isDeactivated(collaborator.termination_date);
 
     return matchesSearch && matchesRole && matchesTeam && matchesStatus;
   });
@@ -110,7 +111,7 @@ const Collaborators = () => {
       accessor: 'name',
       render: (row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#10b981', filter: row.termination_date ? 'grayscale(100%)' : 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#10b981', filter: isDeactivated(row.termination_date) ? 'grayscale(100%)' : 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
             {row.name.charAt(0)}
           </div>
           <div>
@@ -124,7 +125,7 @@ const Collaborators = () => {
       header: 'Status',
       accessor: 'status',
       render: (row) => (
-        <StatusBadge status={row.termination_date ? 'Inativo' : 'Ativo'} customColors={row.termination_date ? { bg: '#fee2e2', text: '#ef4444' } : { bg: '#dcfce7', text: '#16a34a' }} />
+        <StatusBadge status={isDeactivated(row.termination_date) ? 'Inativo' : 'Ativo'} customColors={isDeactivated(row.termination_date) ? { bg: '#fee2e2', text: '#ef4444' } : { bg: '#dcfce7', text: '#16a34a' }} />
       )
     },
     {

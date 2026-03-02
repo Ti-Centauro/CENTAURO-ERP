@@ -7,6 +7,7 @@ import DataTable from '../components/shared/DataTable';
 import StatusBadge from '../components/shared/StatusBadge';
 import VehicleModal from '../components/fleet/VehicleModal';
 import ImportPreviewModal from '../components/shared/ImportPreviewModal';
+import { isDeactivated } from '../utils/formatters';
 import './Fleet.css';
 
 const Fleet = () => {
@@ -39,8 +40,9 @@ const Fleet = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deleteType, setDeleteType] = useState(null); // 'fleet' or 'insurance'
 
-  // Search
+  // Search and Filter
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('ALL');
 
   useEffect(() => { loadData(); }, []);
 
@@ -144,7 +146,7 @@ const Fleet = () => {
     { header: 'Modelo', accessor: 'model' },
     { header: 'Marca', accessor: 'brand' },
     { header: 'Ano', accessor: 'year' },
-    { header: 'Status', accessor: 'status', render: r => <StatusBadge status={r.status} /> },
+    { header: 'Status', accessor: 'status', render: r => <StatusBadge status={isDeactivated(r.deactivation_date) ? 'INATIVO' : r.status} /> },
     {
       header: 'Seguro', render: r => {
         const ins = insurances.find(i => i.id === r.insurance_id);
@@ -160,10 +162,14 @@ const Fleet = () => {
     { header: 'Sinistros', accessor: 'claims_info', render: r => r.claims_info || '-' }
   ];
 
-  const filteredFleet = fleet.filter(f =>
-    f.license_plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    f.model.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredFleet = fleet.filter(f => {
+    const matchesSearch = f.license_plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.model.toLowerCase().includes(searchTerm.toLowerCase());
+    let matchesStatus = true;
+    if (filterStatus === 'ACTIVE') matchesStatus = !isDeactivated(f.deactivation_date);
+    if (filterStatus === 'INACTIVE') matchesStatus = isDeactivated(f.deactivation_date);
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="fleet">
@@ -203,6 +209,14 @@ const Fleet = () => {
             />
           </div>
           <div className="filters-row">
+            <div className="filter-group">
+              <label className="label">Status</label>
+              <select className="input" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', marginRight: '1rem' }}>
+                <option value="ALL">Todos os Veículos</option>
+                <option value="ACTIVE">Ativos</option>
+                <option value="INACTIVE">Inativos</option>
+              </select>
+            </div>
             <div className="filter-group">
               <label className="label">Visualizar</label>
               <div className="tab-switcher-container">

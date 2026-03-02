@@ -21,7 +21,8 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
     odometer: '',
     cnpj: '',
     status: 'ACTIVE',
-    insurance_id: ''
+    insurance_id: '',
+    deactivation_date: ''
   });
 
   const [fuelCosts, setFuelCosts] = useState([]);
@@ -40,7 +41,8 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
         odometer: vehicle.odometer || '',
         cnpj: vehicle.cnpj || '',
         status: vehicle.status || 'ACTIVE',
-        insurance_id: vehicle.insurance_id || ''
+        insurance_id: vehicle.insurance_id || '',
+        deactivation_date: vehicle.deactivation_date || ''
       });
       loadCosts();
     }
@@ -102,16 +104,29 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    // Preparar payload enviando null caso a data esteja vazia
+    const payload = { ...formData };
+    if (!payload.deactivation_date) {
+      payload.deactivation_date = null;
+    }
+    if (payload.odometer === '') {
+      payload.odometer = null;
+    } else if (payload.odometer !== null) {
+      payload.odometer = parseInt(payload.odometer, 10);
+    }
+
     try {
       if (vehicle) {
-        await updateFleet(vehicle.id, formData);
+        await updateFleet(vehicle.id, payload);
       } else {
-        await createFleet(formData);
+        await createFleet(payload);
       }
       onSuccess();
       onClose();
     } catch (error) {
-      alert('Erro ao salvar veículo');
+      const errorMsg = error.response?.data?.detail || 'Erro ao salvar veículo';
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -203,6 +218,7 @@ const VehicleModal = ({ vehicle, insurances = [], onClose, onSuccess, canEdit, o
                   </option>
                 ))}
               </Select>
+              <Input label="Data de Baixa (Opcional)" type="date" value={formData.deactivation_date || ''} onChange={handleChange('deactivation_date')} wrapperClassName="full-width" />
             </div>
             <div className="form-actions">
               <Button variant="secondary" type="button" onClick={onClose}>Cancelar</Button>

@@ -11,6 +11,60 @@ from app.models.users import User
 
 router = APIRouter()
 
+async def sync_project_resource_after_allocation_change(project_id: int, resource_type: str, resource_id: int, db: AsyncSession):
+    from sqlalchemy import select, func, delete
+    from app.models.project_resources import ProjectCollaborator, ProjectVehicle, ProjectTool
+    
+    if not project_id or not resource_id:
+        return
+
+    # Check remaining allocations
+    stmt = select(
+        func.min(models.Allocation.date).label("min_date"),
+        func.max(models.Allocation.date).label("max_date"),
+        func.count(models.Allocation.id).label("count")
+    ).where(
+        models.Allocation.project_id == project_id,
+        models.Allocation.resource_type == resource_type,
+        models.Allocation.resource_id == resource_id
+    )
+    
+    result = await db.execute(stmt)
+    stats = result.first()
+    count = stats.count if stats else 0
+    min_date = stats.min_date if stats else None
+    max_date = stats.max_date if stats else None
+
+    if resource_type == "PERSON":
+        model = ProjectCollaborator
+        res_col = "collaborator_id"
+    elif resource_type == "CAR":
+        model = ProjectVehicle
+        res_col = "vehicle_id"
+    elif resource_type == "TOOL":
+        model = ProjectTool
+        res_col = "tool_id"
+    else:
+        return
+
+    if count == 0:
+        # Delete link
+        await db.execute(delete(model).where(
+            model.project_id == project_id,
+            getattr(model, res_col) == resource_id
+        ))
+    else:
+        # Update dates
+        res = await db.execute(select(model).where(
+            model.project_id == project_id,
+            getattr(model, res_col) == resource_id
+        ))
+        item = res.scalar_one_or_none()
+        if item:
+            item.start_date = min_date
+            item.end_date = max_date
+            db.add(item)
+
 # Allocations
 @router.get("/allocations", response_model=List[schemas.AllocationResponse])
 async def get_allocations(
@@ -219,6 +273,22 @@ async def create_allocation(allocation: schemas.AllocationCreate, db: AsyncSessi
                     end_date=allocation.end_date
                 )
                 db.add(pv)
+        elif allocation.resource_type == "TOOL":
+            from app.models.project_resources import ProjectTool
+            q = select(ProjectTool).where(
+                ProjectTool.project_id == allocation.project_id,
+                ProjectTool.tool_id == allocation.resource_id
+            )
+            res = await db.execute(q)
+            pt = res.scalars().first()
+            if not pt:
+                pt = ProjectTool(
+                    project_id=allocation.project_id,
+                    tool_id=allocation.resource_id,
+                    start_date=allocation.start_date,
+                    end_date=allocation.end_date
+                )
+                db.add(pt)
 
     await db.commit()
     return created_allocations
@@ -235,10 +305,19 @@ async def batch_delete_allocations(payload: dict, db: AsyncSession = Depends(get
     if not ids:
         return {"success": True, "count": 0}
 
+    # Identify affected resources
+    result = await db.execute(select(models.Allocation).where(models.Allocation.id.in_(ids)))
+    allocs = result.scalars().all()
+    affected = set([(a.project_id, a.resource_type, a.resource_id) for a in allocs if a.project_id])
+
     # Execute delete in a single query
     await db.execute(
         delete(models.Allocation).where(models.Allocation.id.in_(ids))
     )
+    await db.flush()
+
+    for p_id, r_type, r_id in affected:
+        await sync_project_resource_after_allocation_change(p_id, r_type, r_id, db)
     
     await db.commit()
     return {"success": True, "count": len(ids)}
@@ -351,7 +430,31 @@ async def update_allocation(allocation_id: int, allocation: schemas.AllocationCr
                     end_date=allocation.end_date
                 )
                 db.add(pv)
+        elif allocation.resource_type == "TOOL":
+            from app.models.project_resources import ProjectTool
+            res = await db.execute(
+                select(ProjectTool).where(
+                    ProjectTool.project_id == allocation.project_id,
+                    ProjectTool.tool_id == allocation.resource_id
+                )
+            )
+            pt = res.scalars().first()
+            if not pt:
+                pt = ProjectTool(
+                    project_id=allocation.project_id,
+                    tool_id=allocation.resource_id,
+                    start_date=allocation.start_date,
+                    end_date=allocation.end_date
+                )
+                db.add(pt)
     
+    await db.flush()
+    # Synchronize bounds dynamically after update
+    if db_allocation and db_allocation.project_id:
+        await sync_project_resource_after_allocation_change(db_allocation.project_id, db_allocation.resource_type, db_allocation.resource_id, db)
+    if allocation.project_id:
+        await sync_project_resource_after_allocation_change(allocation.project_id, allocation.resource_type, allocation.resource_id, db)
+
     await db.commit()
     return created_allocations
 
@@ -364,7 +467,16 @@ async def delete_allocation(allocation_id: int, db: AsyncSession = Depends(get_d
     if not db_allocation:
         raise HTTPException(status_code=404, detail="Allocation not found")
     
+    project_id = db_allocation.project_id
+    resource_type = db_allocation.resource_type
+    resource_id = db_allocation.resource_id
+
     await db.delete(db_allocation)
+    await db.flush()
+    
+    if project_id:
+        await sync_project_resource_after_allocation_change(project_id, resource_type, resource_id, db)
+
     await db.commit()
     return {"message": "Allocation deleted"}
 
@@ -467,6 +579,31 @@ async def update_collaborator(collaborator_id: int, collaborator: schemas.Collab
     team_ids = collaborator.team_ids
     collaborator_data = collaborator.model_dump(exclude={"team_ids", "role"})
     
+    # Validation for termination_date
+    if collaborator.termination_date and getattr(db_collaborator, 'termination_date', None) != collaborator.termination_date:
+        from app.models.commercial import Project
+        from app.models.project_resources import ProjectCollaborator
+        from sqlalchemy import or_
+
+        active_allocations_query = (
+            select(ProjectCollaborator)
+            .join(Project, Project.id == ProjectCollaborator.project_id)
+            .where(
+                ProjectCollaborator.collaborator_id == db_collaborator.id,
+                Project.status == "Em Andamento",
+                or_(
+                    ProjectCollaborator.end_date >= collaborator.termination_date,
+                    ProjectCollaborator.end_date.is_(None)
+                )
+            )
+        )
+        active_allocations_result = await db.execute(active_allocations_query)
+        if active_allocations_result.scalars().first():
+            raise HTTPException(
+                status_code=400,
+                detail="Não é possível definir esta data de demissão pois o colaborador possui alocações ativas em projetos em andamento nesta data ou posteriormente."
+            )
+
     # Update collaborator attributes
     for key, value in collaborator_data.items():
         setattr(db_collaborator, key, value)

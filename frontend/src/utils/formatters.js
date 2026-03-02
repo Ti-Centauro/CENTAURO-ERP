@@ -23,3 +23,15 @@ export const formatTimeAgo = (dateString) => {
 
   return date.toLocaleDateString('pt-BR');
 };
+
+export const isDeactivated = (dateString) => {
+  if (!dateString) return false;
+  // Create date considering midnight of the local timezone to compare with today safely
+  // dateString is typically 'YYYY-MM-DD'
+  const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
+  const targetDate = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return targetDate <= today;
+};

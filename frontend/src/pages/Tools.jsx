@@ -4,6 +4,7 @@ import { getTools, createTool, deleteTool, updateTool, getCollaborators, getProj
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import SearchableSelect from '../components/shared/SearchableSelect';
+import { isDeactivated } from '../utils/formatters';
 import './Tools.css';
 
 const Tools = () => {
@@ -19,6 +20,7 @@ const Tools = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('ALL');
+  const [filterStatus, setFilterStatus] = useState('ALL');
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -34,6 +36,7 @@ const Tools = () => {
     category: 'OTHER',
     condition: 'GOOD',
     next_maintenance: '',
+    deactivation_date: '',
   });
 
   const CATEGORIES = [
@@ -111,7 +114,8 @@ const Tools = () => {
       // Prepare payload with null checks
       const payload = {
         ...formData,
-        next_maintenance: formData.next_maintenance || null
+        next_maintenance: formData.next_maintenance || null,
+        deactivation_date: formData.deactivation_date || null
       };
 
       if (editingId) {
@@ -130,11 +134,13 @@ const Tools = () => {
         category: 'OTHER',
         condition: 'GOOD',
         next_maintenance: '',
+        deactivation_date: '',
       });
       loadTools();
     } catch (error) {
       console.error('Error saving tool:', error);
-      alert('Erro ao salvar ferramenta: ' + error.response?.data?.detail);
+      const errorMsg = error.response?.data?.detail || 'Erro ao salvar ferramenta';
+      alert(errorMsg);
     }
   };
 
@@ -153,6 +159,7 @@ const Tools = () => {
       category: tool.category || 'OTHER',
       condition: tool.condition || 'GOOD',
       next_maintenance: tool.next_maintenance || '',
+      deactivation_date: tool.deactivation_date || '',
     });
     setEditingId(tool.id);
     setShowForm(true);
@@ -233,7 +240,12 @@ const Tools = () => {
     const matchesSearch = tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tool.serial_number.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'ALL' || tool.category === filterCategory;
-    return matchesSearch && matchesCategory;
+
+    let matchesStatus = true;
+    if (filterStatus === 'ACTIVE') matchesStatus = !isDeactivated(tool.deactivation_date);
+    if (filterStatus === 'INACTIVE') matchesStatus = isDeactivated(tool.deactivation_date);
+
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   return (
@@ -255,6 +267,18 @@ const Tools = () => {
           >
             <option value="ALL">Todas Categorias</option>
             {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+
+          {/* Status Filter */}
+          <select
+            className="input"
+            style={{ width: '150px', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)' }}
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="ALL">Todas Status</option>
+            <option value="ACTIVE">Ativas</option>
+            <option value="INACTIVE">Inativas</option>
           </select>
 
           {/* Search Box */}
@@ -298,6 +322,7 @@ const Tools = () => {
                 category: 'OTHER',
                 condition: 'GOOD',
                 next_maintenance: '',
+                deactivation_date: '',
               });
               setShowForm(true);
             }}>
@@ -426,6 +451,18 @@ const Tools = () => {
                     />
                   </div>
                 )}
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label className="label">Data de Baixa (Desativação)</label>
+                  <input
+                    type="date"
+                    name="deactivation_date"
+                    className="input"
+                    value={formData.deactivation_date}
+                    onChange={handleChange}
+                  />
+                  <small style={{ color: '#64748b' }}>Preencha se a ferramenta foi furtada, quebrada definitivamente ou descartada.</small>
+                </div>
               </div>
               <div className="form-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
@@ -470,7 +507,7 @@ const Tools = () => {
                     key={tool.id}
                     className="tool-card card clickable"
                     onClick={() => handleEdit(tool)}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', ...(isDeactivated(tool.deactivation_date) ? { filter: 'grayscale(100%)', opacity: 0.6 } : {}) }}
                   >
                     <div className="tool-card-header">
                       <div className="tool-icon">
@@ -479,9 +516,9 @@ const Tools = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                         <span
                           className="status-badge"
-                          style={getStatusColor(tool.status)}
+                          style={isDeactivated(tool.deactivation_date) ? { bg: '#fee2e2', color: '#991b1b', backgroundColor: '#fee2e2' } : getStatusColor(tool.status)}
                         >
-                          {getStatusLabel(tool.status)}
+                          {isDeactivated(tool.deactivation_date) ? 'INATIVO' : getStatusLabel(tool.status)}
                         </span>
                         {maintenanceAlert && (
                           <span title={maintenanceAlert.title} style={{ color: maintenanceAlert.color, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
@@ -550,10 +587,10 @@ const Tools = () => {
                   {filteredTools.map(tool => {
                     const maintenanceAlert = getMaintenanceAlert(tool.next_maintenance, tool.category);
                     return (
-                      <tr key={tool.id} onClick={() => handleEdit(tool)}>
+                      <tr key={tool.id} onClick={() => handleEdit(tool)} style={isDeactivated(tool.deactivation_date) ? { filter: 'grayscale(100%)', opacity: 0.6 } : {}}>
                         <td>
-                          <span className="status-badge" style={getStatusColor(tool.status)}>
-                            {getStatusLabel(tool.status)}
+                          <span className="status-badge" style={isDeactivated(tool.deactivation_date) ? { bg: '#fee2e2', color: '#991b1b', backgroundColor: '#fee2e2' } : getStatusColor(tool.status)}>
+                            {isDeactivated(tool.deactivation_date) ? 'INATIVO' : getStatusLabel(tool.status)}
                           </span>
                         </td>
                         <td>

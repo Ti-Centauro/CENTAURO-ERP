@@ -33,6 +33,7 @@ class FleetBase(BaseModel):
     fuel_type: Optional[FuelType] = None
     status: FleetStatus = FleetStatus.ACTIVE
     odometer: Optional[int] = 0
+    deactivation_date: Optional[date] = None
 
 class FleetCreate(FleetBase):
     pass
@@ -55,6 +56,7 @@ class ToolBase(BaseModel):
     category: Optional[str] = "OTHER"
     condition: Optional[str] = "GOOD"
     next_maintenance: Optional[date] = None
+    deactivation_date: Optional[date] = None
 
 class ToolCreate(ToolBase):
     pass

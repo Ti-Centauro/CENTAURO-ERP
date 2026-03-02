@@ -106,7 +106,8 @@ const DataTable = ({
                   borderBottom: rowIndex === currentData.length - 1 ? 'none' : '1px solid #f1f5f9',
                   transition: 'background 0.1s',
                   cursor: onRowClick ? 'pointer' : 'default',
-                  fontSize: '0.75rem'
+                  fontSize: '0.75rem',
+                  ...(row.deactivation_date ? { filter: 'grayscale(100%)', opacity: 0.6 } : {})
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'white'}

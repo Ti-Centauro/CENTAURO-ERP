@@ -71,6 +71,7 @@ class Fleet(Base):
     fuel_type = Column(Enum(FuelType), nullable=True)
     status = Column(Enum(FleetStatus), default=FleetStatus.ACTIVE)
     odometer = Column(Integer, default=0)
+    deactivation_date = Column(Date, nullable=True)
 
     # Maintenance Relationship
     maintenances = relationship("VehicleMaintenance", back_populates="vehicle")
@@ -93,6 +94,7 @@ class Tool(Base):
     category = Column(Enum(ToolCategory), default=ToolCategory.OTHER)
     condition = Column(Enum(ToolCondition), default=ToolCondition.GOOD)
     next_maintenance = Column(Date, nullable=True)
+    deactivation_date = Column(Date, nullable=True)
 
 class VehicleMaintenance(Base):
     __tablename__ = "vehicle_maintenances"
