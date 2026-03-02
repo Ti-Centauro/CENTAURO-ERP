@@ -44,6 +44,16 @@ const Fleet = () => {
 
   useEffect(() => { loadData(); }, []);
 
+  // Close insurance form on Escape
+  useEffect(() => {
+    if (!showInsuranceForm) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowInsuranceForm(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showInsuranceForm]);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -222,7 +232,7 @@ const Fleet = () => {
             actions={false}
             onEdit={(row) => { setEditingInsurance(row); setInsuranceFormData(row); setShowInsuranceForm(true); }}
             onDelete={(row) => handleDelete(row.id, 'insurance')}
-            onRowClick={(row) => { setEditingInsurance(row); setInsuranceFormData(row); setShowInsuranceForm(true); }}
+            onRowClick={canEdit ? (row) => { setEditingInsurance(row); setInsuranceFormData(row); setShowInsuranceForm(true); } : undefined}
           />
         )}
       </div>
@@ -239,7 +249,7 @@ const Fleet = () => {
       )}
 
       {showInsuranceForm && (
-        <div className="fleet-form-modal">
+        <div className="fleet-form-modal" onClick={() => setShowInsuranceForm(false)}>
           <div className="fleet-form card" onClick={e => e.stopPropagation()}>
             <h3>{editingInsurance ? 'Editar Seguro' : 'Novo Seguro'}</h3>
             <form onSubmit={handleInsuranceSubmit}>
@@ -251,7 +261,7 @@ const Fleet = () => {
               </div>
               <div className="form-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowInsuranceForm(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary">Salvar</button>
+                {canEdit && <button type="submit" className="btn btn-primary">Salvar</button>}
               </div>
             </form>
           </div>

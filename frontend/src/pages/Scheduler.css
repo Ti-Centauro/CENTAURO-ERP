@@ -496,3 +496,106 @@
   /* Slate-600 */
   background-color: #f1f5f9;
 }
+
+/* --- Allocation Form Modal (Pop-up) --- */
+.scheduler-form-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  animation: fadeInOverlay 0.2s ease-out;
+}
+
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.scheduler-form-modal .scheduler-form {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.75rem 2rem;
+  width: 95%;
+  max-width: 520px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.scheduler-form-modal .form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.scheduler-form-modal .form-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.scheduler-form-modal .close-btn {
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.scheduler-form-modal .close-btn:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.scheduler-form-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.scheduler-form-modal .form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.scheduler-form-modal .form-row .form-group {
+  flex: 1;
+}
+
+.scheduler-form-modal .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}

@@ -68,11 +68,6 @@ const ProjectTeamTab = ({ project, projectCollaborators, availableCollaborators,
     <div className="tab-content" style={{ padding: '1rem' }}>
       <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0 }}>Colaboradores Alocados</h3>
-        {canEdit && (
-          <button className="btn btn-primary btn-sm" onClick={() => setShowCollabForm(!showCollabForm)}>
-            <Plus size={16} /> Adicionar
-          </button>
-        )}
       </div>
 
       {showCollabForm && (

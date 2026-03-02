@@ -161,6 +161,10 @@ async def create_allocation(allocation: schemas.AllocationCreate, db: AsyncSessi
         db.add(new_alloc)
         created_allocations.append(new_alloc)
         current_date += timedelta(days=1)
+    
+    # If no valid days were created (e.g. only weekends selected), skip link creation
+    if not created_allocations:
+        return []
         
     # 2. Link to Project
     if allocation.project_id:
@@ -292,6 +296,11 @@ async def update_allocation(allocation_id: int, allocation: schemas.AllocationCr
         db.add(new_alloc)
         created_allocations.append(new_alloc)
         current_date += timedelta(days=1)
+
+    # If no valid days were created, skip link creation
+    if not created_allocations:
+        await db.commit()
+        return []
 
     # 3. Link to Project (Same logic)
     if allocation.project_id:

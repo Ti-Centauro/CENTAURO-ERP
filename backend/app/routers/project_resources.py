@@ -103,10 +103,8 @@ async def get_project_collaborators(project_id: int, db: AsyncSession = Depends(
 
 @router.post("/projects/{project_id}/collaborators", response_model=schemas.ProjectCollaboratorResponse)
 async def add_project_collaborator(project_id: int, data: schemas.ProjectCollaboratorCreate, db: AsyncSession = Depends(get_db)):
-    db_item = models.ProjectCollaborator(**data.model_dump(exclude={'include_weekends'}))
-    db.add(db_item)
-    
     # Sync with Allocation (Scheduler)
+    days_created = 0
     if data.start_date and data.end_date:
         import holidays
         br_holidays = holidays.BR()
@@ -138,7 +136,15 @@ async def add_project_collaborator(project_id: int, data: schemas.ProjectCollabo
                 description=f"Alocado no Projeto {project_id}"
             )
             db.add(new_alloc)
+            days_created += 1
             current_date += timedelta(days=1)
+    
+    # Guard: don't create a link if no valid days were generated
+    if data.start_date and data.end_date and days_created == 0:
+        raise HTTPException(status_code=400, detail="Nenhum dia útil no intervalo selecionado.")
+
+    db_item = models.ProjectCollaborator(**data.model_dump(exclude={'include_weekends'}))
+    db.add(db_item)
             
     await db.commit()
     await db.refresh(db_item)
@@ -244,10 +250,8 @@ async def get_project_tools(project_id: int, db: AsyncSession = Depends(get_db))
 
 @router.post("/projects/{project_id}/tools", response_model=schemas.ProjectToolResponse)
 async def add_project_tool(project_id: int, data: schemas.ProjectToolCreate, db: AsyncSession = Depends(get_db)):
-    db_item = models.ProjectTool(**data.model_dump(exclude={'include_weekends'}))
-    db.add(db_item)
-    
     # Sync with Allocation
+    days_created = 0
     if data.start_date and data.end_date:
         import holidays
         br_holidays = holidays.BR()
@@ -279,7 +283,15 @@ async def add_project_tool(project_id: int, data: schemas.ProjectToolCreate, db:
                 description=f"Ferramenta no Projeto {project_id}"
             )
             db.add(new_alloc)
+            days_created += 1
             current_date += timedelta(days=1)
+
+    # Guard: don't create a link if no valid days were generated
+    if data.start_date and data.end_date and days_created == 0:
+        raise HTTPException(status_code=400, detail="Nenhum dia útil no intervalo selecionado.")
+
+    db_item = models.ProjectTool(**data.model_dump(exclude={'include_weekends'}))
+    db.add(db_item)
 
     await db.commit()
     await db.refresh(db_item)
@@ -383,10 +395,8 @@ async def get_project_vehicles(project_id: int, db: AsyncSession = Depends(get_d
 
 @router.post("/projects/{project_id}/vehicles", response_model=schemas.ProjectVehicleResponse)
 async def add_project_vehicle(project_id: int, data: schemas.ProjectVehicleCreate, db: AsyncSession = Depends(get_db)):
-    db_item = models.ProjectVehicle(**data.model_dump(exclude={'include_weekends'}))
-    db.add(db_item)
-    
     # Sync with Allocation
+    days_created = 0
     if data.start_date and data.end_date:
         import holidays
         br_holidays = holidays.BR()
@@ -418,7 +428,15 @@ async def add_project_vehicle(project_id: int, data: schemas.ProjectVehicleCreat
                 description=f"Veículo no Projeto {project_id}"
             )
             db.add(new_alloc)
+            days_created += 1
             current_date += timedelta(days=1)
+
+    # Guard: don't create a link if no valid days were generated
+    if data.start_date and data.end_date and days_created == 0:
+        raise HTTPException(status_code=400, detail="Nenhum dia útil no intervalo selecionado.")
+
+    db_item = models.ProjectVehicle(**data.model_dump(exclude={'include_weekends'}))
+    db.add(db_item)
 
     await db.commit()
     await db.refresh(db_item)

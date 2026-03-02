@@ -109,7 +109,7 @@ const ProjectAssetsTab = ({ project, projectTools, projectVehicles, availableToo
         <div className="resource-section">
           <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>Gerenciar Ferramentas</h3>
-            {canEdit && <button className="btn btn-primary btn-sm" onClick={() => setShowToolForm(!showToolForm)}><Plus size={16} /> Adicionar</button>}
+
           </div>
 
           {showToolForm && (
@@ -217,7 +217,7 @@ const ProjectAssetsTab = ({ project, projectTools, projectVehicles, availableToo
         <div className="resource-section">
           <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>Gerenciar Veículos</h3>
-            {canEdit && <button className="btn btn-primary btn-sm" onClick={() => setShowVehicleForm(!showVehicleForm)}><Plus size={16} /> Adicionar</button>}
+
           </div>
 
           {showVehicleForm && (

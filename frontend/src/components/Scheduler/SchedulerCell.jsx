@@ -132,7 +132,7 @@ const SchedulerCell = ({
               e.stopPropagation();
               if (isSelectionMode && onSelectAllocation) {
                 onSelectAllocation(alloc.id);
-              } else if (onAllocationClick) {
+              } else if (canEdit && onAllocationClick) {
                 onAllocationClick(alloc);
               }
             }}

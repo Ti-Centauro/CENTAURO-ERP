@@ -65,6 +65,16 @@ const getHolidayInfo = (date) => {
 const Scheduler = () => {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('scheduler', 'edit');
+  const canEditFleet = hasPermission('fleet', 'edit');
+  const canEditTools = hasPermission('tools', 'edit');
+
+  // Resolve edit permission per resource type
+  const canEditResource = (resourceType) => {
+    if (!canEdit) return false; // Must have scheduler edit as base
+    if (resourceType === 'CAR') return canEditFleet;
+    if (resourceType === 'TOOL') return canEditTools;
+    return true; // PERSON uses scheduler edit only
+  };
   const [allocations, setAllocations] = useState([]);
   const [collaborators, setCollaborators] = useState([]);
   const [fleet, setFleet] = useState([]);
@@ -94,6 +104,16 @@ const Scheduler = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Close form on Escape key
+  useEffect(() => {
+    if (!showForm) return;
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setShowForm(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showForm]);
 
   const loadData = async () => {
     try {
@@ -500,13 +520,15 @@ const Scheduler = () => {
             )}
           </div>
 
-          <button
-            className={`btn-toggle-selection ${isSelectionMode ? 'active' : ''}`}
-            onClick={toggleSelectionMode}
-          >
-            <CheckSquare size={18} />
-            Seleção Múltipla
-          </button>
+          {canEdit && (
+            <button
+              className={`btn-toggle-selection ${isSelectionMode ? 'active' : ''}`}
+              onClick={toggleSelectionMode}
+            >
+              <CheckSquare size={18} />
+              Seleção Múltipla
+            </button>
+          )}
 
           <div className="view-toggle">
             <button
@@ -600,7 +622,7 @@ const Scheduler = () => {
                 onQuickAllocate={handleQuickAllocation}
                 onBatchAllocate={handleBatchAllocate}
                 onDelete={handleDeleteAllocation}
-                canEdit={canEdit}
+                canEdit={canEditResource(resource.type)}
 
                 isSelectionMode={isSelectionMode}
                 selectedAllocationIds={selectedAllocationIds}
@@ -618,8 +640,8 @@ const Scheduler = () => {
       )}
 
       {showForm && (
-        <div className="scheduler-form-modal">
-          <div className="scheduler-form card">
+        <div className="scheduler-form-modal" onClick={() => setShowForm(false)}>
+          <div className="scheduler-form card" onClick={(e) => e.stopPropagation()}>
             <div className="form-header">
               <h3>{editingId ? 'Editar Alocação' : 'Nova Alocação'}</h3>
               <button className="close-btn" onClick={() => setShowForm(false)}>
@@ -636,8 +658,8 @@ const Scheduler = () => {
                   onChange={handleChange}
                 >
                   <option value="PERSON">Colaborador</option>
-                  <option value="CAR">Veículo</option>
-                  <option value="TOOL">Ferramenta</option>
+                  {canEditFleet && <option value="CAR">Veículo</option>}
+                  {canEditTools && <option value="TOOL">Ferramenta</option>}
                 </select>
               </div>
               <div className="form-group">
