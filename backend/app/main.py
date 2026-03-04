@@ -116,7 +116,10 @@ async def startup():
 
         for table, col, dtype in columns_to_add:
             try:
-                await conn.execute(text(f"SELECT {col} FROM {table} LIMIT 1"))
+                # Use a nested transaction (savepoint) so that if the SELECT fails,
+                # the whole transaction is not aborted (critical for PostgreSQL).
+                async with conn.begin_nested():
+                    await conn.execute(text(f"SELECT {col} FROM {table} LIMIT 1"))
             except Exception:
                 print(f"Migrating: Adding {col} to {table}")
                 await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {dtype}"))
