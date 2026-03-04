@@ -22,7 +22,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
-import { Plus, Search, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, FileText, CheckCircle, XCircle, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import './Commercial.css';
 import ProposalModal from '../components/commercial/ProposalModal';
 
@@ -65,12 +65,19 @@ const Commercial = () => {
   const dragRef = useRef({ startX: 0, scrollLeft: 0 });
   const [isDragScrolling, setIsDragScrolling] = useState(false);
 
-  // Filter
+  // Filter Status and Date Range
+  const initialStatuses = COLUMNS.map(c => c.id);
+  const [filterStatuses, setFilterStatuses] = useState(initialStatuses);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+
+  // Search local
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, []); // Run once on mount
 
   // --- DRAG TO SCROLL HANDLERS ---
   const handleMouseDown = (e) => {
@@ -123,8 +130,14 @@ const Commercial = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Constrói a query string via URLSearchParams para FastAPI ler como List[str]
+      const queryParams = new URLSearchParams();
+      filterStatuses.forEach(status => queryParams.append('status', status));
+      if (filterStartDate) queryParams.append('start_date', filterStartDate);
+      if (filterEndDate) queryParams.append('end_date', filterEndDate);
+
       const [propRes, cliRes, colRes] = await Promise.all([
-        getProposals(),
+        getProposals(queryParams),
         getClients(),
         getCollaborators()
       ]);
@@ -293,12 +306,12 @@ const Commercial = () => {
     loadData();
   };
 
-  // Filtered
+  // Filtered locally (by search text)
   const filteredProposals = useMemo(() => {
     return proposals.filter(p =>
       p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.internal_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      (p.internal_id && p.internal_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.client_name && p.client_name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [proposals, searchTerm]);
 
@@ -319,7 +332,7 @@ const Commercial = () => {
           <div className="search-input">
             <Search size={16} />
             <input
-              placeholder="Buscar propostas..."
+              placeholder="Buscar histórico (título/id)..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
@@ -329,6 +342,93 @@ const Commercial = () => {
           </button>
         </div>
       </header>
+
+      {/* PAINEL DE FILTROS RECOLHÍVEL */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6 mt-4 shrink-0 w-full overflow-hidden">
+
+        {/* Header clicável */}
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(!filtersOpen)}
+          className="w-full flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal size={16} className="text-gray-500" />
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Filtros</span>
+            {!filtersOpen && filterStatuses.length > 0 && (
+              <span className="text-xs text-blue-600 font-medium ml-1">
+                ({filterStatuses.length} status selecionados)
+              </span>
+            )}
+          </div>
+          {filtersOpen ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+        </button>
+
+        {/* Conteúdo colapsável */}
+        {filtersOpen && (
+          <div className="px-6 pb-5 pt-2 flex flex-col xl:flex-row gap-6 justify-between items-start border-t border-gray-100">
+
+            {/* Lado Esquerdo: Status do Funil */}
+            <div className="flex-1">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 block">Status do Funil</h3>
+              <div className="flex flex-wrap gap-2">
+                {COLUMNS.map(col => {
+                  const isActive = filterStatuses.includes(col.id);
+                  return (
+                    <button
+                      key={col.id}
+                      type="button"
+                      onClick={() => {
+                        if (isActive) {
+                          setFilterStatuses(filterStatuses.filter(s => s !== col.id));
+                        } else {
+                          setFilterStatuses([...filterStatuses, col.id]);
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${isActive
+                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-transparent'
+                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                      {col.title}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Lado Direito: Filtros de Data e Botão */}
+            <div className="flex flex-wrap items-end gap-4 min-w-[320px]">
+              <div className="flex flex-col gap-1 w-full sm:w-auto">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">De</label>
+                <input
+                  type="date"
+                  value={filterStartDate}
+                  onChange={(e) => setFilterStartDate(e.target.value)}
+                  className="w-full sm:w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1 w-full sm:w-auto">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Até</label>
+                <input
+                  type="date"
+                  value={filterEndDate}
+                  onChange={(e) => setFilterEndDate(e.target.value)}
+                  className="w-full sm:w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <button
+                onClick={loadData}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-6 py-2 transition-colors"
+              >
+                Aplicar
+              </button>
+            </div>
+
+          </div>
+        )}
+
+      </div>
 
       {isDragScrolling && <div className="global-drag-overlay" />}
 
@@ -353,6 +453,19 @@ const Commercial = () => {
                     {filteredProposals.filter(p => p.status === col.id).length}
                   </span>
                 </div>
+                {(col.id === 'GANHA' || col.id === 'PERDIDA') && (() => {
+                  const total = filteredProposals
+                    .filter(p => p.status === col.id)
+                    .reduce((sum, p) => sum + parseFloat(p.value || 0), 0);
+                  return total > 0 ? (
+                    <div className="text-xs font-semibold text-center py-1 px-2" style={{
+                      backgroundColor: col.id === 'GANHA' ? '#dcfce7' : '#fee2e2',
+                      color: col.id === 'GANHA' ? '#166534' : '#991b1b'
+                    }}>
+                      Total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                  ) : null;
+                })()}
 
                 <SortableContext
                   items={filteredProposals.filter(p => p.status === col.id).map(p => p.id)}

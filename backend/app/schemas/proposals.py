@@ -31,6 +31,7 @@ class ProposalBase(BaseModel):
     status: ProposalStatus = ProposalStatus.LEAD
     history: Optional[str] = None
     loss_reason: Optional[str] = None
+    decision_date: Optional[date] = None
 
 
 class ProposalCreate(ProposalBase):
@@ -59,6 +60,7 @@ class ProposalResponse(ProposalBase):
     loss_reason: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    decision_date: Optional[date] = None
 
     class Config:
         from_attributes = True

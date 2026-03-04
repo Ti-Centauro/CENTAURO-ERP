@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Enum, Text, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Enum, Text, DateTime, Boolean, Date, func
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
@@ -44,7 +44,8 @@ class CommercialProposal(Base):
     
     converted_project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, server_default=func.now())
+    decision_date = Column(Date, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships

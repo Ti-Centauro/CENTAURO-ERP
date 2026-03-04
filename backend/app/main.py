@@ -83,6 +83,9 @@ async def startup():
             ("projects", "company_id", "INTEGER"),
             ("projects", "estimated_days", "INTEGER"),
             ("projects", "warranty_months", "INTEGER"),
+
+            # Commercial Proposals
+            ("commercial_proposals", "decision_date", "DATE"),
             
             # Project Billings Migrations
             ("project_billings", "substitution_reason", "VARCHAR"),

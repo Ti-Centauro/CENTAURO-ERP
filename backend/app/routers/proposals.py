@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, desc
 from sqlalchemy.orm import selectinload
-from typing import List
+from typing import List, Optional
 from datetime import date, datetime, timedelta
 
 from app.database import get_db
@@ -15,9 +15,40 @@ from app.schemas import proposals as schemas
 router = APIRouter(prefix="/commercial/proposals", tags=["Commercial Proposals"])
 
 
+from fastapi import Query
+
 @router.get("/", response_model=List[schemas.ProposalResponse])
-async def get_proposals(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.CommercialProposal).order_by(desc(models.CommercialProposal.id)).offset(skip).limit(limit))
+async def get_proposals(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    status: Optional[List[schemas.ProposalStatus]] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(models.CommercialProposal)
+
+    if status:
+        stmt = stmt.where(models.CommercialProposal.status.in_(status))
+
+    if start_date or end_date:
+        # Check if the filtering is strictly for GANHA/PERDIDA to use decision_date
+        is_only_finalized = False
+        if status and all(s in [schemas.ProposalStatus.GANHA, schemas.ProposalStatus.PERDIDA] for s in status):
+            is_only_finalized = True
+
+        if is_only_finalized:
+            date_column = models.CommercialProposal.decision_date
+        else:
+            # Cast created_at (DateTime) to Date for the comparison
+            date_column = func.date(models.CommercialProposal.created_at)
+
+        if start_date:
+            stmt = stmt.where(date_column >= start_date)
+        if end_date:
+            stmt = stmt.where(date_column <= end_date)
+
+    result = await db.execute(stmt.order_by(desc(models.CommercialProposal.id)).offset(skip).limit(limit))
     proposals = result.scalars().all()
     return proposals
 
@@ -58,6 +89,15 @@ async def update_proposal(id: int, proposal_update: schemas.ProposalUpdate, db: 
         raise HTTPException(status_code=404, detail="Proposta não encontrada")
     
     update_data = proposal_update.model_dump(exclude_unset=True)
+    
+    # Auto-fill logic for decision_date
+    if "status" in update_data:
+        new_status = update_data["status"]
+        if new_status in [schemas.ProposalStatus.GANHA, schemas.ProposalStatus.PERDIDA]:
+            update_data["decision_date"] = date.today()
+        else:
+            update_data["decision_date"] = None
+            
     for key, value in update_data.items():
         setattr(db_proposal, key, value)
     
@@ -121,10 +161,17 @@ async def convert_proposal_to_project(id: int, convert_data: schemas.ProposalCon
     tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
     
     # 4. Create Project
-    budget = convert_data.budget if convert_data.budget is not None else proposal.value
-    # Assume entire budget is Service Value for now, or split? 
-    # Let's put budget as budget, and service_value as budget (safe default for services company)
-    
+    # If the user overriden the total budget and it differs from proposal.value, we fall back to putting it all in service_value
+    # Otherwise, we keep the original labor and material split.
+    if convert_data.budget is not None and format(convert_data.budget, ".2f") != format(proposal.value or 0, ".2f"):
+        service_value = convert_data.budget
+        material_value = 0
+        budget = convert_data.budget
+    else:
+        service_value = proposal.labor_value or (proposal.value or 0)
+        material_value = proposal.material_value or 0
+        budget = proposal.value or 0
+
     new_project = commercial_models.Project(
         tag=tag,
         project_number=next_number,
@@ -133,8 +180,8 @@ async def convert_proposal_to_project(id: int, convert_data: schemas.ProposalCon
         coordinator=convert_data.coordinator,
         status="Em Andamento",
         client_id=client_id,
-        service_value=budget,
-        material_value=0,  # Default
+        service_value=service_value,
+        material_value=material_value,
         budget=budget,
         start_date=convert_data.start_date,
         company_id=convert_data.company_id,
@@ -150,6 +197,7 @@ async def convert_proposal_to_project(id: int, convert_data: schemas.ProposalCon
     
     # 5. Update Proposal
     proposal.status = schemas.ProposalStatus.GANHA
+    proposal.decision_date = date.today()
     proposal.converted_project_id = new_project.id
     if not proposal.client_id:  # Link client if it wasn't linked
         proposal.client_id = client_id
