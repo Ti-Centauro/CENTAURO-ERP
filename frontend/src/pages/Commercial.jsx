@@ -291,7 +291,7 @@ const Commercial = () => {
       }
 
       await convertProposalToProject(selectedProposal.id, payload);
-      alert("Sucesso! Projeto criado.");
+      alert("Sucesso! O sistema gerou o projeto ou contrato.");
       setShowConvertModal(false);
       loadData();
     } catch (error) {
@@ -311,7 +311,8 @@ const Commercial = () => {
     return proposals.filter(p =>
       p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.internal_id && p.internal_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (p.client_name && p.client_name.toLowerCase().includes(searchTerm.toLowerCase()))
+      (p.client_name && p.client_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.responsible && p.responsible.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [proposals, searchTerm]);
 
@@ -332,7 +333,7 @@ const Commercial = () => {
           <div className="search-input">
             <Search size={16} />
             <input
-              placeholder="Buscar histórico (título/id)..."
+              placeholder="Buscar (título/id/resp)..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
@@ -541,8 +542,8 @@ const Commercial = () => {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
-              <h3><CheckCircle size={20} color="#16a34a" /> Fechamento de Venda</h3>
-              <p>Transformar proposta em Projeto Oficial</p>
+              <h3><CheckCircle size={20} color="#16a34a" /> Aprovar Proposta</h3>
+              <p>Gerar Projeto, Obra ou Contrato Oficial</p>
             </div>
             <form onSubmit={handleConversion}>
               <div className="form-grid">
@@ -586,7 +587,7 @@ const Commercial = () => {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={cancelConversion}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ background: '#16a34a' }}>Confirmar e Gerar Obra</button>
+                <button type="submit" className="btn btn-primary" style={{ background: '#16a34a' }}>Confirmar e Gerar</button>
               </div>
             </form>
           </div>

@@ -44,6 +44,7 @@ class CommercialProposal(Base):
     loss_reason = Column(String, nullable=True)
     
     converted_project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    converted_contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=True)
 
     created_at = Column(DateTime, server_default=func.now())
     decision_date = Column(Date, nullable=True)
@@ -52,6 +53,7 @@ class CommercialProposal(Base):
     # Relationships
     client = relationship("app.models.commercial.Client", backref="proposals")
     project = relationship("app.models.commercial.Project", foreign_keys=[converted_project_id])
+    contract = relationship("app.models.commercial.Contract", foreign_keys=[converted_contract_id])
     tasks = relationship("ProposalTask", back_populates="proposal", cascade="all, delete-orphan")
 
 

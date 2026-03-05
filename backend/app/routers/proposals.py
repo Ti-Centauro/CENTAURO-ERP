@@ -141,70 +141,105 @@ async def convert_proposal_to_project(id: int, convert_data: schemas.ProposalCon
     if not client:
          raise HTTPException(status_code=404, detail="Cliente não encontrado.")
 
-    # 3. Generate Project TAG (Logic copied from commercial.py)
+    # 3. Determine if it's a Contract or Project
+    is_contract = proposal.proposal_type in ["RECORRENTE", "LPU"]
+    
     today = date.today()
     ref_date = convert_data.start_date
     yy = ref_date.strftime("%y")
     mm = ref_date.strftime("%m")
     ccc = client.client_number if client.client_number else "00"
     
-    # Prefix
-    prefix_base = f"CEP{convert_data.company_id}" if convert_data.company_id else "CEP"
-    
-    # Count sequential
-    pattern = f"{prefix_base}_{yy}%"
-    result = await db.execute(select(func.count(commercial_models.Project.id)).where(commercial_models.Project.tag.like(pattern)))
-    count = result.scalar() or 0
-    next_number = count + 1
-    nn = f"{next_number:02d}"
-    
-    tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
-    
-    # 4. Create Project
-    # If the user overriden the total budget and it differs from proposal.value, we fall back to putting it all in service_value
-    # Otherwise, we keep the original labor and material split.
-    if convert_data.budget is not None and format(convert_data.budget, ".2f") != format(proposal.value or 0, ".2f"):
-        service_value = convert_data.budget
-        material_value = 0
-        budget = convert_data.budget
+    if is_contract:
+        # Generate Contract TAG (CEC or CEL)
+        prefix_type = "CEL" if proposal.proposal_type == "LPU" else "CEC"
+        prefix_base = f"{prefix_type}{convert_data.company_id}" if convert_data.company_id else prefix_type
+        
+        pattern = f"{prefix_base}_{yy}%"
+        result = await db.execute(select(func.count(commercial_models.Contract.id)).where(commercial_models.Contract.contract_number.like(pattern)))
+        count = result.scalar() or 0
+        next_number = count + 1
+        nn = f"{next_number:02d}"
+        
+        tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
+        
+        # Create Contract
+        contract_type = commercial_models.ContractType.LPU if proposal.proposal_type == "LPU" else commercial_models.ContractType.RECORRENTE
+        
+        new_entity = commercial_models.Contract(
+            client_id=client_id,
+            description=convert_data.project_scope or proposal.description or proposal.title,
+            contract_number=tag,
+            signature_date=convert_data.start_date,
+            value=proposal.value,
+            contract_type=contract_type,
+            company_id=convert_data.company_id
+        )
+        entity_type = "Contrato"
+        
     else:
-        service_value = proposal.labor_value or (proposal.value or 0)
-        material_value = proposal.material_value or 0
-        budget = proposal.value or 0
+        # Generate Project TAG (CEP)
+        prefix_base = f"CEP{convert_data.company_id}" if convert_data.company_id else "CEP"
+        
+        pattern = f"{prefix_base}_{yy}%"
+        result = await db.execute(select(func.count(commercial_models.Project.id)).where(commercial_models.Project.tag.like(pattern)))
+        count = result.scalar() or 0
+        next_number = count + 1
+        nn = f"{next_number:02d}"
+        
+        tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
+        
+        # Create Project
+        if convert_data.budget is not None and format(convert_data.budget, ".2f") != format(proposal.value or 0, ".2f"):
+            service_value = convert_data.budget
+            material_value = 0
+            budget = convert_data.budget
+        else:
+            service_value = proposal.labor_value or (proposal.value or 0)
+            material_value = proposal.material_value or 0
+            budget = proposal.value or 0
 
-    new_project = commercial_models.Project(
-        tag=tag,
-        project_number=next_number,
-        name=proposal.title,
-        scope=convert_data.project_scope or proposal.description or proposal.title,
-        coordinator=convert_data.coordinator,
-        status="Em Andamento",
-        client_id=client_id,
-        service_value=service_value,
-        material_value=material_value,
-        budget=budget,
-        start_date=convert_data.start_date,
-        company_id=convert_data.company_id,
-        estimated_days=convert_data.estimated_days,
-        warranty_months=convert_data.warranty_months,
-        estimated_start_date=convert_data.start_date
-        # estimated_end_date logic could be added based on estimated_days
-    )
-    
-    db.add(new_project)
+        new_entity = commercial_models.Project(
+            tag=tag,
+            project_number=next_number,
+            name=proposal.title,
+            scope=convert_data.project_scope or proposal.description or proposal.title,
+            coordinator=convert_data.coordinator,
+            status="Em Andamento",
+            client_id=client_id,
+            service_value=service_value,
+            material_value=material_value,
+            budget=budget,
+            start_date=convert_data.start_date,
+            company_id=convert_data.company_id,
+            estimated_days=convert_data.estimated_days,
+            warranty_months=convert_data.warranty_months,
+            estimated_start_date=convert_data.start_date
+        )
+        entity_type = "Projeto"
+        
+    db.add(new_entity)
     await db.commit()
-    await db.refresh(new_project)
+    await db.refresh(new_entity)
     
     # 5. Update Proposal
     proposal.status = schemas.ProposalStatus.GANHA
     proposal.decision_date = date.today()
-    proposal.converted_project_id = new_project.id
+    if is_contract:
+        proposal.converted_contract_id = new_entity.id
+    else:
+        proposal.converted_project_id = new_entity.id
+        
     if not proposal.client_id:  # Link client if it wasn't linked
         proposal.client_id = client_id
     
     await db.commit()
     
-    return {"message": "Projeto criado com sucesso", "project_id": new_project.id, "project_tag": new_project.tag}
+    return {
+        "message": f"{entity_type} criado com sucesso!", 
+        "entity_id": new_entity.id, 
+        "entity_tag": tag
+    }
 
 
 
