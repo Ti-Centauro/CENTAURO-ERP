@@ -338,98 +338,99 @@ const Commercial = () => {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className="btn flex items-center justify-center bg-white border border-gray-200 hover:bg-gray-50 transition-colors relative"
+              style={{ width: '40px', height: '40px', borderRadius: '6px', padding: 0 }}
+              title="Filtros"
+            >
+              <SlidersHorizontal size={18} className="text-gray-600" />
+              {filterStatuses.length > 0 && filterStatuses.length !== COLUMNS.length && (
+                <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {filterStatuses.length}
+                </span>
+              )}
+            </button>
+
+            {/* Popover de Filtros */}
+            {filtersOpen && (
+              <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-5 w-[400px]">
+                <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Filtros do Funil</h3>
+                  <button onClick={() => setFiltersOpen(false)} className="text-gray-400 hover:text-gray-600">
+                    <XCircle size={18} />
+                  </button>
+                </div>
+
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Status</h4>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {COLUMNS.map(col => {
+                    const isActive = filterStatuses.includes(col.id);
+                    return (
+                      <button
+                        key={col.id}
+                        type="button"
+                        onClick={() => {
+                          if (isActive) {
+                            setFilterStatuses(filterStatuses.filter(s => s !== col.id));
+                          } else {
+                            setFilterStatuses([...filterStatuses, col.id]);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${isActive
+                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-transparent'
+                          : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                          }`}
+                      >
+                        {col.title}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Data Início</label>
+                    <input
+                      type="date"
+                      value={filterStartDate}
+                      onChange={(e) => setFilterStartDate(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Data Fim</label>
+                    <input
+                      type="date"
+                      value={filterEndDate}
+                      onChange={(e) => setFilterEndDate(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-gray-100">
+                  <button
+                    onClick={() => {
+                      loadData();
+                      setFiltersOpen(false);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg px-6 py-2 transition-colors w-full"
+                  >
+                    Aplicar Filtros
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button className="btn btn-primary" onClick={handleNewProposal}>
             <Plus size={18} /> Nova Proposta
           </button>
         </div>
       </header>
-
-      {/* PAINEL DE FILTROS RECOLHÍVEL */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6 mt-4 shrink-0 w-full overflow-hidden">
-
-        {/* Header clicável */}
-        <button
-          type="button"
-          onClick={() => setFiltersOpen(!filtersOpen)}
-          className="w-full flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal size={16} className="text-gray-500" />
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Filtros</span>
-            {!filtersOpen && filterStatuses.length > 0 && (
-              <span className="text-xs text-blue-600 font-medium ml-1">
-                ({filterStatuses.length} status selecionados)
-              </span>
-            )}
-          </div>
-          {filtersOpen ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
-        </button>
-
-        {/* Conteúdo colapsável */}
-        {filtersOpen && (
-          <div className="px-6 pb-5 pt-2 flex flex-col xl:flex-row gap-6 justify-between items-start border-t border-gray-100">
-
-            {/* Lado Esquerdo: Status do Funil */}
-            <div className="flex-1">
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 block">Status do Funil</h3>
-              <div className="flex flex-wrap gap-2">
-                {COLUMNS.map(col => {
-                  const isActive = filterStatuses.includes(col.id);
-                  return (
-                    <button
-                      key={col.id}
-                      type="button"
-                      onClick={() => {
-                        if (isActive) {
-                          setFilterStatuses(filterStatuses.filter(s => s !== col.id));
-                        } else {
-                          setFilterStatuses([...filterStatuses, col.id]);
-                        }
-                      }}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${isActive
-                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-transparent'
-                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                        }`}
-                    >
-                      {col.title}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Lado Direito: Filtros de Data e Botão */}
-            <div className="flex flex-wrap items-end gap-4 min-w-[320px]">
-              <div className="flex flex-col gap-1 w-full sm:w-auto">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">De</label>
-                <input
-                  type="date"
-                  value={filterStartDate}
-                  onChange={(e) => setFilterStartDate(e.target.value)}
-                  className="w-full sm:w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              <div className="flex flex-col gap-1 w-full sm:w-auto">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Até</label>
-                <input
-                  type="date"
-                  value={filterEndDate}
-                  onChange={(e) => setFilterEndDate(e.target.value)}
-                  className="w-full sm:w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              <button
-                onClick={loadData}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-6 py-2 transition-colors"
-              >
-                Aplicar
-              </button>
-            </div>
-
-          </div>
-        )}
-
-      </div>
 
       {isDragScrolling && <div className="global-drag-overlay" />}
 
