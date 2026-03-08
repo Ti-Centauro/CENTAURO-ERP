@@ -84,6 +84,7 @@ import {
   getClients, getCollaborators
 } from '../../services/api'; // Adjust path based on location
 import ConfirmModal from '../shared/ConfirmModal';
+import Modal from '../shared/Modal';
 
 const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = [] }) => {
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'tasks'
@@ -340,56 +341,62 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-    }}>
-      <div className="modal-content" style={{
-        background: 'white', padding: '24px', borderRadius: '12px',
-        width: '90%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#1e293b' }}>
-            {proposal ? 'Editar Proposta' : 'Nova Proposta'}
-          </h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={proposal ? 'Editar Proposta' : 'Nova Proposta'}
+        maxWidth="700px"
+        headerActions={
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            {proposal && (
+              <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('info')}
+                  style={{
+                    padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: activeTab === 'info' ? 'white' : 'transparent',
+                    color: activeTab === 'info' ? '#0f172a' : '#64748b',
+                    fontWeight: activeTab === 'info' ? '600' : '500',
+                    boxShadow: activeTab === 'info' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Informações
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('tasks')}
+                  style={{
+                    padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: activeTab === 'tasks' ? 'white' : 'transparent',
+                    color: activeTab === 'tasks' ? '#0f172a' : '#64748b',
+                    fontWeight: activeTab === 'tasks' ? '600' : '500',
+                    boxShadow: activeTab === 'tasks' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Follow-up ({tasks.filter(t => !t.is_completed).length})
+                </button>
+              </div>
+            )}
             {proposal && (
               <button
+                type="button"
                 onClick={handleDeleteProposal}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', padding: '4px' }}
+                className="std-modal-close-btn danger"
+                style={{ color: '#ef4444' }}
                 title="Excluir Proposta"
               >
-                <Trash2 size={20} />
+                <Trash2 size={24} />
               </button>
             )}
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: '4px' }}>
-              <X size={24} />
-            </button>
           </div>
-        </div>
+        }
+      >
 
-        {/* Tabs */}
-        {proposal && (
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-            <button
-              type="button"
-              className={`btn ${activeTab === 'info' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setActiveTab('info')}
-              style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: activeTab === 'info' ? '#3b82f6' : '#f1f5f9', color: activeTab === 'info' ? 'white' : '#475569' }}
-            >
-              Informações
-            </button>
-            <button
-              type="button"
-              className={`btn ${activeTab === 'tasks' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setActiveTab('tasks')}
-              style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: activeTab === 'tasks' ? '#3b82f6' : '#f1f5f9', color: activeTab === 'tasks' ? 'white' : '#475569' }}
-            >
-              Follow-up ({tasks.filter(t => !t.is_completed).length})
-            </button>
-          </div>
-        )}
+
 
         {/* Tab: Info */}
         {activeTab === 'info' && (
@@ -749,7 +756,7 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
             </div>
           </div>
         )}
-      </div>
+      </Modal>
 
       <ConfirmModal
         isOpen={showConfirmModal}
@@ -758,7 +765,7 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
         title="Confirmar Exclusão"
         message="Tem certeza que deseja excluir esta proposta? A proposta e suas tarefas associadas serão permanentemente removidas."
       />
-    </div>
+    </>
   );
 };
 

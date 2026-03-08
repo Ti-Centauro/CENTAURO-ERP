@@ -4,6 +4,7 @@ import { getAllocations, getCollaborators, getFleet, getTools, getProjects, getC
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import Modal from '../components/shared/Modal';
 import { ResourceRow } from '../components/Scheduler';
 import { isDeactivated } from '../utils/formatters';
 import './Scheduler.css';
@@ -105,16 +106,6 @@ const Scheduler = () => {
   useEffect(() => {
     loadData();
   }, []);
-
-  // Close form on Escape key
-  useEffect(() => {
-    if (!showForm) return;
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') setShowForm(false);
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [showForm]);
 
   const loadData = async () => {
     try {
@@ -644,137 +635,134 @@ const Scheduler = () => {
         </div>
       )}
 
-      {showForm && (
-        <div className="scheduler-form-modal" onClick={() => setShowForm(false)}>
-          <div className="scheduler-form card" onClick={(e) => e.stopPropagation()}>
-            <div className="form-header">
-              <h3>{editingId ? 'Editar Alocação' : 'Nova Alocação'}</h3>
-              <button className="close-btn" onClick={() => setShowForm(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label className="label">Tipo de Recurso</label>
-                <select
-                  name="resource_type"
-                  className="input"
-                  value={formData.resource_type}
-                  onChange={handleChange}
-                >
-                  <option value="PERSON">Colaborador</option>
-                  {canEditFleet && <option value="CAR">Veículo</option>}
-                  {canEditTools && <option value="TOOL">Ferramenta</option>}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="label">Recurso *</label>
-                <select
-                  name="resource_id"
-                  className="input"
-                  value={formData.resource_id}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Selecione...</option>
-                  {formData.resource_type === 'PERSON' ? (
-                    filteredCollaborators.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))
-                  ) : formData.resource_type === 'CAR' ? (
-                    activeFleet.map(f => (
-                      <option key={f.id} value={f.id}>{f.model} - {f.license_plate}</option>
-                    ))
-                  ) : (
-                    activeTools.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))
-                  )}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="label">Projeto *</label>
-                <select
-                  name="project_id"
-                  className="input"
-                  value={formData.project_id}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Selecione...</option>
-                  {projects.map(p => {
-                    const client = clients.find(c => c.id === p.client_id);
-                    return (
-                      <option key={p.id} value={p.id}>
-                        {client ? `${client.name} - ` : ''}{p.tag} ({p.name})
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="label">Data Início *</label>
-                  <input
-                    type="date"
-                    name="start_date"
-                    className="input"
-                    value={formData.start_date}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Data Fim *</label>
-                  <input
-                    type="date"
-                    name="end_date"
-                    className="input"
-                    value={formData.end_date}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <input
-                  type="checkbox"
-                  name="include_weekends"
-                  id="include_weekends"
-                  checked={formData.include_weekends}
-                  onChange={(e) => setFormData({ ...formData, include_weekends: e.target.checked })}
-                  style={{ width: 'auto', margin: 0 }}
-                />
-                <label htmlFor="include_weekends" className="label" style={{ marginBottom: 0, cursor: 'pointer' }}>
-                  Incluir Finais de Semana e Feriados
-                </label>
-              </div>
-
-              <div className="form-actions">
-                {editingId && canEdit && (
-                  <button
-                    type="button"
-                    className="btn btn-danger-outline"
-                    onClick={() => handleDeleteAllocation(editingId)}
-                    style={{ marginRight: 'auto' }}
-                  >
-                    <Trash2 size={16} /> Excluir
-                  </button>
-                )}
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
-                  Cancelar
-                </button>
-                {canEdit && (
-                  <button type="submit" className="btn btn-primary">
-                    Salvar
-                  </button>
-                )}
-              </div>
-            </form>
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingId ? 'Editar Alocação' : 'Nova Alocação'}
+        maxWidth="600px"
+        headerActions={
+          editingId && canEdit && (
+            <button
+              type="button"
+              className="std-modal-close-btn danger"
+              onClick={() => handleDeleteAllocation(editingId)}
+              title="Excluir Alocação"
+            >
+              <Trash2 size={24} />
+            </button>
+          )
+        }
+      >
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label">Tipo de Recurso</label>
+            <select
+              name="resource_type"
+              className="input"
+              value={formData.resource_type}
+              onChange={handleChange}
+            >
+              <option value="PERSON">Colaborador</option>
+              {canEditFleet && <option value="CAR">Veículo</option>}
+              {canEditTools && <option value="TOOL">Ferramenta</option>}
+            </select>
           </div>
-        </div>
-      )}
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label">Recurso *</label>
+            <select
+              name="resource_id"
+              className="input"
+              value={formData.resource_id}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Selecione...</option>
+              {formData.resource_type === 'PERSON' ? (
+                filteredCollaborators.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))
+              ) : formData.resource_type === 'CAR' ? (
+                activeFleet.map(f => (
+                  <option key={f.id} value={f.id}>{f.model} - {f.license_plate}</option>
+                ))
+              ) : (
+                activeTools.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))
+              )}
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label">Projeto *</label>
+            <select
+              name="project_id"
+              className="input"
+              value={formData.project_id}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Selecione...</option>
+              {projects.map(p => {
+                const client = clients.find(c => c.id === p.client_id);
+                return (
+                  <option key={p.id} value={p.id}>
+                    {client ? `${client.name} - ` : ''}{p.tag} ({p.name})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Data Início *</label>
+              <input
+                type="date"
+                name="start_date"
+                className="input"
+                value={formData.start_date}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Data Fim *</label>
+              <input
+                type="date"
+                name="end_date"
+                className="input"
+                value={formData.end_date}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px' }}>
+            <input
+              type="checkbox"
+              name="include_weekends"
+              id="include_weekends"
+              checked={formData.include_weekends}
+              onChange={(e) => setFormData({ ...formData, include_weekends: e.target.checked })}
+              style={{ width: '16px', height: '16px', accentColor: '#3b82f6', cursor: 'pointer' }}
+            />
+            <label htmlFor="include_weekends" style={{ fontSize: '0.9rem', color: '#475569', cursor: 'pointer', margin: 0, fontWeight: 500 }}>
+              Incluir Finais de Semana e Feriados na contagem
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+              Cancelar
+            </button>
+            {canEdit && (
+              <button type="submit" className="btn btn-primary">
+                Salvar Alocação
+              </button>
+            )}
+          </div>
+        </form>
+      </Modal>
 
       <ConfirmModal
         isOpen={showConfirmModal}

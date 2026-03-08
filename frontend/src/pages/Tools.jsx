@@ -3,6 +3,7 @@ import { Plus, Trash2, Wrench, MapPin, User, Edit, LayoutGrid, List, Search, Ale
 import { getTools, createTool, deleteTool, updateTool, getCollaborators, getProjects } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import Modal from '../components/shared/Modal';
 import SearchableSelect from '../components/shared/SearchableSelect';
 import { isDeactivated } from '../utils/formatters';
 import './Tools.css';
@@ -333,151 +334,153 @@ const Tools = () => {
         </div>
       </header>
 
-      {showForm && (
-        <div className="tools-form-modal">
-          <div className="tools-form card" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3>{editingId ? 'Editar Ferramenta' : 'Cadastrar Ferramenta'}</h3>
-              {editingId && canEdit && (
-                <button
-                  type="button"
-                  className="btn-icon-small danger"
-                  onClick={() => handleDelete(editingId)}
-                  title="Excluir Ferramenta"
-                >
-                  <Trash2 size={20} />
-                </button>
-              )}
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingId ? 'Editar Ferramenta' : 'Cadastrar Ferramenta'}
+        maxWidth="1000px"
+        headerActions={
+          editingId && canEdit && (
+            <button
+              type="button"
+              className="std-modal-close-btn danger"
+              onClick={() => handleDelete(editingId)}
+              title="Excluir Ferramenta"
+            >
+              <Trash2 size={24} />
+            </button>
+          )
+        }
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="form-grid">
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="label">Nome *</label>
+              <input
+                type="text"
+                name="name"
+                className="input"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                placeholder="Ex: Máquina de Fusão"
+              />
             </div>
-            <form onSubmit={handleSubmit}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="label">Categoria *</label>
-                  <select
-                    name="category"
-                    className="input"
-                    value={formData.category}
-                    onChange={handleChange}
-                    required
-                  >
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </div>
 
-                <div className="form-group">
-                  <label className="label">Nome *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    className="input"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    placeholder="Ex: Máquina de Fusão"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Patrimônio *</label>
-                  <input
-                    type="text"
-                    name="serial_number"
-                    className="input"
-                    value={formData.serial_number}
-                    onChange={handleChange}
-                    required
-                    placeholder="SN123456"
-                  />
-                </div>
+            <div className="form-group">
+              <label className="label">Categoria *</label>
+              <select
+                name="category"
+                className="input"
+                value={formData.category}
+                onChange={handleChange}
+                required
+              >
+                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
 
-                <div className="form-group">
-                  <label className="label">Com Quem Está *</label>
-                  <SearchableSelect
-                    name="current_holder"
-                    value={formData.current_holder}
-                    onChange={handleChange}
-                    options={holderOptions}
-                    placeholder="Selecione ou digite..."
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Onde Está (Opcional)</label>
-                  <SearchableSelect
-                    name="current_location"
-                    value={formData.current_location}
-                    onChange={handleChange}
-                    options={locationOptions}
-                    placeholder="Selecione ou digite..."
-                  />
-                </div>
+            <div className="form-group">
+              <label className="label">Patrimônio *</label>
+              <input
+                type="text"
+                name="serial_number"
+                className="input"
+                value={formData.serial_number}
+                onChange={handleChange}
+                required
+                placeholder="SN123456"
+              />
+            </div>
 
-                <div className="form-group">
-                  <label className="label">Condição *</label>
-                  <select
-                    name="condition"
-                    className="input"
-                    value={formData.condition}
-                    onChange={handleChange}
-                    required
-                  >
-                    {CONDITIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </div>
+            <div className="form-group">
+              <label className="label">Condição *</label>
+              <select
+                name="condition"
+                className="input"
+                value={formData.condition}
+                onChange={handleChange}
+                required
+              >
+                {CONDITIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
 
-                <div className="form-group">
-                  <label className="label">Status *</label>
-                  <select
-                    name="status"
-                    className="input"
-                    value={formData.status}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="AVAILABLE">Disponível</option>
-                    <option value="IN_USE">Em Uso</option>
-                    <option value="MAINTENANCE">Manutenção</option>
-                  </select>
-                </div>
+            <div className="form-group">
+              <label className="label">Status *</label>
+              <select
+                name="status"
+                className="input"
+                value={formData.status}
+                onChange={handleChange}
+                required
+              >
+                <option value="AVAILABLE">Disponível</option>
+                <option value="IN_USE">Em Uso</option>
+                <option value="MAINTENANCE">Manutenção</option>
+              </select>
+            </div>
 
-                {(formData.category === 'INSTRUMENT' || formData.category === 'POWER_TOOL') && (
-                  <div className="form-group">
-                    <label className="label">Próxima Calibração/Manutenção</label>
-                    <input
-                      type="date"
-                      name="next_maintenance"
-                      className="input"
-                      value={formData.next_maintenance}
-                      onChange={handleChange}
-                    />
-                  </div>
-                )}
+            <div className="form-group">
+              <label className="label">Com Quem Está *</label>
+              <SearchableSelect
+                name="current_holder"
+                value={formData.current_holder}
+                onChange={handleChange}
+                options={holderOptions}
+                placeholder="Selecione ou digite..."
+                required
+              />
+            </div>
 
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label className="label">Data de Baixa (Desativação)</label>
-                  <input
-                    type="date"
-                    name="deactivation_date"
-                    className="input"
-                    value={formData.deactivation_date}
-                    onChange={handleChange}
-                  />
-                  <small style={{ color: '#64748b' }}>Preencha se a ferramenta foi furtada, quebrada definitivamente ou descartada.</small>
-                </div>
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="label">Onde Está (Opcional)</label>
+              <SearchableSelect
+                name="current_location"
+                value={formData.current_location}
+                onChange={handleChange}
+                options={locationOptions}
+                placeholder="Selecione ou digite..."
+              />
+            </div>
+
+            {(formData.category === 'INSTRUMENT' || formData.category === 'POWER_TOOL') && (
+              <div className="form-group">
+                <label className="label">Próxima Calibração/Manutenção</label>
+                <input
+                  type="date"
+                  name="next_maintenance"
+                  className="input"
+                  value={formData.next_maintenance}
+                  onChange={handleChange}
+                />
               </div>
-              <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
-                  Cancelar
-                </button>
-                {canEdit && (
-                  <button type="submit" className="btn btn-primary">
-                    Salvar Ferramenta
-                  </button>
-                )}
-              </div>
-            </form>
+            )}
+
+            <div className="form-group full-width">
+              <label className="label">Data de Baixa (Desativação)</label>
+              <input
+                type="date"
+                name="deactivation_date"
+                className="input"
+                value={formData.deactivation_date}
+                onChange={handleChange}
+              />
+              <small style={{ color: '#64748b' }}>Preencha se a ferramenta foi furtada, quebrada definitivamente ou descartada.</small>
+            </div>
           </div>
-        </div>
-      )}
+          <div className="form-actions" style={{ marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+              Cancelar
+            </button>
+            {canEdit && (
+              <button type="submit" className="btn btn-primary">
+                Salvar Ferramenta
+              </button>
+            )}
+          </div>
+        </form>
+      </Modal>
 
       {loading ? (
         <div className="loading">Carregando ferramentas...</div>

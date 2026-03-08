@@ -4,6 +4,7 @@ import api, { getClients, createClient, deleteClient, updateClient } from '../se
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import DataTable from '../components/shared/DataTable';
+import Modal from '../components/shared/Modal';
 import Input from '../components/shared/Input';
 import Select from '../components/shared/Select';
 import Button from '../components/shared/Button';
@@ -59,17 +60,6 @@ const Clients = () => {
   useEffect(() => {
     loadClients();
   }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && showForm && !showConfirmModal) {
-        setShowForm(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showForm, showConfirmModal]);
 
   const loadClients = async () => {
     try {
@@ -294,222 +284,214 @@ const Clients = () => {
         </div>
       </div>
 
-      {showForm && (
-        <div className="clients-form-modal">
-          {/* Modal content preserved exactly as is, just wrapped or rendered here. 
-                Wait, I can't just comment out the modal content in replace_file_content. 
-                I need to keep the modal rendering logic. 
-                The user instruction says "Replace with <DataTable />: Define columns, Pass data". 
-                I will replace the `.clients-grid` block with `<DataTable />`.
-            */}
-          <div className="clients-form card" style={{ maxWidth: editingId ? '800px' : '600px' }} onClick={(e) => e.stopPropagation()}>
-            {/* ... Modal Content Copied/States as is ... */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3>{editingId ? 'Editar Cliente' : 'Cadastrar Cliente'}</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                {editingId && (
-                  <div className="tab-switcher" style={{ background: '#f1f5f9', padding: '4px', borderRadius: '8px', display: 'flex', gap: '4px' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('general');
-                        setShowContactForm(false);
-                        setEditingContactId(null);
-                        setContactFormData({ name: '', email: '', phone: '', department: 'Geral' });
-                      }}
-                      style={{
-                        padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                        background: activeTab === 'general' ? 'white' : 'transparent',
-                        color: activeTab === 'general' ? '#0f172a' : '#64748b',
-                        fontWeight: activeTab === 'general' ? '600' : '500',
-                        boxShadow: activeTab === 'general' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
-                      }}
-                    >
-                      Dados Gerais
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('contacts');
-                        setShowContactForm(false);
-                        setEditingContactId(null);
-                        setContactFormData({ name: '', email: '', phone: '', department: 'Geral' });
-                      }}
-                      style={{
-                        padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                        background: activeTab === 'contacts' ? 'white' : 'transparent',
-                        color: activeTab === 'contacts' ? '#0f172a' : '#64748b',
-                        fontWeight: activeTab === 'contacts' ? '600' : '500',
-                        boxShadow: activeTab === 'contacts' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
-                      }}
-                    >
-                      Contatos ({contacts.length})
-                    </button>
-                  </div>
-                )}
-                {editingId && canEdit && (
-                  <button
-                    type="button"
-                    className="btn-icon-small danger"
-                    onClick={() => handleDelete(editingId, 'client')}
-                    title="Excluir Cliente"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                )}
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingId ? 'Editar Cliente' : 'Cadastrar Cliente'}
+        maxWidth={editingId ? '800px' : '600px'}
+        headerActions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {editingId && (
+              <div className="tab-switcher" style={{ background: '#f1f5f9', padding: '4px', borderRadius: '8px', display: 'flex', gap: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('general');
+                    setShowContactForm(false);
+                    setEditingContactId(null);
+                    setContactFormData({ name: '', email: '', phone: '', department: 'Geral' });
+                  }}
+                  style={{
+                    padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: activeTab === 'general' ? 'white' : 'transparent',
+                    color: activeTab === 'general' ? '#0f172a' : '#64748b',
+                    fontWeight: activeTab === 'general' ? '600' : '500',
+                    boxShadow: activeTab === 'general' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  Dados Gerais
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('contacts');
+                    setShowContactForm(false);
+                    setEditingContactId(null);
+                    setContactFormData({ name: '', email: '', phone: '', department: 'Geral' });
+                  }}
+                  style={{
+                    padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: activeTab === 'contacts' ? 'white' : 'transparent',
+                    color: activeTab === 'contacts' ? '#0f172a' : '#64748b',
+                    fontWeight: activeTab === 'contacts' ? '600' : '500',
+                    boxShadow: activeTab === 'contacts' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  Contatos ({contacts.length})
+                </button>
               </div>
+            )}
+            {editingId && canEdit && (
+              <button
+                type="button"
+                className="std-modal-close-btn danger"
+                onClick={() => handleDelete(editingId, 'client')}
+                title="Excluir Cliente"
+              >
+                <Trash2 size={24} />
+              </button>
+            )}
+          </div>
+        }
+      >
+        {activeTab === 'general' && (
+          <form onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <Input label="Nome / Razão Social *" name="name" value={formData.name} onChange={handleChange} required placeholder="Nome do cliente" />
+              <Input label="Número do Cliente" name="client_number" value={formData.client_number} onChange={handleChange} placeholder="Ex: 01, 02, 03..." />
+              <Input label="CNPJ *" name="cnpj" value={formData.cnpj} onChange={handleChange} required placeholder="00.000.000/0000-00" />
+              <Input label="Endereço" name="address" value={formData.address} onChange={handleChange} placeholder="Endereço completo" fullWidth />
             </div>
+            <div className="form-actions">
+              <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>Cancelar</Button>
+              {canEdit && <Button variant="primary" type="submit">Salvar Cliente</Button>}
+            </div>
+          </form>
+        )}
 
-            {activeTab === 'general' && (
-              <form onSubmit={handleSubmit}>
-                <div className="form-grid">
-                  <Input label="Nome / Razão Social *" name="name" value={formData.name} onChange={handleChange} required placeholder="Nome do cliente" />
-                  <Input label="Número do Cliente" name="client_number" value={formData.client_number} onChange={handleChange} placeholder="Ex: 01, 02, 03..." />
-                  <Input label="CNPJ *" name="cnpj" value={formData.cnpj} onChange={handleChange} required placeholder="00.000.000/0000-00" />
-                  <Input label="Endereço" name="address" value={formData.address} onChange={handleChange} placeholder="Endereço completo" fullWidth />
+        {activeTab === 'contacts' && editingId && (
+          <div>
+            {/* Add Contact Button */}
+            {canEdit && !showContactForm && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setContactFormData({ name: '', email: '', phone: '', department: 'Geral' });
+                  setEditingContactId(null);
+                  setShowContactForm(true);
+                }}
+                style={{ marginBottom: '1rem' }}
+              >
+                <UserPlus size={18} />
+                Adicionar Contato
+              </button>
+            )}
+
+            {/* Contact Form */}
+            {showContactForm && (
+              <form onSubmit={handleContactSubmit} style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                <h4 style={{ marginBottom: '1rem', color: '#475569' }}>
+                  {editingContactId ? 'Editar Contato' : 'Novo Contato'}
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                  <Input label="Nome *" value={contactFormData.name} onChange={(e) => setContactFormData({ ...contactFormData, name: e.target.value })} required placeholder="Nome do contato" />
+                  <Select label="Departamento" value={contactFormData.department} onChange={(e) => setContactFormData({ ...contactFormData, department: e.target.value })}>
+                    {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                  </Select>
+                  <Input label="Email" type="email" value={contactFormData.email} onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })} placeholder="email@exemplo.com" />
+                  <Input label="Telefone" type="tel" value={contactFormData.phone} onChange={(e) => setContactFormData({ ...contactFormData, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" />
                 </div>
-                <div className="form-actions">
-                  <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>Cancelar</Button>
-                  {canEdit && <Button variant="primary" type="submit">Salvar Cliente</Button>}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                  <Button variant="primary" type="submit">{editingContactId ? 'Salvar' : 'Adicionar'}</Button>
+                  <Button variant="secondary" type="button" onClick={() => { setShowContactForm(false); setEditingContactId(null); }}>Cancelar</Button>
                 </div>
               </form>
             )}
 
-            {activeTab === 'contacts' && editingId && (
-              <div>
-                {/* Add Contact Button */}
-                {canEdit && !showContactForm && (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => {
-                      setContactFormData({ name: '', email: '', phone: '', department: 'Geral' });
-                      setEditingContactId(null);
-                      setShowContactForm(true);
-                    }}
-                    style={{ marginBottom: '1rem' }}
-                  >
-                    <UserPlus size={18} />
-                    Adicionar Contato
-                  </button>
-                )}
-
-                {/* Contact Form */}
-                {showContactForm && (
-                  <form onSubmit={handleContactSubmit} style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                    <h4 style={{ marginBottom: '1rem', color: '#475569' }}>
-                      {editingContactId ? 'Editar Contato' : 'Novo Contato'}
-                    </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                      <Input label="Nome *" value={contactFormData.name} onChange={(e) => setContactFormData({ ...contactFormData, name: e.target.value })} required placeholder="Nome do contato" />
-                      <Select label="Departamento" value={contactFormData.department} onChange={(e) => setContactFormData({ ...contactFormData, department: e.target.value })}>
-                        {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
-                      </Select>
-                      <Input label="Email" type="email" value={contactFormData.email} onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })} placeholder="email@exemplo.com" />
-                      <Input label="Telefone" type="tel" value={contactFormData.phone} onChange={(e) => setContactFormData({ ...contactFormData, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" />
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                      <Button variant="primary" type="submit">{editingContactId ? 'Salvar' : 'Adicionar'}</Button>
-                      <Button variant="secondary" type="button" onClick={() => { setShowContactForm(false); setEditingContactId(null); }}>Cancelar</Button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Contacts List */}
-                {contacts.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-                    <Users size={48} />
-                    <p style={{ marginTop: '1rem' }}>Nenhum contato cadastrado ainda.</p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gap: '0.75rem' }}>
-                    {contacts.map(contact => {
-                      const deptStyle = getDeptStyle(contact.department);
-                      return (
-                        <div
-                          key={contact.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '1rem',
-                            background: 'white',
-                            borderRadius: '8px',
-                            border: '1px solid #e2e8f0'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-                            <div style={{
-                              width: '40px', height: '40px', borderRadius: '50%',
-                              background: deptStyle.bg, display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                              <Building2 size={20} color={deptStyle.color} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                <strong style={{ color: '#0f172a' }}>{contact.name}</strong>
-                                <span style={{
-                                  fontSize: '0.75rem',
-                                  padding: '2px 8px',
-                                  borderRadius: '4px',
-                                  background: deptStyle.bg,
-                                  color: deptStyle.color,
-                                  border: `1px solid ${deptStyle.border}`,
-                                  fontWeight: '500'
-                                }}>
-                                  {contact.department}
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: '#64748b' }}>
-                                {contact.email && (
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Mail size={14} /> {contact.email}
-                                  </span>
-                                )}
-                                {contact.phone && (
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Phone size={14} /> {contact.phone}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {canEdit && (
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button
-                                type="button"
-                                className="btn-icon-small"
-                                onClick={() => handleEditContact(contact)}
-                                title="Editar"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-icon-small danger"
-                                onClick={() => handleDelete(contact.id, 'contact')}
-                                title="Excluir"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          )}
+            {/* Contacts List */}
+            {contacts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                <Users size={48} />
+                <p style={{ marginTop: '1rem' }}>Nenhum contato cadastrado ainda.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                {contacts.map(contact => {
+                  const deptStyle = getDeptStyle(contact.department);
+                  return (
+                    <div
+                      key={contact.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '1rem',
+                        background: 'white',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '50%',
+                          background: deptStyle.bg, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          <Building2 size={20} color={deptStyle.color} />
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <div className="form-actions" style={{ marginTop: '1.5rem' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
-                    Fechar
-                  </button>
-                </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <strong style={{ color: '#0f172a' }}>{contact.name}</strong>
+                            <span style={{
+                              fontSize: '0.75rem',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              background: deptStyle.bg,
+                              color: deptStyle.color,
+                              border: `1px solid ${deptStyle.border}`,
+                              fontWeight: '500'
+                            }}>
+                              {contact.department}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: '#64748b' }}>
+                            {contact.email && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Mail size={14} /> {contact.email}
+                              </span>
+                            )}
+                            {contact.phone && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Phone size={14} /> {contact.phone}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {canEdit && (
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            className="btn-icon-small"
+                            onClick={() => handleEditContact(contact)}
+                            title="Editar"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-icon-small danger"
+                            onClick={() => handleDelete(contact.id, 'contact')}
+                            title="Excluir"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
+
+            <div className="form-actions" style={{ marginTop: '1.5rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+                Fechar
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       <DataTable
         columns={columns}

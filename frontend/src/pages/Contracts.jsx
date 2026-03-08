@@ -4,6 +4,7 @@ import { getContracts, createContract, updateContract, deleteContract, getClient
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import DataTable from '../components/shared/DataTable';
+import Modal from '../components/shared/Modal';
 import StatusBadge from '../components/shared/StatusBadge';
 import './Contracts.css';
 
@@ -39,17 +40,6 @@ const Contracts = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState('');
   const [filterType, setFilterType] = useState('');
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && showForm && !showConfirmModal) {
-        setShowForm(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showForm, showConfirmModal]);
 
   useEffect(() => {
     loadContracts();
@@ -366,336 +356,335 @@ const Contracts = () => {
         </div>
       </div>
 
-      {showForm && (
-        <div className="contract-form-modal">
-          {/* Preservation of Modal Content Logic */}
-          <div className="contract-form card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3>{editingId ? 'Editar Contrato' : 'Criar Contrato'}</h3>
-              {editingId && canEdit && (
-                <button
-                  type="button"
-                  className="btn-icon-small danger"
-                  onClick={() => handleDelete(editingId)}
-                  title="Excluir Contrato"
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingId ? 'Editar Contrato' : 'Criar Contrato'}
+        maxWidth="900px"
+        headerActions={
+          editingId && canEdit && (
+            <button
+              type="button"
+              className="std-modal-close-btn danger"
+              onClick={() => handleDelete(editingId)}
+              title="Excluir Contrato"
+            >
+              <Trash2 size={24} />
+            </button>
+          )
+        }
+      >
+        <form onSubmit={handleSubmit}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', paddingBottom: '0.5rem' }}>
+            {/* Coluna Esquerda */}
+            <div className="form-column">
+              <div className="form-group">
+                <label className="label">TAG (Automático)</label>
+                <input
+                  type="text"
+                  name="contract_number"
+                  className="input"
+                  value={formData.contract_number || 'Gerado Automaticamente'}
+                  readOnly
+                  disabled
+                  style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed', fontWeight: 'bold' }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Cliente *</label>
+                <select
+                  name="client_id"
+                  className="input"
+                  value={formData.client_id}
+                  onChange={handleChange}
+                  required
+                  disabled={!!editingId}
+                  style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
                 >
-                  <Trash2 size={20} />
-                </button>
-              )}
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                {/* Coluna Esquerda */}
-                <div className="form-column">
-                  <div className="form-group">
-                    <label className="label">TAG (Automático)</label>
+                  <option value="">Selecione um cliente</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="label">CNPJ (Empresa)</label>
+                <select
+                  name="company_id"
+                  className="input"
+                  value={formData.company_id}
+                  onChange={handleChange}
+                  disabled={!!editingId} // Disable editing CNPJ once created, as it affects TAG
+                  style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
+                >
+                  <option value="">Selecione</option>
+                  <option value="1">1 - Engenharia</option>
+                  <option value="2">2 - Telecom</option>
+                  <option value="3">3 - ES</option>
+                  <option value="4">4 - MA</option>
+                  <option value="5">5 - SP</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="label">Título/Descrição *</label>
+                <input
+                  type="text"
+                  name="description"
+                  className="input"
+                  value={formData.description}
+                  onChange={handleChange}
+                  required
+                  placeholder="ex: Contrato Ternium 2024"
+                  readOnly={!!editingId}
+                  disabled={!!editingId}
+                  style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Tipo de Contrato *</label>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: editingId ? 'not-allowed' : 'pointer', opacity: editingId ? 0.6 : 1 }}>
                     <input
-                      type="text"
-                      name="contract_number"
-                      className="input"
-                      value={formData.contract_number || 'Gerado Automaticamente'}
-                      readOnly
-                      disabled
-                      style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed', fontWeight: 'bold' }}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="label">Cliente *</label>
-                    <select
-                      name="client_id"
-                      className="input"
-                      value={formData.client_id}
+                      type="radio"
+                      name="contract_type"
+                      value="LPU"
+                      checked={formData.contract_type === 'LPU'}
                       onChange={handleChange}
-                      required
                       disabled={!!editingId}
-                      style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
-                    >
-                      <option value="">Selecione um cliente</option>
-                      {clients.map((client) => (
-                        <option key={client.id} value={client.id}>
-                          {client.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="label">CNPJ (Empresa)</label>
-                    <select
-                      name="company_id"
-                      className="input"
-                      value={formData.company_id}
-                      onChange={handleChange}
-                      disabled={!!editingId} // Disable editing CNPJ once created, as it affects TAG
-                      style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
-                    >
-                      <option value="">Selecione</option>
-                      <option value="1">1 - Engenharia</option>
-                      <option value="2">2 - Telecom</option>
-                      <option value="3">3 - ES</option>
-                      <option value="4">4 - MA</option>
-                      <option value="5">5 - SP</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="label">Título/Descrição *</label>
+                    />
+                    LPU / Guarda-Chuva
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: editingId ? 'not-allowed' : 'pointer', opacity: editingId ? 0.6 : 1 }}>
                     <input
-                      type="text"
-                      name="description"
-                      className="input"
-                      value={formData.description}
+                      type="radio"
+                      name="contract_type"
+                      value="RECORRENTE"
+                      checked={formData.contract_type === 'RECORRENTE'}
                       onChange={handleChange}
-                      required
-                      placeholder="ex: Contrato Ternium 2024"
-                      readOnly={!!editingId}
                       disabled={!!editingId}
-                      style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
                     />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="label">Tipo de Contrato *</label>
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: editingId ? 'not-allowed' : 'pointer', opacity: editingId ? 0.6 : 1 }}>
-                        <input
-                          type="radio"
-                          name="contract_type"
-                          value="LPU"
-                          checked={formData.contract_type === 'LPU'}
-                          onChange={handleChange}
-                          disabled={!!editingId}
-                        />
-                        LPU / Guarda-Chuva
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: editingId ? 'not-allowed' : 'pointer', opacity: editingId ? 0.6 : 1 }}>
-                        <input
-                          type="radio"
-                          name="contract_type"
-                          value="RECORRENTE"
-                          checked={formData.contract_type === 'RECORRENTE'}
-                          onChange={handleChange}
-                          disabled={!!editingId}
-                        />
-                        Recorrente
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="label">Status</label>
-                    {(() => {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const endDate = formData.end_date ? new Date(formData.end_date + 'T12:00:00') : null;
-                      const isExpired = endDate && endDate < today;
-
-                      return (
-                        <div
-                          className={`status-badge ${isExpired ? 'expired' : 'active'}`}
-                          style={{
-                            display: 'inline-block',
-                            padding: '0.25rem 0.75rem',
-                            borderRadius: '999px',
-                            backgroundColor: isExpired ? '#fee2e2' : '#dcfce7',
-                            color: isExpired ? '#991b1b' : '#166534',
-                            fontSize: '0.875rem',
-                            fontWeight: 600
-                          }}
-                        >
-                          {isExpired ? 'Vencido' : 'Ativo'}
-                        </div>
-                      );
-                    })()}
-                  </div>
+                    Recorrente
+                  </label>
                 </div>
+              </div>
 
-                {/* Coluna Direita */}
-                <div className="form-column">
+              <div className="form-group">
+                <label className="label">Status</label>
+                {(() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const endDate = formData.end_date ? new Date(formData.end_date + 'T12:00:00') : null;
+                  const isExpired = endDate && endDate < today;
+
+                  return (
+                    <div
+                      className={`status-badge ${isExpired ? 'expired' : 'active'}`}
+                      style={{
+                        display: 'inline-block',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '999px',
+                        backgroundColor: isExpired ? '#fee2e2' : '#dcfce7',
+                        color: isExpired ? '#991b1b' : '#166534',
+                        fontSize: '0.875rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      {isExpired ? 'Vencido' : 'Ativo'}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Coluna Direita */}
+            <div className="form-column">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="label">Data de Assinatura</label>
+                  <input
+                    type="date"
+                    name="signature_date"
+                    className="input"
+                    value={formData.signature_date}
+                    onChange={handleChange}
+                    readOnly={!!editingId}
+                    disabled={!!editingId}
+                    style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Data de Término</label>
+                  <input
+                    type="date"
+                    name="end_date"
+                    className="input"
+                    value={formData.end_date}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+
+              {/* Campos Financeiros Condicionais */}
+              {formData.contract_type === 'LPU' ? (
+                <>
+                  <div className="form-group">
+                    <label className="label">Valor Global (Teto/Cap) (R$)</label>
+                    <input
+                      type="text"
+                      name="value"
+                      className="input"
+                      value={formatMoney(formData.value)}
+                      onChange={handleMoneyChange}
+                      placeholder="0,00"
+                    />
+                  </div>
+                  {editingId && (
+                    <div style={{ marginTop: '0.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div className="form-group">
+                        <label className="label" style={{ fontSize: '0.8rem' }}>Já Faturado (Pago)</label>
+                        <div style={{
+                          padding: '0.5rem',
+                          backgroundColor: '#dcfce7',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #bbf7d0',
+                          color: '#166534',
+                          fontWeight: '600',
+                          fontSize: '0.9rem'
+                        }}>
+                          R$ {getRealizedValue(editingId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label className="label" style={{ fontSize: '0.8rem' }}>A Faturar (Previsto/Emitido)</label>
+                        <div style={{
+                          padding: '0.5rem',
+                          backgroundColor: '#fff7ed',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #fed7aa',
+                          color: '#c2410c',
+                          fontWeight: '600',
+                          fontSize: '0.9rem'
+                        }}>
+                          R$ {getPendingValue(editingId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label className="label">Valor Mensal (R$)</label>
+                    <input
+                      type="text"
+                      name="monthly_value"
+                      className="input"
+                      value={formatMoney(formData.monthly_value)}
+                      onChange={handleMoneyChange}
+                      placeholder="0,00"
+                    />
+                  </div>
+                  {editingId && (
+                    <div style={{ marginTop: '0.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div className="form-group">
+                        <label className="label" style={{ fontSize: '0.8rem' }}>Já Faturado (Pago)</label>
+                        <div style={{
+                          padding: '0.5rem',
+                          backgroundColor: '#dcfce7',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #bbf7d0',
+                          color: '#166534',
+                          fontWeight: '600',
+                          fontSize: '0.9rem'
+                        }}>
+                          R$ {getRealizedValue(editingId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label className="label" style={{ fontSize: '0.8rem' }}>A Faturar (Previsto/Emitido)</label>
+                        <div style={{
+                          padding: '0.5rem',
+                          backgroundColor: '#fff7ed',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #fed7aa',
+                          color: '#c2410c',
+                          fontWeight: '600',
+                          fontSize: '0.9rem'
+                        }}>
+                          R$ {getPendingValue(editingId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div className="form-group">
-                      <label className="label">Data de Assinatura</label>
+                      <label className="label">Dia de Vencimento</label>
                       <input
-                        type="date"
-                        name="signature_date"
+                        type="number"
+                        name="due_day"
                         className="input"
-                        value={formData.signature_date}
+                        value={formData.due_day}
                         onChange={handleChange}
-                        readOnly={!!editingId}
-                        disabled={!!editingId}
-                        style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
+                        min="1"
+                        max="31"
+                        placeholder="ex: 5"
                       />
                     </div>
                     <div className="form-group">
-                      <label className="label">Data de Término</label>
+                      <label className="label">Índice de Reajuste</label>
                       <input
-                        type="date"
-                        name="end_date"
+                        type="text"
+                        name="readjustment_index"
                         className="input"
-                        value={formData.end_date}
+                        value={formData.readjustment_index}
                         onChange={handleChange}
+                        placeholder="ex: IPCA"
                       />
                     </div>
                   </div>
+                </>
+              )}
 
-                  {/* Campos Financeiros Condicionais */}
-                  {formData.contract_type === 'LPU' ? (
-                    <>
-                      <div className="form-group">
-                        <label className="label">Valor Global (Teto/Cap) (R$)</label>
-                        <input
-                          type="text"
-                          name="value"
-                          className="input"
-                          value={formatMoney(formData.value)}
-                          onChange={handleMoneyChange}
-                          placeholder="0,00"
-                        />
-                      </div>
-                      {editingId && (
-                        <div style={{ marginTop: '0.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                          <div className="form-group">
-                            <label className="label" style={{ fontSize: '0.8rem' }}>Já Faturado (Pago)</label>
-                            <div style={{
-                              padding: '0.5rem',
-                              backgroundColor: '#dcfce7',
-                              borderRadius: '0.5rem',
-                              border: '1px solid #bbf7d0',
-                              color: '#166534',
-                              fontWeight: '600',
-                              fontSize: '0.9rem'
-                            }}>
-                              R$ {getRealizedValue(editingId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </div>
-                          </div>
-                          <div className="form-group">
-                            <label className="label" style={{ fontSize: '0.8rem' }}>A Faturar (Previsto/Emitido)</label>
-                            <div style={{
-                              padding: '0.5rem',
-                              backgroundColor: '#fff7ed',
-                              borderRadius: '0.5rem',
-                              border: '1px solid #fed7aa',
-                              color: '#c2410c',
-                              fontWeight: '600',
-                              fontSize: '0.9rem'
-                            }}>
-                              R$ {getPendingValue(editingId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="form-group">
-                        <label className="label">Valor Mensal (R$)</label>
-                        <input
-                          type="text"
-                          name="monthly_value"
-                          className="input"
-                          value={formatMoney(formData.monthly_value)}
-                          onChange={handleMoneyChange}
-                          placeholder="0,00"
-                        />
-                      </div>
-                      {editingId && (
-                        <div style={{ marginTop: '0.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                          <div className="form-group">
-                            <label className="label" style={{ fontSize: '0.8rem' }}>Já Faturado (Pago)</label>
-                            <div style={{
-                              padding: '0.5rem',
-                              backgroundColor: '#dcfce7',
-                              borderRadius: '0.5rem',
-                              border: '1px solid #bbf7d0',
-                              color: '#166534',
-                              fontWeight: '600',
-                              fontSize: '0.9rem'
-                            }}>
-                              R$ {getRealizedValue(editingId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </div>
-                          </div>
-                          <div className="form-group">
-                            <label className="label" style={{ fontSize: '0.8rem' }}>A Faturar (Previsto/Emitido)</label>
-                            <div style={{
-                              padding: '0.5rem',
-                              backgroundColor: '#fff7ed',
-                              borderRadius: '0.5rem',
-                              border: '1px solid #fed7aa',
-                              color: '#c2410c',
-                              fontWeight: '600',
-                              fontSize: '0.9rem'
-                            }}>
-                              R$ {getPendingValue(editingId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div className="form-group">
-                          <label className="label">Dia de Vencimento</label>
-                          <input
-                            type="number"
-                            name="due_day"
-                            className="input"
-                            value={formData.due_day}
-                            onChange={handleChange}
-                            min="1"
-                            max="31"
-                            placeholder="ex: 5"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="label">Índice de Reajuste</label>
-                          <input
-                            type="text"
-                            name="readjustment_index"
-                            className="input"
-                            value={formData.readjustment_index}
-                            onChange={handleChange}
-                            placeholder="ex: IPCA"
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  <div className="form-group">
-                    <label className="label">Anexo do Contrato</label>
-                    <div style={{
-                      border: '2px dashed #cbd5e1',
-                      borderRadius: '0.5rem',
-                      padding: '2rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#64748b',
-                      cursor: 'pointer',
-                      backgroundColor: '#f8fafc'
-                    }}>
-                      <Upload size={24} style={{ marginBottom: '0.5rem' }} />
-                      <span>Clique para fazer upload</span>
-                      <span style={{ fontSize: '0.75rem' }}>PDF, DOCX ou Imagens</span>
-                    </div>
-                  </div>
+              <div className="form-group">
+                <label className="label">Anexo do Contrato</label>
+                <div style={{
+                  border: '2px dashed #cbd5e1',
+                  borderRadius: '0.5rem',
+                  padding: '2rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  backgroundColor: '#f8fafc'
+                }}>
+                  <Upload size={24} style={{ marginBottom: '0.5rem' }} />
+                  <span>Clique para fazer upload</span>
+                  <span style={{ fontSize: '0.75rem' }}>PDF, DOCX ou Imagens</span>
                 </div>
               </div>
-
-              <div className="form-actions" style={{ marginTop: '2rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
-                  Cancelar
-                </button>
-                {canEdit && (
-                  <button type="submit" className="btn btn-primary">
-                    {editingId ? 'Salvar Alterações' : 'Salvar Contrato'}
-                  </button>
-                )}
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="form-actions" style={{ marginTop: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+              Cancelar
+            </button>
+            {canEdit && (
+              <button type="submit" className="btn btn-primary">
+                {editingId ? 'Salvar Alterações' : 'Salvar Contrato'}
+              </button>
+            )}
+          </div>
+        </form>
+      </Modal>
 
       <div style={{ padding: '0 2rem 2rem' }}>
         <DataTable
@@ -713,7 +702,7 @@ const Contracts = () => {
         title="Confirmar Exclusão"
         message="Tem certeza que deseja excluir este contrato? Esta ação não pode ser desfeita."
       />
-    </div>
+    </div >
   );
 };
 

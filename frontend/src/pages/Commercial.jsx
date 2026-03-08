@@ -22,9 +22,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
-import { Plus, Search, FileText, CheckCircle, XCircle, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, FileText, CheckCircle, XCircle, ChevronDown, ChevronUp, SlidersHorizontal, AlertCircle } from 'lucide-react';
 import './Commercial.css';
 import ProposalModal from '../components/commercial/ProposalModal';
+import Modal from '../components/shared/Modal';
 
 // --- CONSTANTS - 9 Colunas do Funil ---
 const COLUMNS = [
@@ -506,94 +507,93 @@ const Commercial = () => {
         proposal={selectedProposal}
         onSuccess={loadData}
         initialClients={clients}
+        maxWidth="1000px"
       />
 
 
       {/* LOSS MODAL */}
-      {showLossModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '450px' }}>
-            <div className="modal-header" style={{ textAlign: 'center' }}>
-              <XCircle size={48} color="#ef4444" style={{ marginBottom: '10px' }} />
-              <h3 style={{ margin: 0 }}>Registrar Perda</h3>
-              <p style={{ color: '#64748b', margin: '5px 0 0 0' }}>Informe o motivo da perda desta proposta</p>
-            </div>
-            <div className="form-group">
-              <label>Motivo da Perda *</label>
-              <textarea
-                rows={4}
-                value={lossReason}
-                onChange={e => setLossReason(e.target.value)}
-                placeholder="Ex: Preço acima do concorrente, cliente desistiu do projeto, prazo não atendeu..."
-                style={{ resize: 'none' }}
-              />
-            </div>
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={cancelLoss}>Cancelar</button>
-              <button type="button" className="btn btn-primary" style={{ background: '#ef4444' }} onClick={confirmLoss}>
-                Confirmar Perda
-              </button>
-            </div>
-          </div>
+      <Modal
+        isOpen={showLossModal}
+        onClose={cancelLoss}
+        title="Registrar Perda"
+        maxWidth="450px"
+      >
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <AlertCircle size={48} color="#ef4444" style={{ marginBottom: '10px' }} />
+          <p style={{ color: '#64748b', margin: '5px 0 0 0' }}>Informe o motivo da perda desta proposta</p>
         </div>
-      )}
+        <div className="form-group" style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Motivo da Perda *</label>
+          <textarea
+            rows={4}
+            value={lossReason}
+            onChange={e => setLossReason(e.target.value)}
+            placeholder="Ex: Preço acima do concorrente, cliente desistiu do projeto..."
+            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '6px', resize: 'vertical' }}
+          />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button type="button" className="btn btn-secondary" onClick={cancelLoss}>Cancelar</button>
+          <button type="button" className="btn btn-primary" style={{ background: '#ef4444' }} onClick={confirmLoss}>
+            Confirmar Perda
+          </button>
+        </div>
+      </Modal>
 
       {/* CONVERT MODAL */}
-      {showConvertModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '600px' }}>
-            <div className="modal-header">
-              <h3><CheckCircle size={20} color="#16a34a" /> Aprovar Proposta</h3>
-              <p>Gerar Projeto, Obra ou Contrato Oficial</p>
+      <Modal
+        isOpen={showConvertModal}
+        onClose={cancelConversion}
+        title={<span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={20} color="#16a34a" /> Aprovar Proposta</span>}
+        maxWidth="600px"
+      >
+        <p style={{ color: '#64748b', marginBottom: '20px' }}>Gerar Projeto, Obra ou Contrato Oficial</p>
+        <form onSubmit={handleConversion}>
+          <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Empresa (Prefixo TAG) *</label>
+              <select className="input" required value={convertFormData.company_id || ''} onChange={e => setConvertFormData({ ...convertFormData, company_id: e.target.value })}>
+                <option value="">Selecione...</option>
+                <option value="1">1 - Engenharia</option>
+                <option value="2">2 - Telecom</option>
+                <option value="3">3 - ES</option>
+                <option value="4">4 - MA</option>
+                <option value="5">5 - SP</option>
+              </select>
             </div>
-            <form onSubmit={handleConversion}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Empresa (Prefixo TAG) *</label>
-                  <select required value={convertFormData.company_id || ''} onChange={e => setConvertFormData({ ...convertFormData, company_id: e.target.value })}>
-                    <option value="">Selecione...</option>
-                    <option value="1">1 - Engenharia</option>
-                    <option value="2">2 - Telecom</option>
-                    <option value="3">3 - ES</option>
-                    <option value="4">4 - MA</option>
-                    <option value="5">5 - SP</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Data de Início Real *</label>
-                  <input type="date" required value={convertFormData.start_date} onChange={e => setConvertFormData({ ...convertFormData, start_date: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Orçamento Aprovado (R$)</label>
-                  <input type="number" step="0.01" value={convertFormData.budget} onChange={e => setConvertFormData({ ...convertFormData, budget: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Previsão (Dias)</label>
-                  <input type="number" value={convertFormData.estimated_days} onChange={e => setConvertFormData({ ...convertFormData, estimated_days: e.target.value })} />
-                </div>
-                <div className="form-group full-width">
-                  <label>Escopo do Projeto</label>
-                  <textarea value={convertFormData.project_scope} onChange={e => setConvertFormData({ ...convertFormData, project_scope: e.target.value })} rows={4} />
-                </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Data de Início Real *</label>
+              <input className="input" type="date" required value={convertFormData.start_date} onChange={e => setConvertFormData({ ...convertFormData, start_date: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Orçamento Aprovado (R$)</label>
+              <input className="input" type="number" step="0.01" value={convertFormData.budget} onChange={e => setConvertFormData({ ...convertFormData, budget: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Previsão (Dias)</label>
+              <input className="input" type="number" value={convertFormData.estimated_days} onChange={e => setConvertFormData({ ...convertFormData, estimated_days: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+              <label className="label">Escopo do Projeto</label>
+              <textarea className="input" value={convertFormData.project_scope} onChange={e => setConvertFormData({ ...convertFormData, project_scope: e.target.value })} rows={4} />
+            </div>
 
-                {(!selectedProposal.client_id && !convertFormData.client_id) && (
-                  <div className="form-group full-width" style={{ border: '1px solid #f59e0b', padding: '10px', borderRadius: '4px', background: '#fffbeb' }}>
-                    <label style={{ color: '#b45309' }}>Atenção: Vincule um cliente para continuar</label>
-                    <select required onChange={e => setConvertFormData({ ...convertFormData, client_id: e.target.value })}>
-                      <option value="">Selecione um cliente...</option>
-                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                )}
+            {(!selectedProposal || (!selectedProposal.client_id && !convertFormData.client_id)) && (
+              <div className="form-group full-width" style={{ gridColumn: '1 / -1', border: '1px solid #f59e0b', padding: '10px', borderRadius: '4px', background: '#fffbeb' }}>
+                <label style={{ color: '#b45309', display: 'block', marginBottom: '8px' }}>Atenção: Vincule um cliente para continuar</label>
+                <select className="input" required onChange={e => setConvertFormData({ ...convertFormData, client_id: e.target.value })}>
+                  <option value="">Selecione um cliente...</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
               </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={cancelConversion}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ background: '#16a34a' }}>Confirmar e Gerar</button>
-              </div>
-            </form>
+            )}
           </div>
-        </div>
-      )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+            <button type="button" className="btn btn-secondary" onClick={cancelConversion}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" style={{ background: '#16a34a' }}>Confirmar e Gerar</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

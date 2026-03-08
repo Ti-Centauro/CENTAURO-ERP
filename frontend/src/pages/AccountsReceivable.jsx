@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { getAllBillings, updateProjectBilling, getProjects, getClients, previewTaxesImport, confirmTaxesImport } from '../services/api';
 import DataTable from '../components/shared/DataTable';
+import Modal from '../components/shared/Modal';
 import './AccountsReceivable.css';
 
 const AccountsReceivable = () => {
@@ -407,35 +408,38 @@ const AccountsReceivable = () => {
 
       {/* Edit Modal */}
       {editingBilling && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>Editar Faturamento</h3>
-              <button className="close-btn" onClick={() => setEditingBilling(null)}><XCircle size={24} /></button>
-            </div>
-            <form onSubmit={handleSave}>
+        <Modal
+          isOpen={!!editingBilling}
+          onClose={() => setEditingBilling(null)}
+          title="Editar Faturamento"
+          maxWidth="800px"
+        >
+          <form onSubmit={handleSave}>
+            <div className="form-grid" style={{ marginBottom: '1rem' }}>
               <div className="form-group">
-                <label>Projeto (TAG)</label>
+                <label className="label">Projeto (TAG)</label>
                 <div style={{
-                  padding: '0.5rem 0.75rem',
-                  backgroundColor: '#f1f5f9',
-                  borderRadius: '0.375rem',
-                  border: '1px solid #cbd5e1',
+                  padding: '0.6rem 1rem',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
                   color: '#334155',
-                  fontWeight: '600',
+                  fontWeight: 600,
                   fontSize: '0.9rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
+                  gap: '0.5rem',
+                  height: '2.5rem'
                 }}>
                   <Tag size={16} />
-                  {getProjectTag(editingBilling.project_id)}
+                  {getProjectTag(editingBilling?.project_id)}
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Status</label>
+                <label className="label">Status</label>
                 <select
+                  className="input"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 >
@@ -451,27 +455,30 @@ const AccountsReceivable = () => {
               {formData.status === 'EMITIDA' && (
                 <>
                   <div className="form-group">
-                    <label>Data de Emissão *</label>
+                    <label className="label">Data de Emissão *</label>
                     <input
                       type="date"
+                      className="input"
                       value={formData.issue_date}
                       onChange={(e) => setFormData({ ...formData, issue_date: e.target.value })}
                       required
                     />
                   </div>
                   <div className="form-group">
-                    <label>Data de Vencimento *</label>
+                    <label className="label">Data de Vencimento *</label>
                     <input
                       type="date"
+                      className="input"
                       value={formData.date}
                       onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       required
                     />
                   </div>
                   <div className="form-group">
-                    <label>Nº Nota Fiscal</label>
+                    <label className="label">Nº Nota Fiscal</label>
                     <input
                       type="text"
+                      className="input"
                       value={formData.invoice_number}
                       onChange={(e) => setFormData({ ...formData, invoice_number: e.target.value })}
                     />
@@ -481,20 +488,25 @@ const AccountsReceivable = () => {
 
               {formData.status === 'PAGO' && (
                 <div className="form-group">
-                  <label>Data de Pagamento</label>
+                  <label className="label">Data de Pagamento</label>
                   <input
                     type="date"
+                    className="input"
                     value={formData.payment_date}
                     onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
                   />
                 </div>
               )}
+            </div>
 
-              {formData.status === 'SUBSTITUIDA' && (
-                <div className="substitution-section">
-                  <div className="form-group">
-                    <label>Motivo da Substituição *</label>
+            {formData.status === 'SUBSTITUIDA' && (
+              <div className="substitution-section" style={{ background: '#fff7ed', padding: '1rem', borderRadius: '8px', margin: '1rem 0', border: '1px solid #ffedd5' }}>
+                <h4 style={{ color: '#9a3412', marginBottom: '1rem' }}>Dados da Nova Nota (Substituta)</h4>
+                <div className="form-grid">
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="label">Motivo da Substituição *</label>
                     <textarea
+                      className="input"
                       value={formData.substitution_reason}
                       onChange={(e) => setFormData({ ...formData, substitution_reason: e.target.value })}
                       placeholder="Ex: Erro no valor, dados incorretos, solicitação do cliente..."
@@ -502,64 +514,63 @@ const AccountsReceivable = () => {
                       required
                     />
                   </div>
-                  <h4>Dados da Nova Nota (Substituta)</h4>
                   <div className="form-group">
-                    <label>Número da Nova Nota *</label>
+                    <label className="label">Número da Nova Nota *</label>
                     <input
                       type="text"
+                      className="input"
                       value={formData.substitution_invoice_number}
                       onChange={(e) => setFormData({ ...formData, substitution_invoice_number: e.target.value })}
                       required
                     />
                   </div>
                   <div className="form-group">
-                    <label>Data de Emissão *</label>
+                    <label className="label">Data de Emissão *</label>
                     <input
                       type="date"
+                      className="input"
                       value={formData.substitution_issue_date}
                       onChange={(e) => setFormData({ ...formData, substitution_issue_date: e.target.value })}
                       required
                     />
                   </div>
                   <div className="form-group">
-                    <label>Data de Vencimento *</label>
+                    <label className="label">Data de Vencimento *</label>
                     <input
                       type="date"
+                      className="input"
                       value={formData.substitution_due_date}
                       onChange={(e) => setFormData({ ...formData, substitution_due_date: e.target.value })}
                       required
                     />
                   </div>
                 </div>
-              )}
-
-              {/* Financial & Tax Section */}
-              <div className="form-section-divider">
-                <h4>Dados Fiscais & Financeiros</h4>
               </div>
+            )}
 
+            {/* Financial & Tax Section */}
+            <div style={{ margin: '2rem 0 1rem 0', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+              <h4 style={{ fontSize: '1.1rem', color: '#0f172a' }}>Dados Fiscais & Financeiros</h4>
+            </div>
+
+            <div className="form-grid">
               <div className="form-group">
-                <label>Categoria</label>
-                <select value={formData.category} onChange={(e) => {
+                <label className="label">Categoria</label>
+                <select className="input" value={formData.category} onChange={(e) => {
                   const newCategory = e.target.value;
                   setFormData(prev => ({
                     ...prev,
                     category: newCategory,
-                    // Shared fields (used in both but with different context) - Reset on any change
                     retention_pis: 0,
                     retention_cofins: 0,
-
-                    // Reset fields based on new category to avoid ghost taxes
                     retention_iss: newCategory === 'MATERIAL' ? 0 : prev.retention_iss,
                     retention_inss: newCategory === 'MATERIAL' ? 0 : prev.retention_inss,
                     retention_irrf: newCategory === 'MATERIAL' ? 0 : prev.retention_irrf,
                     retention_csll: newCategory === 'MATERIAL' ? 0 : prev.retention_csll,
-                    // Zerar Impostos Não Retidos (Empresa paga) ao mudar para Material
                     tax_iss: newCategory === 'MATERIAL' ? 0 : prev.tax_iss,
                     tax_irpj: newCategory === 'MATERIAL' ? 0 : prev.tax_irpj,
                     tax_pis: newCategory === 'MATERIAL' ? 0 : prev.tax_pis,
                     tax_cofins: newCategory === 'MATERIAL' ? 0 : prev.tax_cofins,
-                    // Reset material specific taxes if switching to Service
                     tax_icms: newCategory === 'SERVICE' ? 0 : prev.tax_icms,
                     tax_ipi: newCategory === 'SERVICE' ? 0 : prev.tax_ipi,
                     value_st: newCategory === 'SERVICE' ? 0 : prev.value_st
@@ -569,230 +580,183 @@ const AccountsReceivable = () => {
                   <option value="MATERIAL">Material</option>
                 </select>
               </div>
+            </div>
 
-              <div className="form-row" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label>Valor Bruto (R$)</label>
-                  <div style={{ height: '17px', marginBottom: '4px' }}></div> {/* Spacer to align with helpers */}
-                  <input type="number" step="0.01" value={formData.gross_value} onChange={e => setFormData({ ...formData, gross_value: e.target.value })} required />
+            <div className="form-row" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="label">Valor Bruto (R$)</label>
+                <input type="number" step="0.01" className="input" value={formData.gross_value} onChange={e => setFormData({ ...formData, gross_value: e.target.value })} required />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="label">Receber (Entrada no Banco)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="input"
+                  value={formData.net_value}
+                  readOnly
+                  style={{ backgroundColor: '#f8fafc', fontWeight: 'bold' }}
+                  required
+                />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="label">Líquido Real (Aperto)</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={(
+                    (parseFloat(formData.net_value) || 0) -
+                    (
+                      (parseFloat(formData.tax_iss) || 0) +
+                      (parseFloat(formData.tax_pis) || 0) +
+                      (parseFloat(formData.tax_cofins) || 0) +
+                      (parseFloat(formData.tax_irpj) || 0) +
+                      (parseFloat(formData.tax_icms) || 0) +
+                      (parseFloat(formData.tax_ipi) || 0) +
+                      (parseFloat(formData.value_st) || 0)
+                    )
+                  ).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  readOnly
+                  style={{ backgroundColor: '#f0fdf4', color: '#166534', fontWeight: 'bold', border: '1px solid #bbf7d0' }}
+                />
+              </div>
+            </div>
+
+            {/* Impostos Retidos pelo Cliente (SERVICE) */}
+            {formData.category === 'SERVICE' && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', background: '#fef2f2', padding: '1rem', borderRadius: '8px', border: '1px solid #fecaca', marginBottom: '1rem' }}>
+                  <h5 style={{ gridColumn: '1 / -1', margin: '0 0 0.5rem 0', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '8px' }}>⛔ Retidos (Cliente paga)</h5>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>ISS</label><input type="number" step="0.01" className="input" value={formData.retention_iss} onChange={e => setFormData({ ...formData, retention_iss: e.target.value })} /></div>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>PIS</label><input type="number" step="0.01" className="input" value={formData.retention_pis} onChange={e => setFormData({ ...formData, retention_pis: e.target.value })} /></div>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>COFINS</label><input type="number" step="0.01" className="input" value={formData.retention_cofins} onChange={e => setFormData({ ...formData, retention_cofins: e.target.value })} /></div>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>CSLL</label><input type="number" step="0.01" className="input" value={formData.retention_csll} onChange={e => setFormData({ ...formData, retention_csll: e.target.value })} /></div>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>INSS</label><input type="number" step="0.01" className="input" value={formData.retention_inss} onChange={e => setFormData({ ...formData, retention_inss: e.target.value })} /></div>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>IRRF</label><input type="number" step="0.01" className="input" value={formData.retention_irrf} onChange={e => setFormData({ ...formData, retention_irrf: e.target.value })} /></div>
                 </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label>Valor a Receber (Caixa)</label>
-                  <div style={{ fontSize: '0.8em', color: '#64748b', marginBottom: '4px' }}>Entra no Banco</div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.net_value}
-                    onChange={e => setFormData({ ...formData, net_value: e.target.value })}
-                    readOnly
-                    style={{ backgroundColor: '#e9ecef', cursor: 'not-allowed', fontWeight: 'bold' }}
-                    required
-                  />
-                </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label>Líquido Real (Pós-Impostos)</label>
-                  <div style={{ fontSize: '0.8em', color: '#64748b', marginBottom: '4px' }}>Sobra após pagar guias</div>
-                  <input
-                    type="text" // Text to allow formatting nicely, strictly read-only
-                    value={(
-                      (parseFloat(formData.net_value) || 0) -
-                      (
-                        (parseFloat(formData.tax_iss) || 0) +
-                        (parseFloat(formData.tax_pis) || 0) +
-                        (parseFloat(formData.tax_cofins) || 0) +
-                        (parseFloat(formData.tax_irpj) || 0) +
-                        (parseFloat(formData.tax_icms) || 0) +
-                        (parseFloat(formData.tax_ipi) || 0) +
-                        (parseFloat(formData.value_st) || 0)
-                      )
-                    ).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    readOnly
-                    style={{ backgroundColor: '#f0fdf4', color: '#166534', fontWeight: 'bold', border: '1px solid #bbf7d0' }}
-                  />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', background: '#fffbeb', padding: '1rem', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                  <h5 style={{ gridColumn: '1 / -1', margin: '0 0 0.5rem 0', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>💰 Não Retidos (Empresa paga)</h5>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>ISS</label><input type="number" step="0.01" className="input" value={formData.tax_iss} onChange={e => setFormData({ ...formData, tax_iss: e.target.value })} /></div>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>PIS</label><input type="number" step="0.01" className="input" value={formData.tax_pis} onChange={e => setFormData({ ...formData, tax_pis: e.target.value })} /></div>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>COFINS</label><input type="number" step="0.01" className="input" value={formData.tax_cofins} onChange={e => setFormData({ ...formData, tax_cofins: e.target.value })} /></div>
+                  <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>IRPJ</label><input type="number" step="0.01" className="input" value={formData.tax_irpj} onChange={e => setFormData({ ...formData, tax_irpj: e.target.value })} /></div>
                 </div>
               </div>
+            )}
 
-              {/* Impostos Retidos pelo Cliente (SERVICE) */}
-              {formData.category === 'SERVICE' && (
-                <>
-                  {/* Impostos Retidos pelo Cliente */}
-                  <div className="tax-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', background: '#fef2f2', padding: '15px', borderRadius: '8px', border: '1px solid #fecaca', marginBottom: '15px' }}>
-                    <h5 style={{ gridColumn: '1 / -1', margin: '0 0 10px 0', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '8px' }}>⛔ Retidos (Cliente paga)</h5>
-
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>ISS</label>
-                      <input type="number" step="0.01" value={formData.retention_iss} onChange={e => setFormData({ ...formData, retention_iss: e.target.value })} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>PIS</label>
-                      <input type="number" step="0.01" value={formData.retention_pis} onChange={e => setFormData({ ...formData, retention_pis: e.target.value })} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>COFINS</label>
-                      <input type="number" step="0.01" value={formData.retention_cofins} onChange={e => setFormData({ ...formData, retention_cofins: e.target.value })} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>CSLL</label>
-                      <input type="number" step="0.01" value={formData.retention_csll} onChange={e => setFormData({ ...formData, retention_csll: e.target.value })} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>INSS</label>
-                      <input type="number" step="0.01" value={formData.retention_inss} onChange={e => setFormData({ ...formData, retention_inss: e.target.value })} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>IRRF</label>
-                      <input type="number" step="0.01" value={formData.retention_irrf} onChange={e => setFormData({ ...formData, retention_irrf: e.target.value })} />
-                    </div>
-                  </div>
-
-                  {/* Impostos Não Retidos (Empresa Paga) */}
-                  <div className="tax-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '15px', background: '#fffbeb', padding: '15px', borderRadius: '8px', border: '1px solid #fcd34d' }}>
-                    <h5 style={{ gridColumn: '1 / -1', margin: '0 0 10px 0', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>💰 Não Retidos (Empresa paga)</h5>
-
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>ISS</label>
-                      <input type="number" step="0.01" value={formData.tax_iss} onChange={e => setFormData({ ...formData, tax_iss: e.target.value })} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>PIS</label>
-                      <input type="number" step="0.01" value={formData.tax_pis} onChange={e => setFormData({ ...formData, tax_pis: e.target.value })} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>COFINS</label>
-                      <input type="number" step="0.01" value={formData.tax_cofins} onChange={e => setFormData({ ...formData, tax_cofins: e.target.value })} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8em' }}>IRPJ</label>
-                      <input type="number" step="0.01" value={formData.tax_irpj} onChange={e => setFormData({ ...formData, tax_irpj: e.target.value })} />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {formData.category === 'MATERIAL' && (
-                <div className="tax-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <h5 style={{ gridColumn: '1 / -1', margin: '0 0 10px 0', color: '#64748b' }}>Impostos (Nota)</h5>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.8em' }}>ICMS</label>
-                    <input type="number" step="0.01" value={formData.tax_icms} onChange={e => setFormData({ ...formData, tax_icms: e.target.value })} />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.8em' }}>PIS</label>
-                    <input type="number" step="0.01" value={formData.tax_pis} onChange={e => setFormData({ ...formData, tax_pis: e.target.value })} />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.8em' }}>COFINS</label>
-                    <input type="number" step="0.01" value={formData.tax_cofins} onChange={e => setFormData({ ...formData, tax_cofins: e.target.value })} />
-                  </div>
-                </div>
-              )}
-
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setEditingBilling(null)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary">Salvar</button>
+            {formData.category === 'MATERIAL' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '1.5rem' }}>
+                <h5 style={{ gridColumn: '1 / -1', margin: '0 0 0.5rem 0', color: '#64748b' }}>Impostos (Nota)</h5>
+                <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>ICMS</label><input type="number" step="0.01" className="input" value={formData.tax_icms} onChange={e => setFormData({ ...formData, tax_icms: e.target.value })} /></div>
+                <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>PIS</label><input type="number" step="0.01" className="input" value={formData.tax_pis} onChange={e => setFormData({ ...formData, tax_pis: e.target.value })} /></div>
+                <div className="form-group"><label className="label" style={{ fontSize: '0.8em' }}>COFINS</label><input type="number" step="0.01" className="input" value={formData.tax_cofins} onChange={e => setFormData({ ...formData, tax_cofins: e.target.value })} /></div>
               </div>
-            </form>
-          </div>
-        </div>
+            )}
+
+            <div className="form-actions" style={{ marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setEditingBilling(null)}>Cancelar</button>
+              <button type="submit" className="btn btn-primary">Salvar Alterações</button>
+            </div>
+          </form>
+        </Modal>
       )}
       {/* Import Preview Modal */}
-      {showPreviewModal && previewData && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '900px', width: '90%' }}>
-            <div className="modal-header">
-              <h3>Prévia da Importação</h3>
-              <button className="close-btn" onClick={() => { setShowPreviewModal(false); setPreviewData(null); }}><XCircle size={24} /></button>
-            </div>
-
-            <div className="modal-body">
-              <div className="summary-banner" style={{ display: 'flex', gap: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', marginBottom: '15px' }}>
-                <div>
-                  <div style={{ fontSize: '0.9em', color: '#64748b' }}>Notas Encontradas</div>
-                  <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}>{previewData.found_count}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.9em', color: '#64748b' }}>Valor Total (Bruto)</div>
-                  <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#16a34a' }}>
-                    R$ {previewData.total_value?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </div>
+      {
+        showPreviewModal && previewData && (
+          <Modal
+            isOpen={showPreviewModal}
+            onClose={() => { setShowPreviewModal(false); setPreviewData(null); }}
+            title="Prévia da Importação"
+            maxWidth="900px"
+          >
+            <div className="summary-banner" style={{ display: 'flex', gap: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', marginBottom: '15px' }}>
+              <div>
+                <div style={{ fontSize: '0.9em', color: '#64748b' }}>Notas Encontradas</div>
+                <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}>{previewData?.found_count}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.9em', color: '#64748b' }}>Valor Total (Bruto)</div>
+                <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#16a34a' }}>
+                  R$ {previewData?.total_value?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>
               </div>
+            </div>
 
-              {previewData.items.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                  <AlertCircle size={48} style={{ margin: '0 auto 10px', display: 'block', opacity: 0.5 }} />
-                  Nenhuma nota válida encontrada para importação. Verifique se o arquivo corresponde ao modelo esperado.
-                </div>
-              ) : (
-                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                  <table className="billings-table">
-                    <thead>
-                      <tr>
-                        <th>Nota</th>
-                        <th>Cliente</th>
-                        <th>Projeto</th>
-                        <th>Categoria (Detectada)</th>
-                        <th>Bruto (Excel)</th>
-                        <th>Líquido (Calc)</th>
-                        <th>Status</th>
+            {previewData?.items.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                <AlertCircle size={48} style={{ margin: '0 auto 10px', display: 'block', opacity: 0.5 }} />
+                Nenhuma nota válida encontrada para importação. Verifique se o arquivo corresponde ao modelo esperado.
+              </div>
+            ) : (
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <table className="billings-table">
+                  <thead>
+                    <tr>
+                      <th>Nota</th>
+                      <th>Cliente</th>
+                      <th>Projeto</th>
+                      <th>Categoria</th>
+                      <th>Bruto</th>
+                      <th>Líquido</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewData?.items.map((item, idx) => (
+                      <tr key={idx}>
+                        <td>{item.invoice_number}</td>
+                        <td>{item.client_name}</td>
+                        <td><Tag size={12} /> {item.project_tag}</td>
+                        <td>
+                          <span className={item.category === 'SERVICE' ? 'badge-blue' : 'badge-gray'} style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                            {item.category === 'SERVICE' ? 'SERVIÇO' : 'MATERIAL'}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 500 }}>R$ {item.gross_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ color: '#16a34a' }}>R$ {item.net_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td>
+                          {item.updates && item.updates.taxes_verified ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '0.85em' }}>
+                              <CheckCircle size={14} /> Ok
+                            </div>
+                          ) : (
+                            <span style={{ color: '#f59e0b' }}>Pendente</span>
+                          )}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {previewData.items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td>{item.invoice_number}</td>
-                          <td>{item.client_name}</td>
-                          <td><Tag size={12} /> {item.project_tag}</td>
-                          <td>
-                            <span className={item.category === 'SERVICE' ? 'badge badge-blue' : 'badge badge-gray'}>
-                              {item.category === 'SERVICE' ? 'SERVIÇO' : 'MATERIAL'}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: 500 }}>R$ {item.gross_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                          <td style={{ color: '#16a34a' }}>R$ {item.net_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                          <td>
-                            {item.updates && item.updates.taxes_verified ? (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '0.85em' }}>
-                                <CheckCircle size={14} /> Ok
-                              </div>
-                            ) : (
-                              <span style={{ color: '#f59e0b' }}>Pendente</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              <div style={{ marginTop: '15px' }}>
-                <details>
-                  <summary style={{ cursor: 'pointer', color: '#64748b', fontSize: '0.9em' }}>Ver Logs de Processamento</summary>
-                  <pre style={{ background: '#1e293b', color: '#f1f5f9', padding: '10px', borderRadius: '4px', fontSize: '0.8em', maxHeight: '150px', overflow: 'auto', marginTop: '5px' }}>
-                    {previewData.logs.join('\n')}
-                  </pre>
-                </details>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+            )}
 
-              <div className="modal-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => { setShowPreviewModal(false); setPreviewData(null); }}>
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleConfirmImport}
-                  disabled={previewData.items.length === 0 || loading}
-                >
-                  {loading ? 'Confirmando...' : 'Confirmar Importação'}
-                </button>
-              </div>
+            <div style={{ marginTop: '1rem' }}>
+              <details>
+                <summary style={{ cursor: 'pointer', color: '#64748b', fontSize: '0.9em' }}>Ver Logs de Processamento</summary>
+                <pre style={{ background: '#1e293b', color: '#f1f5f9', padding: '10px', borderRadius: '4px', fontSize: '0.8em', maxHeight: '150px', overflow: 'auto', marginTop: '5px' }}>
+                  {previewData?.logs.join('\n')}
+                </pre>
+              </details>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+
+            <div className="form-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => { setShowPreviewModal(false); setPreviewData(null); }}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmImport}
+                disabled={previewData?.items.length === 0 || loading}
+              >
+                {loading ? 'Confirmando...' : 'Confirmar Importação'}
+              </button>
+            </div>
+          </Modal>
+        )
+      }
+    </div >
   );
 };
 

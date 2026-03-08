@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, Ticket as TicketIcon, AlertCircle, Edit } from 'lucide-react';
 import { getTickets, createTicket, deleteTicket, updateTicket, getContracts } from '../services/api';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import Modal from '../components/shared/Modal';
 import './Tickets.css';
 
 const Tickets = () => {
@@ -18,17 +19,6 @@ const Tickets = () => {
     status: 'OPEN',
     priority: 'MEDIUM',
   });
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && showForm && !showConfirmModal) {
-        setShowForm(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showForm, showConfirmModal]);
 
   useEffect(() => {
     loadTickets();
@@ -173,96 +163,96 @@ const Tickets = () => {
         </button>
       </header>
 
-      {showForm && (
-        <div className="tickets-form-modal">
-          <div className="tickets-form card" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3>{editingId ? 'Editar Ticket' : 'Criar Ticket'}</h3>
-              {editingId && (
-                <button
-                  type="button"
-                  className="btn-icon-small danger"
-                  onClick={() => handleDelete(editingId)}
-                  title="Excluir Ticket"
-                >
-                  <Trash2 size={20} />
-                </button>
-              )}
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingId ? 'Editar Ticket' : 'Criar Ticket'}
+        maxWidth="1000px"
+        headerActions={
+          editingId && (
+            <button
+              type="button"
+              className="std-modal-close-btn danger"
+              onClick={() => handleDelete(editingId)}
+              title="Excluir Ticket"
+            >
+              <Trash2 size={24} />
+            </button>
+          )
+        }
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="form-grid">
+            <div className="form-group full-width">
+              <label className="label">Título *</label>
+              <input
+                type="text"
+                name="title"
+                className="input"
+                value={formData.title}
+                onChange={handleChange}
+                required
+                placeholder="Descreva o problema"
+              />
             </div>
-            <form onSubmit={handleSubmit}>
-              <div className="form-grid">
-                <div className="form-group full-width">
-                  <label className="label">Título *</label>
-                  <input
-                    type="text"
-                    name="title"
-                    className="input"
-                    value={formData.title}
-                    onChange={handleChange}
-                    required
-                    placeholder="Descreva o problema"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Contrato *</label>
-                  <select
-                    name="contract_id"
-                    className="input"
-                    value={formData.contract_id}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Selecione um contrato</option>
-                    {contracts.map((contract) => (
-                      <option key={contract.id} value={contract.id}>
-                        {contract.description}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="label">Prioridade *</label>
-                  <select
-                    name="priority"
-                    className="input"
-                    value={formData.priority}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="LOW">Baixa</option>
-                    <option value="MEDIUM">Média</option>
-                    <option value="HIGH">Alta</option>
-                    <option value="CRITICAL">Crítica</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="label">Status *</label>
-                  <select
-                    name="status"
-                    className="input"
-                    value={formData.status}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="OPEN">Aberto</option>
-                    <option value="IN_PROGRESS">Em Andamento</option>
-                    <option value="RESOLVED">Resolvido</option>
-                    <option value="CLOSED">Fechado</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Criar Ticket
-                </button>
-              </div>
-            </form>
+            <div className="form-group full-width">
+              <label className="label">Contrato *</label>
+              <select
+                name="contract_id"
+                className="input"
+                value={formData.contract_id}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecione um contrato</option>
+                {contracts.map((contract) => (
+                  <option key={contract.id} value={contract.id}>
+                    {contract.description}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="label">Prioridade *</label>
+              <select
+                name="priority"
+                className="input"
+                value={formData.priority}
+                onChange={handleChange}
+                required
+              >
+                <option value="LOW">Baixa</option>
+                <option value="MEDIUM">Média</option>
+                <option value="HIGH">Alta</option>
+                <option value="CRITICAL">Crítica</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="label">Status *</label>
+              <select
+                name="status"
+                className="input"
+                value={formData.status}
+                onChange={handleChange}
+                required
+              >
+                <option value="OPEN">Aberto</option>
+                <option value="IN_PROGRESS">Em Andamento</option>
+                <option value="RESOLVED">Resolvido</option>
+                <option value="CLOSED">Fechado</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+          <div className="form-actions" style={{ marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn btn-primary">
+              {editingId ? 'Salvar Ticket' : 'Criar Ticket'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <div className="tickets-grid">
         {loading ? (
