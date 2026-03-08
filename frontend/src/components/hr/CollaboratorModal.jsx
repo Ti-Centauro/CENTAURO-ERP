@@ -276,6 +276,9 @@ const CollaboratorModal = ({ collaborator, onClose, onSuccess, roles = [], teams
                 <Trash2 size={20} />
               </button>
             )}
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: '4px', marginLeft: '0.5rem' }} title="Fechar">
+              <X size={24} />
+            </button>
           </div>
         </div>
 
