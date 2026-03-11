@@ -16,9 +16,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Plus, GripVertical, Trash2, Edit, X, User, Briefcase } from 'lucide-react';
-import { getTasks, createTask, updateTask, deleteTask, getProjects, getCollaborators } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { getTasks, createTask, updateTask, deleteTask, getProjects, getCollaborators, getClients } from '../services/api';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import Modal from '../components/shared/Modal';
 import './Kanban.css';
 
 // --- COMPONENTS ---
@@ -32,7 +33,7 @@ const DroppableArea = ({ id, children }) => {
   );
 };
 
-const TaskCard = ({ task, onEdit, onDelete, getProjectName, getCollaboratorName, canEdit, isOverlay }) => {
+const TaskCard = ({ task, onEdit, getProjectName, getCollaboratorName, canEdit, isOverlay }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   // If overlay, we might want to skip some Sortable logic or just render raw
@@ -40,17 +41,13 @@ const TaskCard = ({ task, onEdit, onDelete, getProjectName, getCollaboratorName,
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    cursor: canEdit ? 'pointer' : 'grab'
   };
 
   // If it's an overlay, we don't need sortable wrappers, just the visual
   if (isOverlay) {
     return (
       <div className="task-card overlay">
-        <div className="task-header">
-          <div className="task-drag">
-            <GripVertical size={16} color="#94a3b8" />
-          </div>
-        </div>
         <div className="task-content">
           <h4 className="task-title">{task.title}</h4>
         </div>
@@ -65,24 +62,16 @@ const TaskCard = ({ task, onEdit, onDelete, getProjectName, getCollaboratorName,
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="task-card" {...attributes} {...listeners}>
-      <div className="task-header">
-        <div className="task-drag">
-          <GripVertical size={16} color="#94a3b8" />
-        </div>
-        <div className="task-actions" onPointerDown={e => e.stopPropagation()}>
-          {canEdit && (
-            <>
-              <button className="btn-icon-small" onClick={() => onEdit(task)}>
-                <Edit size={14} />
-              </button>
-              <button className="btn-icon-small danger" onClick={() => onDelete(task.id)}>
-                <Trash2 size={14} />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="task-card"
+      {...attributes}
+      {...listeners}
+      onClick={() => {
+        if (canEdit) onEdit(task);
+      }}
+    >
       <div className="task-content">
         <h4 className="task-title">{task.title}</h4>
         {task.description && <p className="task-description">{task.description}</p>}
@@ -115,7 +104,7 @@ const TaskCard = ({ task, onEdit, onDelete, getProjectName, getCollaboratorName,
   );
 };
 
-const Column = ({ column, tasks, onAddTask, onEditTask, onDeleteTask, getProjectName, getCollaboratorName, canEdit }) => {
+const Column = ({ column, tasks, onAddTask, onEditTask, getProjectName, getCollaboratorName, canEdit }) => {
   return (
     <div className="kanban-column">
       <div className="column-header">
@@ -130,7 +119,6 @@ const Column = ({ column, tasks, onAddTask, onEditTask, onDeleteTask, getProject
                 key={task.id}
                 task={task}
                 onEdit={onEditTask}
-                onDelete={onDeleteTask}
                 getProjectName={getProjectName}
                 getCollaboratorName={getCollaboratorName}
                 canEdit={canEdit}
@@ -156,6 +144,7 @@ const Kanban = () => {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [collaborators, setCollaborators] = useState([]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [activeId, setActiveId] = useState(null); // DnD Active State
@@ -179,14 +168,16 @@ const Kanban = () => {
 
   const loadData = async () => {
     try {
-      const [tasksRes, projectsRes, collaboratorsRes] = await Promise.all([
+      const [tasksRes, projectsRes, collaboratorsRes, clientsRes] = await Promise.all([
         getTasks(),
         getProjects(),
-        getCollaborators()
+        getCollaborators(),
+        getClients()
       ]);
       setTasks(tasksRes.data);
       setProjects(projectsRes.data);
       setCollaborators(collaboratorsRes.data);
+      setClients(clientsRes.data);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -363,107 +354,119 @@ const Kanban = () => {
         )}
       </header>
 
-      {showForm && (
-        <div className="kanban-form-modal">
-          <div className="kanban-form card">
-            <div className="form-header">
-              <h3>{editingId ? 'Editar Tarefa' : 'Nova Tarefa'}</h3>
-              <button className="close-btn" onClick={() => setShowForm(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label className="label">Título *</label>
-                <input
-                  type="text"
-                  name="title"
-                  className="input"
-                  value={formData.title}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="label">Descrição</label>
-                <textarea
-                  name="description"
-                  className="input"
-                  value={formData.description}
-                  onChange={handleChange}
-                  rows="3"
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="label">Status</label>
-                  <select
-                    name="status"
-                    className="input"
-                    value={formData.status}
-                    onChange={handleChange}
-                  >
-                    <option value="todo">A Fazer</option>
-                    <option value="in-progress">Em Progresso</option>
-                    <option value="done">Concluído</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="label">Prioridade</label>
-                  <select
-                    name="priority"
-                    className="input"
-                    value={formData.priority}
-                    onChange={handleChange}
-                  >
-                    <option value="low">Baixa</option>
-                    <option value="medium">Média</option>
-                    <option value="high">Alta</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="label">Projeto</label>
-                <select
-                  name="project_id"
-                  className="input"
-                  value={formData.project_id}
-                  onChange={handleChange}
-                >
-                  <option value="">Sem Projeto</option>
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="label">Colaborador</label>
-                <select
-                  name="collaborator_id"
-                  className="input"
-                  value={formData.collaborator_id}
-                  onChange={handleChange}
-                >
-                  <option value="">Sem Responsável</option>
-                  {collaborators.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
-                  Cancelar
-                </button>
-                {canEdit && (
-                  <button type="submit" className="btn btn-primary">
-                    Salvar
-                  </button>
-                )}
-              </div>
-            </form>
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingId ? 'Editar Tarefa' : 'Nova Tarefa'}
+        maxWidth="600px"
+        headerActions={
+          editingId && canEdit && (
+            <button
+              type="button"
+              className="std-modal-close-btn danger"
+              onClick={() => handleDeleteTask(editingId)}
+              title="Excluir Tarefa"
+            >
+              <Trash2 size={24} />
+            </button>
+          )
+        }
+      >
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label">Título *</label>
+            <input
+              type="text"
+              name="title"
+              className="input"
+              value={formData.title}
+              onChange={handleChange}
+              required
+            />
           </div>
-        </div>
-      )}
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label">Descrição</label>
+            <textarea
+              name="description"
+              className="input"
+              value={formData.description}
+              onChange={handleChange}
+              rows="3"
+            />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Status</label>
+              <select
+                name="status"
+                className="input"
+                value={formData.status}
+                onChange={handleChange}
+              >
+                <option value="todo">A Fazer</option>
+                <option value="in-progress">Em Progresso</option>
+                <option value="done">Concluído</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Prioridade</label>
+              <select
+                name="priority"
+                className="input"
+                value={formData.priority}
+                onChange={handleChange}
+              >
+                <option value="low">Baixa</option>
+                <option value="medium">Média</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label">Projeto</label>
+            <select
+              name="project_id"
+              className="input"
+              value={formData.project_id}
+              onChange={handleChange}
+            >
+              <option value="">Sem Projeto</option>
+              {projects.map(p => {
+                const client = clients.find(c => c.id === p.client_id);
+                return (
+                  <option key={p.id} value={p.id}>
+                    {client ? `${client.name} - ` : ''}{p.name}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label">Colaborador</label>
+            <select
+              name="collaborator_id"
+              className="input"
+              value={formData.collaborator_id}
+              onChange={handleChange}
+            >
+              <option value="">Sem Responsável</option>
+              {collaborators.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+              Cancelar
+            </button>
+            {canEdit && (
+              <button type="submit" className="btn btn-primary">
+                Salvar Tarefa
+              </button>
+            )}
+          </div>
+        </form>
+      </Modal>
 
       <DndContext
         sensors={sensors}
@@ -479,7 +482,6 @@ const Kanban = () => {
               tasks={getTasksByStatus(column.id)}
               onAddTask={handleAddTask}
               onEditTask={handleEditTask}
-              onDeleteTask={handleDeleteTask}
               getProjectName={getProjectName}
               getCollaboratorName={getCollaboratorName}
               canEdit={canEdit}

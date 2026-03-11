@@ -7,6 +7,7 @@ import DataTable from '../components/shared/DataTable';
 import StatusBadge from '../components/shared/StatusBadge';
 import VehicleModal from '../components/fleet/VehicleModal';
 import ImportPreviewModal from '../components/shared/ImportPreviewModal';
+import Modal from '../components/shared/Modal';
 import { isDeactivated } from '../utils/formatters';
 import './Fleet.css';
 
@@ -262,25 +263,37 @@ const Fleet = () => {
         />
       )}
 
-      {showInsuranceForm && (
-        <div className="fleet-form-modal" onClick={() => setShowInsuranceForm(false)}>
-          <div className="fleet-form card" onClick={e => e.stopPropagation()}>
-            <h3>{editingInsurance ? 'Editar Seguro' : 'Novo Seguro'}</h3>
-            <form onSubmit={handleInsuranceSubmit}>
-              <div className="form-grid">
-                <div className="form-group"><label className="label">Seguradora</label><input className="input" value={insuranceFormData.insurance_company} onChange={e => setInsuranceFormData({ ...insuranceFormData, insurance_company: e.target.value })} required /></div>
-                <div className="form-group"><label className="label">Apólice</label><input className="input" value={insuranceFormData.policy_number} onChange={e => setInsuranceFormData({ ...insuranceFormData, policy_number: e.target.value })} required /></div>
-                <div className="form-group"><label className="label">Validade</label><input type="date" className="input" value={insuranceFormData.validity} onChange={e => setInsuranceFormData({ ...insuranceFormData, validity: e.target.value })} required /></div>
-                <div className="form-group"><label className="label">Sinistros</label><textarea className="input" value={insuranceFormData.claims_info} onChange={e => setInsuranceFormData({ ...insuranceFormData, claims_info: e.target.value })} /></div>
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowInsuranceForm(false)}>Cancelar</button>
-                {canEdit && <button type="submit" className="btn btn-primary">Salvar</button>}
-              </div>
-            </form>
+      <Modal
+        isOpen={showInsuranceForm}
+        onClose={() => setShowInsuranceForm(false)}
+        title={editingInsurance ? 'Editar Seguro' : 'Novo Seguro'}
+        maxWidth="1000px"
+        headerActions={
+          editingInsurance && (
+            <button
+              type="button"
+              className="std-modal-close-btn danger"
+              onClick={() => handleDelete(editingInsurance.id, 'insurance')}
+              title="Excluir Seguro"
+            >
+              <Trash2 size={24} />
+            </button>
+          )
+        }
+      >
+        <form onSubmit={handleInsuranceSubmit}>
+          <div className="form-grid">
+            <div className="form-group"><label className="label">Seguradora</label><input className="input" value={insuranceFormData.insurance_company} onChange={e => setInsuranceFormData({ ...insuranceFormData, insurance_company: e.target.value })} required /></div>
+            <div className="form-group"><label className="label">Apólice</label><input className="input" value={insuranceFormData.policy_number} onChange={e => setInsuranceFormData({ ...insuranceFormData, policy_number: e.target.value })} required /></div>
+            <div className="form-group"><label className="label">Validade</label><input type="date" className="input" value={insuranceFormData.validity} onChange={e => setInsuranceFormData({ ...insuranceFormData, validity: e.target.value })} required /></div>
+            <div className="form-group full-width"><label className="label">Sinistros / Observações</label><textarea className="input" value={insuranceFormData.claims_info} onChange={e => setInsuranceFormData({ ...insuranceFormData, claims_info: e.target.value })} style={{ minHeight: '100px' }} placeholder="Informações sobre sinistros, coberturas extras, etc." /></div>
           </div>
-        </div>
-      )}
+          <div className="form-actions" style={{ marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowInsuranceForm(false)}>Cancelar</button>
+            {canEdit && <button type="submit" className="btn btn-primary">Salvar</button>}
+          </div>
+        </form>
+      </Modal>
 
       {showPreview && previewData && (
         <ImportPreviewModal

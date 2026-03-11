@@ -1,7 +1,8 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Users, Plus, Edit, Trash2, Crown } from 'lucide-react';
-import api, { getCollaborators } from '../services/api'; // Ensure getCollaborators is exported
+import api, { getCollaborators } from '../services/api';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import Modal from '../components/shared/Modal';
 import './Teams.css';
 
 const Teams = forwardRef(({ embedded = false }, ref) => {
@@ -30,15 +31,7 @@ const Teams = forwardRef(({ embedded = false }, ref) => {
     loadData();
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && showForm && !showConfirmModal) {
-        setShowForm(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showForm, showConfirmModal]);
+
 
   const loadData = async () => {
     try {
@@ -132,112 +125,116 @@ const Teams = forwardRef(({ embedded = false }, ref) => {
         </header>
       )}
 
-      {showForm && (
-        <div className="teams-form-modal">
-          <div className="teams-form card" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3>{editingId ? 'Editar Time' : 'Novo Time'}</h3>
-              {editingId && (
-                <button
-                  type="button"
-                  className="btn-icon-small danger"
-                  onClick={() => handleDelete(editingId)}
-                  title="Excluir Time"
-                >
-                  <Trash2 size={20} />
-                </button>
-              )}
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingId ? 'Editar Time' : 'Novo Time'}
+        maxWidth="1000px"
+        headerActions={
+          editingId && (
+            <button
+              type="button"
+              className="std-modal-close-btn danger"
+              onClick={() => handleDelete(editingId)}
+              title="Excluir Time"
+            >
+              <Trash2 size={24} />
+            </button>
+          )
+        }
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="form-grid">
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="label">Nome do Time *</label>
+              <input
+                type="text"
+                name="name"
+                className="input"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                placeholder="Ex: Infraestrutura"
+              />
             </div>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label className="label">Nome do Time *</label>
-                <input
-                  type="text"
-                  name="name"
-                  className="input"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  placeholder="Ex: Infraestrutura"
-                />
-              </div>
-              <div className="form-group">
-                <label className="label">Descrição</label>
-                <textarea
-                  name="description"
-                  className="input"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Descrição das atividades..."
-                  rows="3"
-                />
-              </div>
-              <div className="form-group">
-                <label className="label">Líder / Gestor</label>
-                <select
-                  name="leader_id"
-                  className="input"
-                  value={formData.leader_id}
-                  onChange={(e) => setFormData({ ...formData, leader_id: e.target.value })}
-                >
-                  <option value="">Sem líder definido</option>
-                  {collaborators.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
 
-              {/* Membros do Time */}
-              {editingId && (
-                <div className="form-group">
-                  <label className="label" style={{ marginBottom: '0.75rem' }}>Membros do Time</label>
-                  {(() => {
-                    const teamMembers = collaborators.filter(c => c.teams?.some(t => t.id === editingId));
-                    if (teamMembers.length === 0) {
-                      return (
-                        <p style={{ color: '#94a3b8', fontSize: '0.875rem', fontStyle: 'italic' }}>
-                          Nenhum membro vinculado a este time.
-                        </p>
-                      );
-                    }
-                    return (
-                      <div className="team-members-grid">
-                        {teamMembers.map(member => (
-                          <div key={member.id} className="team-member-card">
-                            <div className="team-member-avatar">
-                              {member.name?.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="team-member-info">
-                              <div className="team-member-name">
-                                {member.name}
-                                {member.id === parseInt(formData.leader_id) && (
-                                  <Crown size={12} color="#f59e0b" />
-                                )}
-                              </div>
-                              <div className="team-member-role">
-                                {member.role || 'Sem cargo definido'}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
+            <div className="form-group">
+              <label className="label">Líder / Gestor</label>
+              <select
+                name="leader_id"
+                className="input"
+                value={formData.leader_id}
+                onChange={(e) => setFormData({ ...formData, leader_id: e.target.value })}
+              >
+                <option value="">Sem líder definido</option>
+                {collaborators.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
 
-              <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Salvar
-                </button>
-              </div>
-            </form>
+            <div className="form-group full-width">
+              <label className="label">Descrição</label>
+              <textarea
+                name="description"
+                className="input"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descrição das atividades..."
+                rows="3"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          {/* Membros do Time */}
+          {editingId && (
+            <div className="form-group full-width" style={{ marginTop: '1rem' }}>
+              <label className="label" style={{ marginBottom: '0.75rem' }}>Membros do Time</label>
+              {(() => {
+                const teamMembers = collaborators.filter(c => c.teams?.some(t => t.id === editingId));
+                if (teamMembers.length === 0) {
+                  return (
+                    <p style={{ color: '#94a3b8', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                      Nenhum membro vinculado a este time.
+                    </p>
+                  );
+                }
+                return (
+                  <div className="team-members-grid">
+                    {teamMembers.map(member => (
+                      <div key={member.id} className="team-member-card">
+                        <div className="team-member-avatar">
+                          {member.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="team-member-info">
+                          <div className="team-member-name">
+                            {member.name}
+                            {member.id === parseInt(formData.leader_id) && (
+                              <Crown size={12} color="#f59e0b" />
+                            )}
+                          </div>
+                          <div className="team-member-role">
+                            {member.role || 'Sem cargo definido'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          <div className="form-actions" style={{ marginTop: '2rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn btn-primary">
+              {editingId ? 'Salvar Alterações' : 'Criar Time'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <div className="teams-grid">
         {loading ? (

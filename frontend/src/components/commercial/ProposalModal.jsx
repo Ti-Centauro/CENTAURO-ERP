@@ -1,14 +1,90 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
+const SearchableSelect = ({ options, value, onChange, placeholder, disabled, autoFocus }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const wrapperRef = useRef(null);
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm(selectedOption ? selectedOption.label : '');
+    }
+  }, [value, isOpen, selectedOption]);
+
+  const filteredOptions = options.filter(opt =>
+    opt.label.toLowerCase().includes((searchTerm || '').toLowerCase())
+  );
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
+      <input
+        type="text"
+        value={isOpen ? searchTerm : (selectedOption ? selectedOption.label : '')}
+        onChange={(e) => {
+          setSearchTerm(e.target.value);
+          setIsOpen(true);
+          if (e.target.value === '') {
+            onChange('');
+          }
+        }}
+        onClick={() => setIsOpen(true)}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoFocus={autoFocus}
+        style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', cursor: disabled ? 'not-allowed' : 'text', outline: 'none' }}
+        onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.1)'}
+        onBlur={(e) => e.target.style.boxShadow = 'none'}
+      />
+      {isOpen && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', marginTop: '4px', maxHeight: '200px', overflowY: 'auto', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((opt, index) => (
+              <div
+                key={index}
+                onClick={() => {
+                  onChange(opt.value);
+                  setSearchTerm(opt.label);
+                  setIsOpen(false);
+                }}
+                style={{ padding: '8px 10px', cursor: 'pointer', backgroundColor: value === opt.value ? '#f1f5f9' : 'transparent', color: '#334155' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = value === opt.value ? '#f1f5f9' : 'transparent'}
+              >
+                {opt.label}
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: '8px 10px', color: '#94a3b8' }}>Nenhum resultado</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 import {
   X, Check, Plus, Trash2, StopCircle, RotateCcw,
   Calendar, RefreshCw, XCircle, FileText
 } from 'lucide-react';
 import {
-  createProposal, updateProposal,
+  createProposal, updateProposal, deleteProposal,
   getProposalTasks, createProposalTask, deleteProposalTask,
   completeProposalTask, stopTaskRecurrence,
   getClients, getCollaborators
 } from '../../services/api'; // Adjust path based on location
+import ConfirmModal from '../shared/ConfirmModal';
+import Modal from '../shared/Modal';
 
 const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = [] }) => {
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'tasks'
@@ -34,6 +110,9 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
   const [newTaskDate, setNewTaskDate] = useState('');
   const [newTaskRecurrence, setNewTaskRecurrence] = useState(false);
   const [newTaskRecurrenceDays, setNewTaskRecurrenceDays] = useState(2);
+
+  // Modal State
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -175,6 +254,21 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
     }
   };
 
+  const handleDeleteProposal = () => {
+    setShowConfirmModal(true);
+  };
+
+  const confirmDeleteProposal = async () => {
+    try {
+      await deleteProposal(proposal.id);
+      setShowConfirmModal(false);
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (error) {
+      alert("Erro ao excluir proposta: " + error.message);
+    }
+  };
+
   // --- Task Handlers ---
 
   const handleCreateTask = async () => {
@@ -247,45 +341,62 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-    }}>
-      <div className="modal-content" style={{
-        background: 'white', padding: '24px', borderRadius: '12px',
-        width: '90%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#1e293b' }}>
-            {proposal ? 'Editar Proposta' : 'Nova Proposta'}
-          </h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-            <X size={24} />
-          </button>
-        </div>
-
-        {/* Tabs */}
-        {proposal && (
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-            <button
-              type="button"
-              className={`btn ${activeTab === 'info' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setActiveTab('info')}
-              style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: activeTab === 'info' ? '#3b82f6' : '#f1f5f9', color: activeTab === 'info' ? 'white' : '#475569' }}
-            >
-              Informações
-            </button>
-            <button
-              type="button"
-              className={`btn ${activeTab === 'tasks' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setActiveTab('tasks')}
-              style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: activeTab === 'tasks' ? '#3b82f6' : '#f1f5f9', color: activeTab === 'tasks' ? 'white' : '#475569' }}
-            >
-              Follow-up ({tasks.filter(t => !t.is_completed).length})
-            </button>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={proposal ? 'Editar Proposta' : 'Nova Proposta'}
+        maxWidth="700px"
+        headerActions={
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            {proposal && (
+              <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('info')}
+                  style={{
+                    padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: activeTab === 'info' ? 'white' : 'transparent',
+                    color: activeTab === 'info' ? '#0f172a' : '#64748b',
+                    fontWeight: activeTab === 'info' ? '600' : '500',
+                    boxShadow: activeTab === 'info' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Informações
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('tasks')}
+                  style={{
+                    padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: activeTab === 'tasks' ? 'white' : 'transparent',
+                    color: activeTab === 'tasks' ? '#0f172a' : '#64748b',
+                    fontWeight: activeTab === 'tasks' ? '600' : '500',
+                    boxShadow: activeTab === 'tasks' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Follow-up ({tasks.filter(t => !t.is_completed).length})
+                </button>
+              </div>
+            )}
+            {proposal && (
+              <button
+                type="button"
+                onClick={handleDeleteProposal}
+                className="std-modal-close-btn danger"
+                style={{ color: '#ef4444' }}
+                title="Excluir Proposta"
+              >
+                <Trash2 size={24} />
+              </button>
+            )}
           </div>
-        )}
+        }
+      >
+
+
 
         {/* Tab: Info */}
         {activeTab === 'info' && (
@@ -303,33 +414,34 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
 
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500, color: '#334155' }}>Responsável</label>
-              <select
+              <SearchableSelect
+                options={collaborators.map(c => ({ value: c.name, label: c.name }))}
                 value={formData.responsible || ''}
-                onChange={e => setFormData({ ...formData, responsible: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
-              >
-                <option value="">Selecione...</option>
-                {collaborators.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-              </select>
+                onChange={val => setFormData({ ...formData, responsible: val })}
+                placeholder="Busque ou selecione..."
+              />
             </div>
 
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500, color: '#334155' }}>Cliente</label>
-              <select
-                value={formData.client_id}
-                onChange={e => {
-                  const c = clients.find(cl => cl.id === parseInt(e.target.value));
-                  setFormData({
-                    ...formData,
-                    client_id: e.target.value,
-                    client_name: c ? c.name : ''
-                  })
-                }}
-                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '8px' }}
-              >
-                <option value="">-- Novo / Prospect --</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <div style={{ marginBottom: '8px' }}>
+                <SearchableSelect
+                  options={[
+                    { value: '', label: '-- Novo / Prospect --' },
+                    ...clients.map(c => ({ value: String(c.id), label: c.name }))
+                  ]}
+                  value={String(formData.client_id || '')}
+                  onChange={val => {
+                    const c = clients.find(cl => cl.id === parseInt(val));
+                    setFormData({
+                      ...formData,
+                      client_id: val,
+                      client_name: c ? c.name : ''
+                    });
+                  }}
+                  placeholder="Busque ou selecione um cliente..."
+                />
+              </div>
               {!formData.client_id && (
                 <input
                   value={formData.client_name}
@@ -644,8 +756,16 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </Modal>
+
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={confirmDeleteProposal}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja excluir esta proposta? A proposta e suas tarefas associadas serão permanentemente removidas."
+      />
+    </>
   );
 };
 

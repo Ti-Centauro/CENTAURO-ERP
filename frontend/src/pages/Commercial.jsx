@@ -22,9 +22,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
-import { Plus, Search, FileText, CheckCircle, XCircle, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, FileText, CheckCircle, XCircle, ChevronDown, ChevronUp, SlidersHorizontal, AlertCircle } from 'lucide-react';
 import './Commercial.css';
 import ProposalModal from '../components/commercial/ProposalModal';
+import Modal from '../components/shared/Modal';
 
 // --- CONSTANTS - 9 Colunas do Funil ---
 const COLUMNS = [
@@ -338,98 +339,99 @@ const Commercial = () => {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className="btn flex items-center justify-center bg-white border border-gray-200 hover:bg-gray-50 transition-colors relative"
+              style={{ width: '40px', height: '40px', borderRadius: '6px', padding: 0 }}
+              title="Filtros"
+            >
+              <SlidersHorizontal size={18} className="text-gray-600" />
+              {filterStatuses.length > 0 && filterStatuses.length !== COLUMNS.length && (
+                <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {filterStatuses.length}
+                </span>
+              )}
+            </button>
+
+            {/* Popover de Filtros */}
+            {filtersOpen && (
+              <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-5 w-[400px]">
+                <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Filtros do Funil</h3>
+                  <button onClick={() => setFiltersOpen(false)} className="text-gray-400 hover:text-gray-600">
+                    <XCircle size={18} />
+                  </button>
+                </div>
+
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Status</h4>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {COLUMNS.map(col => {
+                    const isActive = filterStatuses.includes(col.id);
+                    return (
+                      <button
+                        key={col.id}
+                        type="button"
+                        onClick={() => {
+                          if (isActive) {
+                            setFilterStatuses(filterStatuses.filter(s => s !== col.id));
+                          } else {
+                            setFilterStatuses([...filterStatuses, col.id]);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${isActive
+                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-transparent'
+                          : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                          }`}
+                      >
+                        {col.title}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Data Início</label>
+                    <input
+                      type="date"
+                      value={filterStartDate}
+                      onChange={(e) => setFilterStartDate(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Data Fim</label>
+                    <input
+                      type="date"
+                      value={filterEndDate}
+                      onChange={(e) => setFilterEndDate(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-gray-100">
+                  <button
+                    onClick={() => {
+                      loadData();
+                      setFiltersOpen(false);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg px-6 py-2 transition-colors w-full"
+                  >
+                    Aplicar Filtros
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button className="btn btn-primary" onClick={handleNewProposal}>
             <Plus size={18} /> Nova Proposta
           </button>
         </div>
       </header>
-
-      {/* PAINEL DE FILTROS RECOLHÍVEL */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6 mt-4 shrink-0 w-full overflow-hidden">
-
-        {/* Header clicável */}
-        <button
-          type="button"
-          onClick={() => setFiltersOpen(!filtersOpen)}
-          className="w-full flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal size={16} className="text-gray-500" />
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Filtros</span>
-            {!filtersOpen && filterStatuses.length > 0 && (
-              <span className="text-xs text-blue-600 font-medium ml-1">
-                ({filterStatuses.length} status selecionados)
-              </span>
-            )}
-          </div>
-          {filtersOpen ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
-        </button>
-
-        {/* Conteúdo colapsável */}
-        {filtersOpen && (
-          <div className="px-6 pb-5 pt-2 flex flex-col xl:flex-row gap-6 justify-between items-start border-t border-gray-100">
-
-            {/* Lado Esquerdo: Status do Funil */}
-            <div className="flex-1">
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 block">Status do Funil</h3>
-              <div className="flex flex-wrap gap-2">
-                {COLUMNS.map(col => {
-                  const isActive = filterStatuses.includes(col.id);
-                  return (
-                    <button
-                      key={col.id}
-                      type="button"
-                      onClick={() => {
-                        if (isActive) {
-                          setFilterStatuses(filterStatuses.filter(s => s !== col.id));
-                        } else {
-                          setFilterStatuses([...filterStatuses, col.id]);
-                        }
-                      }}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${isActive
-                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-transparent'
-                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                        }`}
-                    >
-                      {col.title}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Lado Direito: Filtros de Data e Botão */}
-            <div className="flex flex-wrap items-end gap-4 min-w-[320px]">
-              <div className="flex flex-col gap-1 w-full sm:w-auto">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">De</label>
-                <input
-                  type="date"
-                  value={filterStartDate}
-                  onChange={(e) => setFilterStartDate(e.target.value)}
-                  className="w-full sm:w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              <div className="flex flex-col gap-1 w-full sm:w-auto">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Até</label>
-                <input
-                  type="date"
-                  value={filterEndDate}
-                  onChange={(e) => setFilterEndDate(e.target.value)}
-                  className="w-full sm:w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              <button
-                onClick={loadData}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-6 py-2 transition-colors"
-              >
-                Aplicar
-              </button>
-            </div>
-
-          </div>
-        )}
-
-      </div>
 
       {isDragScrolling && <div className="global-drag-overlay" />}
 
@@ -505,94 +507,93 @@ const Commercial = () => {
         proposal={selectedProposal}
         onSuccess={loadData}
         initialClients={clients}
+        maxWidth="1000px"
       />
 
 
       {/* LOSS MODAL */}
-      {showLossModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '450px' }}>
-            <div className="modal-header" style={{ textAlign: 'center' }}>
-              <XCircle size={48} color="#ef4444" style={{ marginBottom: '10px' }} />
-              <h3 style={{ margin: 0 }}>Registrar Perda</h3>
-              <p style={{ color: '#64748b', margin: '5px 0 0 0' }}>Informe o motivo da perda desta proposta</p>
-            </div>
-            <div className="form-group">
-              <label>Motivo da Perda *</label>
-              <textarea
-                rows={4}
-                value={lossReason}
-                onChange={e => setLossReason(e.target.value)}
-                placeholder="Ex: Preço acima do concorrente, cliente desistiu do projeto, prazo não atendeu..."
-                style={{ resize: 'none' }}
-              />
-            </div>
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={cancelLoss}>Cancelar</button>
-              <button type="button" className="btn btn-primary" style={{ background: '#ef4444' }} onClick={confirmLoss}>
-                Confirmar Perda
-              </button>
-            </div>
-          </div>
+      <Modal
+        isOpen={showLossModal}
+        onClose={cancelLoss}
+        title="Registrar Perda"
+        maxWidth="450px"
+      >
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <AlertCircle size={48} color="#ef4444" style={{ marginBottom: '10px' }} />
+          <p style={{ color: '#64748b', margin: '5px 0 0 0' }}>Informe o motivo da perda desta proposta</p>
         </div>
-      )}
+        <div className="form-group" style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Motivo da Perda *</label>
+          <textarea
+            rows={4}
+            value={lossReason}
+            onChange={e => setLossReason(e.target.value)}
+            placeholder="Ex: Preço acima do concorrente, cliente desistiu do projeto..."
+            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '6px', resize: 'vertical' }}
+          />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button type="button" className="btn btn-secondary" onClick={cancelLoss}>Cancelar</button>
+          <button type="button" className="btn btn-primary" style={{ background: '#ef4444' }} onClick={confirmLoss}>
+            Confirmar Perda
+          </button>
+        </div>
+      </Modal>
 
       {/* CONVERT MODAL */}
-      {showConvertModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '600px' }}>
-            <div className="modal-header">
-              <h3><CheckCircle size={20} color="#16a34a" /> Aprovar Proposta</h3>
-              <p>Gerar Projeto, Obra ou Contrato Oficial</p>
+      <Modal
+        isOpen={showConvertModal}
+        onClose={cancelConversion}
+        title={<span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={20} color="#16a34a" /> Aprovar Proposta</span>}
+        maxWidth="600px"
+      >
+        <p style={{ color: '#64748b', marginBottom: '20px' }}>Gerar Projeto, Obra ou Contrato Oficial</p>
+        <form onSubmit={handleConversion}>
+          <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Empresa (Prefixo TAG) *</label>
+              <select className="input" required value={convertFormData.company_id || ''} onChange={e => setConvertFormData({ ...convertFormData, company_id: e.target.value })}>
+                <option value="">Selecione...</option>
+                <option value="1">1 - Engenharia</option>
+                <option value="2">2 - Telecom</option>
+                <option value="3">3 - ES</option>
+                <option value="4">4 - MA</option>
+                <option value="5">5 - SP</option>
+              </select>
             </div>
-            <form onSubmit={handleConversion}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Empresa (Prefixo TAG) *</label>
-                  <select required value={convertFormData.company_id || ''} onChange={e => setConvertFormData({ ...convertFormData, company_id: e.target.value })}>
-                    <option value="">Selecione...</option>
-                    <option value="1">1 - Engenharia</option>
-                    <option value="2">2 - Telecom</option>
-                    <option value="3">3 - ES</option>
-                    <option value="4">4 - MA</option>
-                    <option value="5">5 - SP</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Data de Início Real *</label>
-                  <input type="date" required value={convertFormData.start_date} onChange={e => setConvertFormData({ ...convertFormData, start_date: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Orçamento Aprovado (R$)</label>
-                  <input type="number" step="0.01" value={convertFormData.budget} onChange={e => setConvertFormData({ ...convertFormData, budget: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Previsão (Dias)</label>
-                  <input type="number" value={convertFormData.estimated_days} onChange={e => setConvertFormData({ ...convertFormData, estimated_days: e.target.value })} />
-                </div>
-                <div className="form-group full-width">
-                  <label>Escopo do Projeto</label>
-                  <textarea value={convertFormData.project_scope} onChange={e => setConvertFormData({ ...convertFormData, project_scope: e.target.value })} rows={4} />
-                </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Data de Início Real *</label>
+              <input className="input" type="date" required value={convertFormData.start_date} onChange={e => setConvertFormData({ ...convertFormData, start_date: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Orçamento Aprovado (R$)</label>
+              <input className="input" type="number" step="0.01" value={convertFormData.budget} onChange={e => setConvertFormData({ ...convertFormData, budget: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="label">Previsão (Dias)</label>
+              <input className="input" type="number" value={convertFormData.estimated_days} onChange={e => setConvertFormData({ ...convertFormData, estimated_days: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+              <label className="label">Escopo do Projeto</label>
+              <textarea className="input" value={convertFormData.project_scope} onChange={e => setConvertFormData({ ...convertFormData, project_scope: e.target.value })} rows={4} />
+            </div>
 
-                {(!selectedProposal.client_id && !convertFormData.client_id) && (
-                  <div className="form-group full-width" style={{ border: '1px solid #f59e0b', padding: '10px', borderRadius: '4px', background: '#fffbeb' }}>
-                    <label style={{ color: '#b45309' }}>Atenção: Vincule um cliente para continuar</label>
-                    <select required onChange={e => setConvertFormData({ ...convertFormData, client_id: e.target.value })}>
-                      <option value="">Selecione um cliente...</option>
-                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                )}
+            {(!selectedProposal || (!selectedProposal.client_id && !convertFormData.client_id)) && (
+              <div className="form-group full-width" style={{ gridColumn: '1 / -1', border: '1px solid #f59e0b', padding: '10px', borderRadius: '4px', background: '#fffbeb' }}>
+                <label style={{ color: '#b45309', display: 'block', marginBottom: '8px' }}>Atenção: Vincule um cliente para continuar</label>
+                <select className="input" required onChange={e => setConvertFormData({ ...convertFormData, client_id: e.target.value })}>
+                  <option value="">Selecione um cliente...</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
               </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={cancelConversion}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ background: '#16a34a' }}>Confirmar e Gerar</button>
-              </div>
-            </form>
+            )}
           </div>
-        </div>
-      )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+            <button type="button" className="btn btn-secondary" onClick={cancelConversion}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" style={{ background: '#16a34a' }}>Confirmar e Gerar</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
