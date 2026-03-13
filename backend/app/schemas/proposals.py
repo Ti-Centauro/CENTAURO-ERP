@@ -19,6 +19,7 @@ class ProposalStatus(str, Enum):
 
 
 class ProposalBase(BaseModel):
+    internal_id: str  # TAG manual (geração automática suspensa)
     title: str
     description: Optional[str] = None
     responsible: Optional[str] = None
@@ -57,7 +58,7 @@ class ProposalUpdate(BaseModel):
 
 class ProposalResponse(ProposalBase):
     id: int
-    internal_id: Optional[str] = None
+    internal_id: str  # TAG manual (geração automática suspensa)
     converted_project_id: Optional[int] = None
     loss_reason: Optional[str] = None
     created_at: Optional[datetime] = None
@@ -69,6 +70,7 @@ class ProposalResponse(ProposalBase):
 
 
 class ProposalConvertRequest(BaseModel):
+    tag: str  # TAG manual (geração automática suspensa)
     start_date: date
     coordinator: Optional[str] = None
     company_id: Optional[int] = None  # To determine TAG prefix

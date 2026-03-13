@@ -89,6 +89,7 @@ import Modal from '../shared/Modal';
 const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = [] }) => {
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'tasks'
   const [formData, setFormData] = useState({
+    internal_id: '',
     title: '',
     client_name: '',
     client_id: '',
@@ -119,6 +120,7 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
       if (proposal) {
         setFormData({
           ...proposal,
+          internal_id: proposal.internal_id || '',
           client_id: proposal.client_id || '',
           // Ensure values are strings for input
           value: proposal.value ? parseFloat(proposal.value).toFixed(2) : '0.00',
@@ -131,6 +133,7 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
       } else {
         // New Proposal
         setFormData({
+          internal_id: '',
           title: '',
           client_name: '',
           client_id: '',
@@ -232,6 +235,7 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
     try {
       const payload = {
         ...formData,
+        internal_id: formData.internal_id.trim().toUpperCase(),
         value: parseFloat(formData.value) || 0,
         labor_value: parseFloat(formData.labor_value) || 0,
         material_value: parseFloat(formData.material_value) || 0,
@@ -401,6 +405,27 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
         {/* Tab: Info */}
         {activeTab === 'info' && (
           <form onSubmit={handleSave}>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500, color: '#334155' }}>TAG da Proposta *</label>
+              <input
+                required
+                value={formData.internal_id}
+                onChange={e => setFormData({ ...formData, internal_id: e.target.value })}
+                readOnly={!!proposal}
+                disabled={!!proposal}
+                placeholder="Ex: PROP-XYZ-01"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  fontWeight: 'bold',
+                  backgroundColor: proposal ? '#f8fafc' : 'white',
+                  cursor: proposal ? 'not-allowed' : 'text'
+                }}
+              />
+            </div>
+
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500, color: '#334155' }}>Título *</label>
               <input

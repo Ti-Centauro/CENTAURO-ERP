@@ -93,18 +93,46 @@ async def create_project(project: schemas.ProjectCreate, db: AsyncSession = Depe
     if not client:
         raise HTTPException(status_code=404, detail=Msg.CLIENT_NOT_FOUND)
     
-    # 2. Determine Project Number and TAG
-    # 2. Determine Project Number and TAG
-    try:
-        tag, next_number, _ = await ProjectService.generate_tag(project, db)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    # ============================================================
+    # [SUSPENSA] Geração automática de TAG suspensa até fim do ano.
+    # O bloco abaixo foi comentado. A TAG agora vem do payload.
+    # Para reverter, descomente o bloco e remova o bloco manual.
+    # ============================================================
+    # # 2. Determine Project Number and TAG (AUTOMÁTICO — COMENTADO)
+    # try:
+    #     tag, next_number, _ = await ProjectService.generate_tag(project, db)
+    # except ValueError as e:
+    #     raise HTTPException(status_code=400, detail=str(e))
 
+    # 2. TAG manual — normalizar e validar unicidade
+    tag = project.tag.strip().upper()
+    
+    # Verificar se a TAG já existe em Projetos
+    existing_project = await db.execute(
+        select(models.Project).where(models.Project.tag == tag)
+    )
+    if existing_project.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=Msg.TAG_ALREADY_EXISTS)
+    
+    # Verificar se a TAG já existe em Contratos
+    existing_contract = await db.execute(
+        select(models.Contract).where(models.Contract.contract_number == tag)
+    )
+    if existing_contract.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=Msg.TAG_ALREADY_EXISTS)
+        
+    # Verificar se a TAG já existe em Propostas
+    from app.models.proposals import CommercialProposal
+    existing_prop = await db.execute(
+        select(CommercialProposal).where(CommercialProposal.internal_id == tag)
+    )
+    if existing_prop.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Esta TAG já está em uso em uma Proposta.")
     
     # Create DB object
     db_project = models.Project(**project.model_dump(exclude={"tag"}))
     db_project.tag = tag
-    db_project.project_number = next_number
+    # db_project.project_number = next_number  # [SUSPENSA] Numeração automática
     
     db.add(db_project)
     await db.commit()

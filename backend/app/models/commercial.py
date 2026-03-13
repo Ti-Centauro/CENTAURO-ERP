@@ -37,7 +37,8 @@ class Contract(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"))
-    description = Column(String)
+    title = Column(String, nullable=True)
+    description = Column(String, nullable=True)
     contract_number = Column(String, nullable=True)
     signature_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)

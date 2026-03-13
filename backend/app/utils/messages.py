@@ -51,6 +51,11 @@ class Msg:
     CONTRACT_DELETED = "Contrato excluído com sucesso."
     
     # ============================================
+    # TAG MESSAGES
+    # ============================================
+    TAG_ALREADY_EXISTS = "Esta TAG já está em uso no sistema."
+    
+    # ============================================
     # COLLABORATOR MESSAGES
     # ============================================
     COLLABORATOR_NOT_FOUND = "Colaborador não encontrado."

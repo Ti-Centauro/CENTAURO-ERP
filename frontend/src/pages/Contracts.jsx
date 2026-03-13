@@ -21,6 +21,7 @@ const Contracts = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [formData, setFormData] = useState({
     client_id: '',
+    title: '',
     description: '',
     contract_number: '',
     signature_date: '',
@@ -156,6 +157,7 @@ const Contracts = () => {
   const resetForm = () => {
     setFormData({
       client_id: '',
+      title: '',
       description: '',
       contract_number: '',
       signature_date: '',
@@ -177,7 +179,8 @@ const Contracts = () => {
   const handleEdit = (contract) => {
     setFormData({
       client_id: contract.client_id,
-      description: contract.description,
+      title: contract.title || '',
+      description: contract.description || '',
       contract_number: contract.contract_number || '',
       signature_date: contract.signature_date || '',
       end_date: contract.end_date || '',
@@ -229,9 +232,16 @@ const Contracts = () => {
 
   const filteredContracts = contracts.filter(contract => {
     const term = searchTerm.toLowerCase();
+    
+    // Find client name for search
+    const client = clients.find(c => c.id === contract.client_id);
+    const clientName = client ? client.name.toLowerCase() : '';
+
     const matchesSearch =
-      contract.description.toLowerCase().includes(term) ||
-      (contract.contract_number && contract.contract_number.toLowerCase().includes(term));
+      (contract.title && contract.title.toLowerCase().includes(term)) ||
+      (contract.description && contract.description.toLowerCase().includes(term)) ||
+      (contract.contract_number && contract.contract_number.toLowerCase().includes(term)) ||
+      clientName.includes(term);
 
     const matchesClient = filterClient ? contract.client_id === parseInt(filterClient) : true;
     const matchesType = filterType ? contract.contract_type === filterType : true;
@@ -243,12 +253,31 @@ const Contracts = () => {
   const columns = [
     { header: 'ID', accessor: 'id', render: row => <span className="text-gray-500 font-mono">#{row.id}</span> },
     {
-      header: 'Contrato', accessor: 'description', render: row => (
-        <div>
-          <div className="font-semibold text-slate-900">{row.description}</div>
-          {row.contract_number && <div className="text-xs text-slate-500">{row.contract_number}</div>}
+      header: 'Tag',
+      accessor: 'contract_number',
+      render: row => <span className="font-mono text-slate-700">{row.contract_number}</span>
+    },
+    {
+      header: 'Título',
+      accessor: 'title',
+      render: row => (
+        <div className="font-semibold text-slate-900">
+          {row.title || row.description}
+          {row.title && row.description && (
+            <div className="text-[10px] text-slate-400 font-normal truncate" style={{ maxWidth: '200px' }}>
+              {row.description}
+            </div>
+          )}
         </div>
       )
+    },
+    {
+      header: 'Cliente',
+      accessor: 'client_id',
+      render: row => {
+        const client = clients.find(c => c.id === row.client_id);
+        return <span className="text-slate-600">{client ? client.name : 'Não informado'}</span>;
+      }
     },
     {
       header: 'Tipo', accessor: 'contract_type', render: row => {
@@ -276,8 +305,7 @@ const Contracts = () => {
         const endDate = row.end_date ? new Date(row.end_date + 'T12:00:00') : null;
         const isExpired = endDate && endDate < today;
         const status = isExpired ? 'Vencido' : 'Ativo';
-        // Manually override color for Active to match existing green
-        return <StatusBadge status={status} />
+        return <StatusBadge status={status} />;
       }
     },
     {
@@ -319,7 +347,7 @@ const Contracts = () => {
               <input
                 type="text"
                 className="input"
-                placeholder="Buscar por descrição ou número..."
+                placeholder="Buscar por título, tag ou cliente..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ width: '100%' }}
@@ -379,15 +407,22 @@ const Contracts = () => {
             {/* Coluna Esquerda */}
             <div className="form-column">
               <div className="form-group">
-                <label className="label">TAG (Automático)</label>
+                {/* TAG — campo manual obrigatório na criação, readOnly na edição */}
+                <label className="label">TAG do Contrato *</label>
                 <input
                   type="text"
                   name="contract_number"
                   className="input"
-                  value={formData.contract_number || 'Gerado Automaticamente'}
-                  readOnly
-                  disabled
-                  style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed', fontWeight: 'bold' }}
+                  value={formData.contract_number}
+                  onChange={handleChange}
+                  required
+                  readOnly={!!editingId}
+                  disabled={!!editingId}
+                  placeholder={editingId ? '' : 'Ex: CEC1_2603_001_01'}
+                  style={editingId
+                    ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed', fontWeight: 'bold' }
+                    : { fontWeight: 'bold' }
+                  }
                 />
               </div>
 
@@ -431,18 +466,28 @@ const Contracts = () => {
               </div>
 
               <div className="form-group">
-                <label className="label">Título/Descrição *</label>
+                <label className="label">Título do Contrato *</label>
                 <input
                   type="text"
+                  name="title"
+                  className="input"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                  placeholder="ex: Contrato Ternium 2024"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Descrição / Observações</label>
+                <textarea
                   name="description"
                   className="input"
                   value={formData.description}
                   onChange={handleChange}
-                  required
-                  placeholder="ex: Contrato Ternium 2024"
-                  readOnly={!!editingId}
-                  disabled={!!editingId}
-                  style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
+                  placeholder="Detalhes adicionais do contrato..."
+                  rows={3}
+                  style={{ resize: 'vertical' }}
                 />
               </div>
 
@@ -579,7 +624,7 @@ const Contracts = () => {
                 </>
               ) : (
                 <>
-                  <div className="form-group">
+                   <div className="form-group">
                     <label className="label">Valor Mensal (R$)</label>
                     <input
                       type="text"
@@ -590,6 +635,7 @@ const Contracts = () => {
                       placeholder="0,00"
                     />
                   </div>
+
                   {editingId && (
                     <div style={{ marginTop: '0.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                       <div className="form-group">

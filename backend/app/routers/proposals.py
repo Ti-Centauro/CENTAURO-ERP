@@ -67,17 +67,53 @@ async def get_proposal(id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/", response_model=schemas.ProposalResponse)
 async def create_proposal(proposal: schemas.ProposalCreate, db: AsyncSession = Depends(get_db)):
-    db_proposal = models.CommercialProposal(**proposal.model_dump())
-    db.add(db_proposal)
-    await db.commit()
-    await db.refresh(db_proposal)
-    
-    # Generate internal ID: PROP-{id}
-    db_proposal.internal_id = f"PROP-{db_proposal.id}"
-    await db.commit()
-    await db.refresh(db_proposal)
-    
-    return db_proposal
+    try:
+        # Import models inside to avoid circular dependencies
+        from app.models.commercial import Project, Contract
+        
+        # 1. TAG manual — normalizar e validar unicidade
+        internal_id = proposal.internal_id.strip().upper()
+        
+        # Validar unicidade em Propostas
+        existing_prop = await db.execute(
+            select(models.CommercialProposal).where(models.CommercialProposal.internal_id == internal_id)
+        )
+        if existing_prop.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Esta TAG de Proposta já está em uso.")
+            
+        # Validar unicidade em Projetos
+        existing_project = await db.execute(
+            select(Project).where(Project.tag == internal_id)
+        )
+        if existing_project.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Esta TAG já está em uso em um Projeto.")
+            
+        # Validar unicidade em Contratos
+        existing_contract = await db.execute(
+            select(Contract).where(Contract.contract_number == internal_id)
+        )
+        if existing_contract.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Esta TAG já está em uso em um Contrato.")
+
+        # Create DB object
+        # Extract fields that are actually in the model to avoid constructor errors
+        exclude_fields = {"internal_id"}
+        payload_data = proposal.model_dump(exclude=exclude_fields)
+        
+        db_proposal = models.CommercialProposal(**payload_data)
+        db_proposal.internal_id = internal_id
+        
+        db.add(db_proposal)
+        await db.commit()
+        await db.refresh(db_proposal)
+        
+        return db_proposal
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR creating proposal: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro interno ao criar proposta: {str(e)}")
 
 
 @router.put("/{id}", response_model=schemas.ProposalResponse)
@@ -144,50 +180,86 @@ async def convert_proposal_to_project(id: int, convert_data: schemas.ProposalCon
     # 3. Determine if it's a Contract or Project
     is_contract = proposal.proposal_type in ["RECORRENTE", "LPU"]
     
-    today = date.today()
-    ref_date = convert_data.start_date
-    yy = ref_date.strftime("%y")
-    mm = ref_date.strftime("%m")
-    ccc = client.client_number if client.client_number else "00"
+    # ============================================================
+    # [SUSPENSA] Geração automática de TAG suspensa até fim do ano.
+    # Os blocos abaixo foram comentados. A TAG agora vem do payload.
+    # Para reverter, descomente os blocos e remova o bloco manual.
+    # ============================================================
+    
+    # # Variáveis de data usadas na geração automática (AUTOMÁTICO — COMENTADO)
+    # today = date.today()
+    # ref_date = convert_data.start_date
+    # yy = ref_date.strftime("%y")
+    # mm = ref_date.strftime("%m")
+    # ccc = client.client_number if client.client_number else "00"
+
+    # TAG manual — normalizar e validar unicidade
+    tag = convert_data.tag.strip().upper()
+    
+    # Verificar se a TAG já existe em Projetos
+    existing_project = await db.execute(
+        select(commercial_models.Project).where(commercial_models.Project.tag == tag)
+    )
+    if existing_project.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Esta TAG já está em uso no sistema.")
+    
+    # Verificar se a TAG já existe em Contratos
+    existing_contract = await db.execute(
+        select(commercial_models.Contract).where(commercial_models.Contract.contract_number == tag)
+    )
+    if existing_contract.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Esta TAG já está em uso no sistema.")
+        
+    # Verificar se a TAG já existe em Propostas (EXCETO a proposta atual que está sendo convertida)
+    existing_prop = await db.execute(
+        select(models.CommercialProposal).where(
+            models.CommercialProposal.internal_id == tag,
+            models.CommercialProposal.id != id
+        )
+    )
+    if existing_prop.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Esta TAG já está em uso em uma Proposta.")
     
     if is_contract:
-        # Generate Contract TAG (CEC or CEL)
-        prefix_type = "CEL" if proposal.proposal_type == "LPU" else "CEC"
-        prefix_base = f"{prefix_type}{convert_data.company_id}" if convert_data.company_id else prefix_type
-        
-        pattern = f"{prefix_base}_{yy}%"
-        result = await db.execute(select(func.count(commercial_models.Contract.id)).where(commercial_models.Contract.contract_number.like(pattern)))
-        count = result.scalar() or 0
-        next_number = count + 1
-        nn = f"{next_number:02d}"
-        
-        tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
+        # # Generate Contract TAG (CEC or CEL) (AUTOMÁTICO — COMENTADO)
+        # prefix_type = "CEL" if proposal.proposal_type == "LPU" else "CEC"
+        # prefix_base = f"{prefix_type}{convert_data.company_id}" if convert_data.company_id else prefix_type
+        # 
+        # pattern = f"{prefix_base}_{yy}%"
+        # result = await db.execute(select(func.count(commercial_models.Contract.id)).where(commercial_models.Contract.contract_number.like(pattern)))
+        # count = result.scalar() or 0
+        # next_number = count + 1
+        # nn = f"{next_number:02d}"
+        # 
+        # tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
         
         # Create Contract
         contract_type = commercial_models.ContractType.LPU if proposal.proposal_type == "LPU" else commercial_models.ContractType.RECORRENTE
         
         new_entity = commercial_models.Contract(
             client_id=client_id,
-            description=convert_data.project_scope or proposal.description or proposal.title,
+            title=proposal.title,
+            description=convert_data.project_scope or proposal.description,
             contract_number=tag,
             signature_date=convert_data.start_date,
             value=proposal.value,
+            monthly_value=proposal.value if contract_type == commercial_models.ContractType.RECORRENTE else None,
             contract_type=contract_type,
             company_id=convert_data.company_id
         )
         entity_type = "Contrato"
         
     else:
-        # Generate Project TAG (CEP)
-        prefix_base = f"CEP{convert_data.company_id}" if convert_data.company_id else "CEP"
-        
-        pattern = f"{prefix_base}_{yy}%"
-        result = await db.execute(select(func.count(commercial_models.Project.id)).where(commercial_models.Project.tag.like(pattern)))
-        count = result.scalar() or 0
-        next_number = count + 1
-        nn = f"{next_number:02d}"
-        
-        tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
+        # # Generate Project TAG (CEP) (AUTOMÁTICO — COMENTADO)
+        # prefix_base = f"CEP{convert_data.company_id}" if convert_data.company_id else "CEP"
+        # 
+        # pattern = f"{prefix_base}_{yy}%"
+        # result = await db.execute(select(func.count(commercial_models.Project.id)).where(commercial_models.Project.tag.like(pattern)))
+        # count = result.scalar() or 0
+        # next_number = count + 1
+        # nn = f"{next_number:02d}"
+        # 
+        # tag = f"{prefix_base}_{yy}{mm}_{ccc}_{nn}"
         
         # Create Project
         if convert_data.budget is not None and format(convert_data.budget, ".2f") != format(proposal.value or 0, ".2f"):
@@ -201,9 +273,9 @@ async def convert_proposal_to_project(id: int, convert_data: schemas.ProposalCon
 
         new_entity = commercial_models.Project(
             tag=tag,
-            project_number=next_number,
+            # project_number=next_number,  # [SUSPENSA] Numeração automática
             name=proposal.title,
-            scope=convert_data.project_scope or proposal.description or proposal.title,
+            scope=convert_data.project_scope or proposal.description,
             coordinator=convert_data.coordinator,
             status="Em Andamento",
             client_id=client_id,

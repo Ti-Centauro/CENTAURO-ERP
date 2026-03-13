@@ -46,8 +46,9 @@ class ClientResponse(ClientBase):
 # Contract Schemas
 class ContractBase(BaseModel):
     client_id: int
-    description: str
-    contract_number: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    contract_number: str  # TAG manual (geração automática suspensa)
     signature_date: Optional[DateType] = None
     end_date: Optional[DateType] = None
     value: Optional[Decimal] = None
@@ -71,7 +72,7 @@ class ContractResponse(ContractBase):
 
 # Project Schemas
 class ProjectBase(BaseModel):
-    tag: Optional[str] = None # Auto-generated
+    tag: str  # TAG manual (geração automática suspensa)
     name: str
     scope: Optional[str] = None
     coordinator: Optional[str] = None

@@ -108,6 +108,7 @@ const Projects = () => {
     try {
       const dataToSend = {
         ...formData,
+        tag: formData.tag, // TAG manual obrigatória
         contract_id: formData.contract_id ? parseInt(formData.contract_id) : null,
         service_value: formData.service_value ? parseFloat(formData.service_value) : 0,
         material_value: formData.material_value ? parseFloat(formData.material_value) : 0,
@@ -331,6 +332,22 @@ const Projects = () => {
             <h3>{editingId ? 'Editar Projeto' : 'Novo Projeto'}</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
+                {/* TAG — campo manual obrigatório na criação, readOnly na edição */}
+                <div className="form-group">
+                  <label className="label">TAG do Projeto *</label>
+                  <input
+                    type="text"
+                    name="tag"
+                    className="input"
+                    value={formData.tag}
+                    onChange={handleChange}
+                    required
+                    readOnly={!!editingId}
+                    disabled={!!editingId}
+                    placeholder={editingId ? '' : 'Ex: CEP1_2603_001_01'}
+                    style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed', fontWeight: 'bold' } : { fontWeight: 'bold' }}
+                  />
+                </div>
                 <div className="form-group">
                   <label className="label">Cliente *</label>
                   <select
@@ -349,7 +366,8 @@ const Projects = () => {
                     ))}
                   </select>
                 </div>
-                {!editingId && (
+                {/* Nº Projeto (AUTOMÁTICO — COMENTADO) */}
+                {/* {!editingId && (
                   <div className="form-group">
                     <label className="label">Nº Projeto (Manual/Opcional)</label>
                     <input
@@ -361,20 +379,7 @@ const Projects = () => {
                       placeholder="Automático se vazio"
                     />
                   </div>
-                )}
-                {editingId && (
-                  <div className="form-group">
-                    <label className="label">Tag</label>
-                    <input
-                      type="text"
-                      name="tag"
-                      className="input"
-                      value={formData.tag}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-                )}
+                )} */}
                 <div className="form-group">
                   <label className="label">Nome *</label>
                   <input

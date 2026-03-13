@@ -196,6 +196,7 @@ const Commercial = () => {
       if (newStatus === 'GANHA' && !proposal.converted_project_id) {
         setSelectedProposal(proposal);
         setConvertFormData({
+          tag: '',
           start_date: new Date().toISOString().split('T')[0],
           manager_name: '',
           project_scope: proposal.description || proposal.title,
@@ -273,6 +274,7 @@ const Commercial = () => {
     e.preventDefault();
     try {
       const payload = {
+        tag: convertFormData.tag, // TAG manual obrigatória
         start_date: convertFormData.start_date,
         coordinator: convertFormData.coordinator,
         company_id: parseInt(convertFormData.company_id),
@@ -550,9 +552,22 @@ const Commercial = () => {
         <p style={{ color: '#64748b', marginBottom: '20px' }}>Gerar Projeto, Obra ou Contrato Oficial</p>
         <form onSubmit={handleConversion}>
           <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            {/* TAG — campo manual obrigatório */}
+            <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+              <label className="label">TAG do Projeto/Contrato *</label>
+              <input
+                className="input"
+                type="text"
+                required
+                value={convertFormData.tag || ''}
+                onChange={e => setConvertFormData({ ...convertFormData, tag: e.target.value })}
+                placeholder="Ex: CEP1_2603_001_01"
+                style={{ fontWeight: 'bold' }}
+              />
+            </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="label">Empresa (Prefixo TAG) *</label>
-              <select className="input" required value={convertFormData.company_id || ''} onChange={e => setConvertFormData({ ...convertFormData, company_id: e.target.value })}>
+              <label className="label">Empresa (Prefixo TAG)</label>
+              <select className="input" value={convertFormData.company_id || ''} onChange={e => setConvertFormData({ ...convertFormData, company_id: e.target.value })}>
                 <option value="">Selecione...</option>
                 <option value="1">1 - Engenharia</option>
                 <option value="2">2 - Telecom</option>
