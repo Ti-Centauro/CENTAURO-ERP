@@ -73,6 +73,7 @@ async def startup():
         columns_to_add = [
             # Table, Column, SQL Type
             ("contracts", "contract_type", "VARCHAR DEFAULT 'LPU'"),
+            ("contracts", "title", "VARCHAR"),
             ("contracts", "monthly_value", "NUMERIC(10, 2)"),
             ("contracts", "due_day", "INTEGER"),
             ("contracts", "readjustment_index", "VARCHAR"),
