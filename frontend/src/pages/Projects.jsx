@@ -6,6 +6,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import ProjectModal from '../components/projects/ProjectModal';
 import DataTable from '../components/shared/DataTable';
 import StatusBadge from '../components/shared/StatusBadge';
+import SearchableSelect from '../components/shared/SearchableSelect';
 import { PROJECT_STATUS, PROJECT_STATUS_OPTIONS } from '../utils/constants';
 import './Projects.css';
 
@@ -353,21 +354,15 @@ const Projects = () => {
                 </div>
                 <div className="form-group">
                   <label className="label">Cliente *</label>
-                  <select
+                  <SearchableSelect
                     name="client_id"
-                    className="input"
+                    placeholder="Selecione um cliente"
+                    options={clients.map(c => ({ value: c.id, label: c.name }))}
                     value={formData.client_id}
                     onChange={handleChange}
                     required
                     disabled={!!editingId}
-                  >
-                    <option value="">Selecione um cliente</option>
-                    {clients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 {/* Nº Projeto (AUTOMÁTICO — COMENTADO) */}
                 {/* {!editingId && (
@@ -429,19 +424,13 @@ const Projects = () => {
                 </div>
                 <div className="form-group">
                   <label className="label">Coordenador</label>
-                  <select
+                  <SearchableSelect
                     name="coordinator"
-                    className="input"
+                    placeholder="Selecione um coordenador"
+                    options={collaborators.map(c => ({ value: c.name, label: c.name }))}
                     value={formData.coordinator}
                     onChange={handleChange}
-                  >
-                    <option value="">Selecione um coordenador</option>
-                    {collaborators.map((collab) => (
-                      <option key={collab.id} value={collab.name}>
-                        {collab.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="form-group full-width">
                   <label className="label">Escopo</label>
@@ -639,33 +628,23 @@ const Projects = () => {
           <div className="filters-row">
             <div className="filter-group">
               <label className="label">Cliente</label>
-              <select
-                className="input"
-                value={filterClient}
-                onChange={(e) => setFilterClient(e.target.value)}
-              >
-                <option value="">Todos</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
+                <SearchableSelect
+                  name="filterClient"
+                  placeholder="Todos os clientes"
+                  options={clients.map(c => ({ value: c.id, label: c.name }))}
+                  value={filterClient}
+                  onChange={(e) => setFilterClient(e.target.value)}
+                />
             </div>
             <div className="filter-group">
               <label className="label">Coordenador</label>
-              <select
-                className="input"
-                value={filterCoordinator}
-                onChange={(e) => setFilterCoordinator(e.target.value)}
-              >
-                <option value="">Todos</option>
-                {uniqueCoordinators.map((coord) => (
-                  <option key={coord} value={coord}>
-                    {coord}
-                  </option>
-                ))}
-              </select>
+                <SearchableSelect
+                  name="filterCoordinator"
+                  placeholder="Todos os coordenadores"
+                  options={uniqueCoordinators.map(coord => ({ value: coord, label: coord }))}
+                  value={filterCoordinator}
+                  onChange={(e) => setFilterCoordinator(e.target.value)}
+                />
             </div>
             <div className="filter-group">
               <label className="label">Status</label>

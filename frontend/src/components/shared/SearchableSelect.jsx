@@ -2,92 +2,89 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import './SearchableSelect.css';
 
-const SearchableSelect = ({ options, value, onChange, placeholder, name, required }) => {
+const SearchableSelect = ({ options, value, onChange, placeholder, name, required, disabled }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredOptions, setFilteredOptions] = useState([]);
   const wrapperRef = useRef(null);
 
+  // When value changes from outside, update the display text to match the selected option's label
   useEffect(() => {
-    // Initialize search term with current value
-    setSearchTerm(value || '');
-  }, [value]);
-
-  useEffect(() => {
-    // Filter options based on search term
-    if (!searchTerm) {
-      setFilteredOptions(options);
-    } else {
-      const lowerTerm = searchTerm.toLowerCase();
-      const filtered = options.filter(option =>
-        option.label.toLowerCase().includes(lowerTerm)
-      );
-      setFilteredOptions(filtered);
+    const selectedOption = options.find(opt => String(opt.value) === String(value));
+    if (selectedOption) {
+      setSearchTerm(selectedOption.label);
+    } else if (!value) {
+      setSearchTerm('');
     }
-  }, [searchTerm, options]);
+  }, [value, options]);
 
   useEffect(() => {
-    // Close dropdown when clicking outside
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
         setIsOpen(false);
-        // If the current search term doesn't match the value (user typed but didn't select), 
-        // we might want to reset it or keep it as free text. 
-        // For now, let's keep it as free text if the parent allows it, 
-        // but here we just ensure the visual state matches the prop value if we want strict mode.
-        // But since we update parent on change, it should be fine.
+        // If we close without selecting, reset search term to reflect current value's label
+        const selectedOption = options.find(opt => String(opt.value) === String(value));
+        setSearchTerm(selectedOption ? selectedOption.label : '');
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [value, options]);
 
   const handleInputChange = (e) => {
-    const newValue = e.target.value;
-    setSearchTerm(newValue);
+    setSearchTerm(e.target.value);
     setIsOpen(true);
-    onChange({ target: { name, value: newValue } });
+    // If user CLEARS the input, trigger empty value update
+    if (!e.target.value) {
+        onChange({ target: { name, value: '' } });
+    }
   };
 
-  const handleSelectOption = (optionValue) => {
-    setSearchTerm(optionValue);
+  const handleSelectOption = (option) => {
+    setSearchTerm(option.label);
     setIsOpen(false);
-    onChange({ target: { name, value: optionValue } });
+    onChange({ target: { name, value: option.value } });
   };
 
-  const handleInputFocus = () => {
-    setIsOpen(true);
-  };
+  const filteredOptions = options.filter(option =>
+    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="searchable-select-wrapper" ref={wrapperRef}>
+    <div className={`searchable-select-wrapper ${disabled ? 'disabled' : ''}`} ref={wrapperRef}>
       <div className="searchable-select-input-container">
         <input
           type="text"
+          name={name}
           className="input searchable-select-input"
           placeholder={placeholder}
           value={searchTerm}
           onChange={handleInputChange}
-          onFocus={handleInputFocus}
+          onFocus={() => !disabled && setIsOpen(true)}
           required={required}
+          disabled={disabled}
+          autoComplete="off"
         />
         <div className="searchable-select-icon">
           <ChevronDown size={16} />
         </div>
       </div>
 
-      {isOpen && filteredOptions.length > 0 && (
+      {isOpen && !disabled && (
         <ul className="searchable-select-dropdown">
-          {filteredOptions.map((option, index) => (
-            <li
-              key={index}
-              className="searchable-select-option"
-              onClick={() => handleSelectOption(option.value)}
-            >
-              {option.label}
-            </li>
-          ))}
+          {filteredOptions.length > 0 ? (
+            filteredOptions.slice(0, 100).map((option) => (
+              <li
+                key={option.value}
+                className={`searchable-select-option ${String(option.value) === String(value) ? 'selected' : ''}`}
+                onClick={() => handleSelectOption(option)}
+              >
+                {option.label}
+              </li>
+            ))
+          ) : (
+            <li className="searchable-select-no-results">Nenhum resultado encontrado</li>
+          )}
         </ul>
       )}
     </div>

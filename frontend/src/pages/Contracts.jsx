@@ -6,6 +6,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import DataTable from '../components/shared/DataTable';
 import Modal from '../components/shared/Modal';
 import StatusBadge from '../components/shared/StatusBadge';
+import SearchableSelect from '../components/shared/SearchableSelect';
 import './Contracts.css';
 
 const Contracts = () => {
@@ -356,16 +357,13 @@ const Contracts = () => {
             <div className="filters-row">
               <div className="filter-group">
                 <label className="label">Cliente</label>
-                <select
-                  className="input"
+                <SearchableSelect
+                  name="filterClient"
+                  placeholder="Todos os clientes"
+                  options={clients.map(c => ({ value: c.id, label: c.name }))}
                   value={filterClient}
                   onChange={(e) => setFilterClient(e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {clients.map(client => (
-                    <option key={client.id} value={client.id}>{client.name}</option>
-                  ))}
-                </select>
+                />
               </div>
               <div className="filter-group">
                 <label className="label">Tipo</label>
@@ -428,22 +426,15 @@ const Contracts = () => {
 
               <div className="form-group">
                 <label className="label">Cliente *</label>
-                <select
+                <SearchableSelect
                   name="client_id"
-                  className="input"
+                  placeholder="Selecione um cliente"
+                  options={clients.map(c => ({ value: c.id, label: c.name }))}
                   value={formData.client_id}
                   onChange={handleChange}
                   required
                   disabled={!!editingId}
-                  style={editingId ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
-                >
-                  <option value="">Selecione um cliente</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div className="form-group">

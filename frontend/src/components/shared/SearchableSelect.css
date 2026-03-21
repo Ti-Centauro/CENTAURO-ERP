@@ -32,7 +32,7 @@
   max-height: 200px;
   overflow-y: auto;
   z-index: 50;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   list-style: none;
   padding: 0;
 }
@@ -46,4 +46,28 @@
 .searchable-select-option:hover {
   background-color: var(--bg-tertiary);
   color: var(--text-primary);
+}
+
+.searchable-select-option.selected {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.searchable-select-no-results {
+  padding: 0.75rem 1rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  text-align: center;
+  font-style: italic;
+}
+
+.searchable-select-wrapper.disabled .searchable-select-input {
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+  color: #64748b;
+}
+
+.searchable-select-wrapper.disabled .searchable-select-icon {
+  opacity: 0.5;
 }
