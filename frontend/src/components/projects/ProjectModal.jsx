@@ -116,7 +116,12 @@ const ProjectModal = ({ project: initialProject, onClose, onUpdate, onEdit }) =>
   };
 
   // Helper for purchases total invoiced passed to info tab
-  const totalInvoiced = (billings || []).reduce((acc, b) => acc + (parseFloat(b.gross_value || b.value) || 0), 0);
+  const totalInvoiced = (billings || []).reduce((acc, b) => {
+    if (b.status === 'PAGO') {
+      return acc + (parseFloat(b.gross_value || b.value) || 0);
+    }
+    return acc;
+  }, 0);
 
   // Tabs Configuration
   const tabs = [
