@@ -11,6 +11,8 @@ from app.models import proposals as models
 from app.utils.timezone import now_brazil, today_brazil, end_of_day_brazil
 from app.models import commercial as commercial_models
 from app.schemas import proposals as schemas
+from app.auth import get_current_active_user
+from app.models.users import User
 
 router = APIRouter(prefix="/commercial/proposals", tags=["Commercial Proposals"])
 
@@ -316,7 +318,10 @@ async def convert_proposal_to_project(id: int, convert_data: schemas.ProposalCon
 
 
 @router.get("/tasks/pending")
-async def get_pending_tasks(db: AsyncSession = Depends(get_db)):
+async def get_pending_tasks(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
     """
     Listar tarefas pendentes (vencidas ou para hoje).
     Retorna: {id, title, due_date, proposal_title, client_name, is_overdue}
@@ -325,7 +330,6 @@ async def get_pending_tasks(db: AsyncSession = Depends(get_db)):
     # End of today (Brasilia Time) - strip tzinfo for naive DateTime column (PostgreSQL compat)
     end_of_day = end_of_day_brazil(today).replace(tzinfo=None)
 
-    # Simple join to get client name if available
     stmt = (
         select(models.ProposalTask)
         .join(models.CommercialProposal)
@@ -336,10 +340,18 @@ async def get_pending_tasks(db: AsyncSession = Depends(get_db)):
             models.ProposalTask.is_completed == False,
             models.ProposalTask.due_date <= end_of_day
         )
-        .order_by(models.ProposalTask.due_date)
     )
 
-    result = await db.execute(stmt)
+    # Filter by responsible user if not superuser
+    if not current_user.is_superuser:
+        user_name = current_user.collaborator.name if current_user.collaborator else None
+        if user_name:
+            stmt = stmt.where(models.CommercialProposal.responsible == user_name)
+        else:
+            # Force no results if user has no linked collaborator name
+            stmt = stmt.where(models.CommercialProposal.responsible == "___HIDDEN_NO_COLLAB___")
+
+    result = await db.execute(stmt.order_by(models.ProposalTask.due_date))
     tasks = result.scalars().all()
 
     response = []
