@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, FileText, Upload, Search } from 'lucide-react';
-import { getContracts, createContract, updateContract, deleteContract, getClients, getProjects, getAllBillings } from '../services/api';
+import { Plus, Trash2, FileText, Upload, Search, DollarSign, LayoutDashboard } from 'lucide-react';
+import { getContracts, createContract, updateContract, deleteContract, getClients, getProjects, getAllBillings, createProjectBilling, deleteProjectBilling } from '../services/api';
+import { formatDateUTC, formatCurrency } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import DataTable from '../components/shared/DataTable';
 import Modal from '../components/shared/Modal';
 import StatusBadge from '../components/shared/StatusBadge';
 import SearchableSelect from '../components/shared/SearchableSelect';
+import Input from '../components/shared/Input';
+import Select from '../components/shared/Select';
+import Button from '../components/shared/Button';
 import './Contracts.css';
 
 const Contracts = () => {
@@ -42,6 +46,15 @@ const Contracts = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [activeTab, setActiveTab] = useState('geral');
+
+  // Financial tab state
+  const [showBillingForm, setShowBillingForm] = useState(false);
+  const [billingFormData, setBillingFormData] = useState({
+    category: 'SERVICE',
+    gross_value: '',
+    description: ''
+  });
 
   useEffect(() => {
     loadContracts();
@@ -193,6 +206,8 @@ const Contracts = () => {
       company_id: contract.company_id || '',
     });
     setEditingId(contract.id);
+    setActiveTab('geral');
+    setShowBillingForm(false);
     setShowForm(true);
   };
 
@@ -229,6 +244,48 @@ const Contracts = () => {
       ...formData,
       [name]: floatValue
     });
+  };
+
+  // ---- Financial Tab Helpers (for RECORRENTE contracts) ----
+  const getContractBillings = (contractId) => {
+    const contractProjectIds = projects
+      .filter(p => p.contract_id === contractId)
+      .map(p => p.id);
+    return billings.filter(b => contractProjectIds.includes(b.project_id));
+  };
+
+  const handleAddBilling = async (e) => {
+    e.preventDefault();
+    if (!editingId) return;
+    const contractProjects = projects.filter(p => p.contract_id === editingId);
+    if (contractProjects.length === 0) {
+      alert('Este contrato não possui projetos vinculados. Crie um projeto primeiro para lançar faturamentos.');
+      return;
+    }
+    try {
+      const val = parseFloat(billingFormData.gross_value);
+      await createProjectBilling(contractProjects[0].id, {
+        ...billingFormData,
+        gross_value: val,
+        value: val,
+        project_id: contractProjects[0].id
+      });
+      setShowBillingForm(false);
+      setBillingFormData({ category: 'SERVICE', gross_value: '', description: '' });
+      loadBillings();
+    } catch (error) {
+      alert('Erro ao criar faturamento: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleDeleteBilling = async (billingId) => {
+    if (!confirm('Tem certeza que deseja excluir este faturamento?')) return;
+    try {
+      await deleteProjectBilling(billingId);
+      loadBillings();
+    } catch (error) {
+      alert('Erro ao excluir: ' + error.message);
+    }
   };
 
   const filteredContracts = contracts.filter(contract => {
@@ -384,7 +441,7 @@ const Contracts = () => {
 
       <Modal
         isOpen={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={() => { setShowForm(false); setActiveTab('geral'); }}
         title={editingId ? 'Editar Contrato' : 'Criar Contrato'}
         maxWidth="900px"
         headerActions={
@@ -400,6 +457,56 @@ const Contracts = () => {
           )
         }
       >
+        {/* Tab Navigation - only show tabs for RECORRENTE in edit mode */}
+        {editingId && formData.contract_type === 'RECORRENTE' && (
+          <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '1rem', gap: '1.5rem' }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('geral')}
+              style={{
+                padding: '0.6rem 0.25rem',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: activeTab === 'geral' ? '#3b82f6' : '#64748b',
+                borderBottom: activeTab === 'geral' ? '2px solid #3b82f6' : '2px solid transparent',
+                transition: 'all 0.2s'
+              }}
+            >
+              <LayoutDashboard size={16} />
+              Visão Geral
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('financial')}
+              style={{
+                padding: '0.6rem 0.25rem',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: activeTab === 'financial' ? '#3b82f6' : '#64748b',
+                borderBottom: activeTab === 'financial' ? '2px solid #3b82f6' : '2px solid transparent',
+                transition: 'all 0.2s'
+              }}
+            >
+              <DollarSign size={16} />
+              Financeiro
+            </button>
+          </div>
+        )}
+
+        {/* GERAL TAB */}
+        {activeTab === 'geral' && (
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', paddingBottom: '0.5rem' }}>
             {/* Coluna Esquerda */}
@@ -721,6 +828,147 @@ const Contracts = () => {
             )}
           </div>
         </form>
+        )}
+
+        {/* FINANCIAL TAB - only for RECORRENTE */}
+        {activeTab === 'financial' && editingId && formData.contract_type === 'RECORRENTE' && (() => {
+          const contractBills = getContractBillings(editingId);
+          const totalFaturadoPago = contractBills
+            .filter(b => b.status === 'PAGO')
+            .reduce((acc, b) => acc + (Number(b.gross_value || b.value) || 0), 0);
+          const totalImpostos = contractBills.reduce((acc, b) => acc + (Number(b.tax_value) || 0), 0);
+          const liquidoReal = totalFaturadoPago - totalImpostos;
+
+          return (
+            <div style={{ padding: '0.5rem 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Histórico de Faturamento</h3>
+                {canEdit && (
+                  <button className="btn btn-primary btn-sm" type="button" onClick={() => setShowBillingForm(!showBillingForm)}>
+                    <Plus size={16} /> Novo Faturamento
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div className="card" style={{ padding: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 0.25rem 0' }}>Valor Mensal</h4>
+                  <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>
+                    R$ {formatCurrency(formData.monthly_value)}
+                  </span>
+                </div>
+                <div className="card" style={{ padding: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 0.25rem 0' }}>Faturado (Bruto)</h4>
+                  <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#3b82f6' }}>
+                    R$ {formatCurrency(totalFaturadoPago)}
+                  </span>
+                </div>
+                <div className="card" style={{ padding: '0.75rem', borderLeft: '3px solid #f87171' }}>
+                  <h4 style={{ fontSize: '0.8rem', color: '#ef4444', margin: '0 0 0.25rem 0' }}>Impostos</h4>
+                  <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#dc2626' }}>
+                    R$ {formatCurrency(totalImpostos)}
+                  </span>
+                </div>
+                <div className="card" style={{ padding: '0.75rem', borderLeft: '3px solid #22c55e', backgroundColor: '#f0fdf4' }}>
+                  <h4 style={{ fontSize: '0.8rem', color: '#15803d', margin: '0 0 0.25rem 0' }}>Receita Líquida</h4>
+                  <span style={{ fontSize: '1.1rem', fontWeight: '700', color: '#166534' }}>
+                    R$ {formatCurrency(liquidoReal)}
+                  </span>
+                </div>
+              </div>
+
+              {showBillingForm && (
+                <form onSubmit={handleAddBilling} style={{ marginBottom: '1.25rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', width: '100%', marginBottom: '10px' }}>
+                    <Select
+                      value={billingFormData.category}
+                      onChange={(e) => setBillingFormData({ ...billingFormData, category: e.target.value })}
+                      required
+                      options={[
+                        { value: 'SERVICE', label: 'Serviço' },
+                        { value: 'MATERIAL', label: 'Material' }
+                      ]}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Valor Bruto (R$)"
+                      step="0.01"
+                      value={billingFormData.gross_value}
+                      onChange={(e) => setBillingFormData({ ...billingFormData, gross_value: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px', width: '100%' }}>
+                    <Input
+                      type="text"
+                      placeholder="Descrição (ex: Mensalidade Jan/2025)"
+                      value={billingFormData.description}
+                      onChange={(e) => setBillingFormData({ ...billingFormData, description: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                    <Button variant="secondary" size="sm" type="button" onClick={() => setShowBillingForm(false)}>Cancelar</Button>
+                    <Button variant="primary" size="sm" type="submit">Salvar</Button>
+                  </div>
+                </form>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {contractBills.map(billing => (
+                  <div key={billing.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 1rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ background: '#f0f9ff', padding: '0.4rem', borderRadius: '50%', color: '#0369a1' }}>
+                        <DollarSign size={18} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>R$ {formatCurrency(billing.gross_value || billing.value)}</strong>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: {
+                              'PREVISTO': '#f1f5f9', 'EMITIDA': '#dbeafe',
+                              'PAGO': '#dcfce7', 'VENCIDA': '#fee2e2',
+                              'CANCELADA': '#f1f5f9', 'SUBSTITUIDA': '#fff7ed'
+                            }[billing.status] || '#f1f5f9',
+                            color: {
+                              'PREVISTO': '#475569', 'EMITIDA': '#1d4ed8',
+                              'PAGO': '#166534', 'VENCIDA': '#dc2626',
+                              'CANCELADA': '#64748b', 'SUBSTITUIDA': '#c2410c'
+                            }[billing.status] || '#475569',
+                            fontWeight: 600,
+                            textTransform: 'uppercase'
+                          }}>
+                            {billing.status}
+                          </span>
+                        </div>
+                        <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                          {formatDateUTC(billing.date)}
+                          {billing.invoice_number && ` - NF ${billing.invoice_number}`}
+                          {billing.description && ` - ${billing.description}`}
+                        </p>
+                      </div>
+                    </div>
+                    {billing.status === 'PREVISTO' && canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBilling(billing.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px' }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {contractBills.length === 0 && !showBillingForm && (
+                  <p style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>Nenhum faturamento lançado para este contrato.</p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
 
       <div style={{ padding: '0 2rem 2rem' }}>
