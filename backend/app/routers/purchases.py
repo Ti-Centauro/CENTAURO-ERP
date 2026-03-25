@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Optional
 from datetime import datetime
+from app.utils.timezone import now_brazil
 from app.database import get_db
 from app.models import purchases as models
 from app.schemas import purchases as schemas
@@ -153,12 +154,18 @@ def recalculate_purchase_status(purchase: models.PurchaseRequest):
          return
 
     all_received = all(i.status == 'delivered' for i in active_items)
+    all_in_stock = all(i.status in ['in_stock', 'delivered'] for i in active_items)
     all_bought = all(i.status in ['bought', 'in_stock', 'delivered'] for i in active_items)
+    all_quoted = all(i.status in ['quoted', 'bought', 'in_stock', 'delivered'] for i in active_items)
 
     if all_received:
         purchase.status = "received" # Retirado
+    elif all_in_stock:
+        purchase.status = "in_stock" # Em estoque
     elif all_bought:
         purchase.status = "ordered" # Comprado
+    elif all_quoted:
+        purchase.status = "quoted" # Cotado
     else:
         purchase.status = "approved"
 
@@ -250,7 +257,7 @@ async def approve_purchase(
         if not has_permission:
             raise HTTPException(status_code=403, detail="Permissão negada. Você não tem alçada para Validação Técnica.")
         
-        purchase.tech_approval_at = datetime.utcnow()
+        purchase.tech_approval_at = now_brazil()
         purchase.tech_approver_id = current_user.id
         
     elif approval.approval_type == schemas.ApprovalType.CONTROL:
@@ -259,7 +266,7 @@ async def approve_purchase(
         if not has_permission:
             raise HTTPException(status_code=403, detail="Permissão negada. Você não tem alçada para Controle de Projetos.")
         
-        purchase.control_approval_at = datetime.utcnow()
+        purchase.control_approval_at = now_brazil()
         purchase.control_approver_id = current_user.id
         
     elif approval.approval_type == schemas.ApprovalType.FINANCE:
@@ -268,7 +275,7 @@ async def approve_purchase(
         if not has_permission:
             raise HTTPException(status_code=403, detail="Permissão negada. Você não tem alçada para Liberação Financeira.")
         
-        purchase.finance_approval_at = datetime.utcnow()
+        purchase.finance_approval_at = now_brazil()
         purchase.finance_approver_id = current_user.id
     
     # Clear any previous rejection if re-approving
@@ -325,7 +332,7 @@ async def reject_purchase(
     # Set rejection info
     purchase.rejection_reason = rejection.reason
     purchase.rejected_by_id = current_user.id
-    purchase.rejected_at = datetime.utcnow()
+    purchase.rejected_at = now_brazil()
     
     # Recalculate (will set to rejected)
     recalculate_purchase_status(purchase)

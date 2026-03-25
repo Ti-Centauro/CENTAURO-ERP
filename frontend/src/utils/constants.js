@@ -68,13 +68,19 @@ export const PURCHASE_STATUS = {
   APROVADO: 'APROVADO',
   REJEITADO: 'REJEITADO',
   COMPRADO: 'COMPRADO',
+  COTADO: 'COTADO',
+  EM_ESTOQUE: 'EM_ESTOQUE',
+  RETIRADO: 'RETIRADO',
 };
 
 export const PURCHASE_STATUS_OPTIONS = [
   { value: 'PENDENTE', label: 'Pendente' },
   { value: 'APROVADO', label: 'Aprovado' },
-  { value: 'REJEITADO', label: 'Rejeitado' },
+  { value: 'COTADO', label: 'Cotado' },
   { value: 'COMPRADO', label: 'Comprado' },
+  { value: 'EM_ESTOQUE', label: 'Em estoque' },
+  { value: 'RETIRADO', label: 'Retirado' },
+  { value: 'REJEITADO', label: 'Rejeitado' },
 ];
 
 // ============================================
@@ -111,7 +117,7 @@ export const BILLING_STATUS = {
 // ============================================
 export const STATUS_COLORS = {
   // Green (success/active)
-  green: ['ACTIVE', 'ATIVO', 'VALID', 'VÁLIDO', 'COMPLETED', 'CONCLUÍDO', 'PAID', 'PAGO', 'APPROVED', 'APROVADO', 'Concluído', 'Ativo', 'Aprovado', 'Faturando'],
+  green: ['ACTIVE', 'ATIVO', 'VALID', 'VÁLIDO', 'COMPLETED', 'CONCLUÍDO', 'PAID', 'PAGO', 'APPROVED', 'APROVADO', 'Concluído', 'Ativo', 'Aprovado', 'Faturando', 'EM ESTOQUE', 'Em estoque', 'RETIRADO', 'Retirado'],
 
   // Yellow/Amber (warning/pending)
   yellow: ['PENDING', 'PENDENTE', 'WARNING', 'IN_PROGRESS', 'EM ANDAMENTO', 'Em Andamento', 'Pausado', 'Em Execução'],
@@ -120,5 +126,5 @@ export const STATUS_COLORS = {
   red: ['INACTIVE', 'INATIVO', 'EXPIRED', 'VENCIDO', 'REJECTED', 'REJEITADO', 'CANCELLED', 'CANCELADO', 'Vencido', 'Cancelado'],
 
   // Blue (info)
-  blue: ['EMITIDA', 'COMPRADO', 'Kick Off', 'Integração', 'Suprimentos', 'Documentação'],
+  blue: ['EMITIDA', 'COMPRADO', 'Cotado', 'COTADO', 'Comprado', 'Retirado', 'Kick Off', 'Integração', 'Suprimentos', 'Documentação'],
 };

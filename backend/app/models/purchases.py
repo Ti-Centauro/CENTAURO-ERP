@@ -1,3 +1,4 @@
+from app.utils.timezone import now_brazil
 from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -22,7 +23,7 @@ class PurchaseRequest(Base):
     # Material Fields
     arrival_forecast = Column(Date, nullable=True) # Data prevista para chegada do material
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_brazil)
     
     # Technical Approval (Engineering)
     tech_approval_at = Column(DateTime, nullable=True)

@@ -16,7 +16,7 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
 
   // Calculate if the form should be locked (read-only)
   // If in 'projects' context and status is Approved or later, lock it.
-  const isLockedStatus = request?.status && ['approved', 'ordered', 'received', 'bought', 'delivered', 'in_stock'].includes(request.status);
+  const isLockedStatus = request?.status && ['approved', 'quoted', 'ordered', 'received', 'bought', 'delivered', 'in_stock'].includes(request.status);
   const readOnly = propReadOnly || (isProjectsContext && isLockedStatus);
 
   const [formData, setFormData] = useState({
@@ -232,7 +232,9 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
                   'pending': 'Pendente',
                   'approved': 'Aprovado',
                   'rejected': 'Rejeitado',
+                  'quoted': 'Cotado',
                   'ordered': 'Comprado',
+                  'in_stock': 'Em estoque',
                   'received': 'Retirado',
                   'cancelled': 'Cancelado'
                 }[formData.status] || formData.status
@@ -311,9 +313,11 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
               >
                 <option value="pending">Pendente</option>
                 <option value="approved">Aprovado</option>
-                <option value="rejected">Rejeitado</option>
+                <option value="quoted">Cotado</option>
                 <option value="ordered">Comprado</option>
+                <option value="in_stock">Em estoque</option>
                 <option value="received">Retirado</option>
+                <option value="rejected">Rejeitado</option>
               </select>
             </div>
 

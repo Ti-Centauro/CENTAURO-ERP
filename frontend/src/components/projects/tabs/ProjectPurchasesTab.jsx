@@ -56,7 +56,9 @@ const ProjectPurchasesTab = ({ project, purchases, canEdit, onSelectRequest, onU
                       'pending': 'Pendente',
                       'approved': 'Aprovado',
                       'rejected': 'Rejeitado',
+                      'quoted': 'Cotado',
                       'ordered': 'Comprado',
+                      'in_stock': 'Em estoque',
                       'received': 'Retirado',
                       'cancelled': 'Cancelado'
                     }[request.status] || request.status

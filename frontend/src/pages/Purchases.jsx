@@ -140,12 +140,15 @@ const Purchases = () => {
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
-                <option value="all">Todos</option>
+                 <option value="all">Todos</option>
                 <option value="pending">Pendente</option>
                 <option value="approved">Aprovado</option>
-                <option value="rejected">Rejeitado</option>
+                <option value="quoted">Cotado</option>
                 <option value="ordered">Comprado</option>
+                <option value="in_stock">Em estoque</option>
                 <option value="received">Retirado</option>
+                <option value="rejected">Rejeitado</option>
+                <option value="cancelled">Cancelado</option>
               </select>
             </div>
             <div className="filter-group">
@@ -186,7 +189,9 @@ const Purchases = () => {
                   'pending': 'Pendente',
                   'approved': 'Aprovado',
                   'rejected': 'Rejeitado',
+                  'quoted': 'Cotado',
                   'ordered': 'Comprado',
+                  'in_stock': 'Em estoque',
                   'received': 'Retirado',
                   'cancelled': 'Cancelado'
                 };
