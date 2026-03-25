@@ -448,7 +448,7 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
                     min="0"
                   />
                 </div>
-                {!readOnly && (
+                {isProjectsContext && !readOnly && (
                   <button className="btn btn-sm btn-secondary" onClick={addItem}>
                     <Plus size={16} /> Adicionar Item
                   </button>
