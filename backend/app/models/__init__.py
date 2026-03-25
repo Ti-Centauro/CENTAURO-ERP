@@ -13,6 +13,6 @@ from .tickets import Ticket
 from .roles import Role
 from .kanban import Task
 from .project_resources import ProjectCollaborator, ProjectTool, ProjectVehicle
-from .purchases import PurchaseRequest
+from .purchases import PurchaseRequest, PurchaseWithdrawal, PurchaseWithdrawalItem
 from .proposals import CommercialProposal, ProposalTask
 from .users import User

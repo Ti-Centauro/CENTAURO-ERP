@@ -17,6 +17,7 @@ class PurchaseItemBase(BaseModel):
     status: str = "pending"
     expected_date: Optional[date] = None
     notes: Optional[str] = None
+    quantity_withdrawn: int = 0
 
 class PurchaseItemCreate(PurchaseItemBase):
     pass
@@ -98,4 +99,36 @@ class ApprovalRequest(BaseModel):
 
 class RejectionRequest(BaseModel):
     reason: str
+
+# ================================
+# WITHDRAWAL SCHEMAS
+# ================================
+
+class WithdrawalItemRequest(BaseModel):
+    item_id: int
+    quantity: int
+
+class WithdrawalRequest(BaseModel):
+    observation: Optional[str] = None
+    items: list[WithdrawalItemRequest]
+
+class WithdrawalItemResponse(BaseModel):
+    id: int
+    item_id: int
+    item_description: Optional[str] = None
+    quantity_withdrawn: int
+
+    class Config:
+        from_attributes = True
+
+class WithdrawalResponse(BaseModel):
+    id: int
+    purchase_id: int
+    user_name: Optional[str] = None
+    observation: Optional[str] = None
+    created_at: datetime
+    items: list[WithdrawalItemResponse] = []
+
+    class Config:
+        from_attributes = True
 

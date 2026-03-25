@@ -71,6 +71,8 @@ export const PURCHASE_STATUS = {
   COTADO: 'COTADO',
   EM_ESTOQUE: 'EM_ESTOQUE',
   RETIRADO: 'RETIRADO',
+  RETIRADO_PARCIAL: 'RETIRADO_PARCIAL',
+  RETIRADO_TOTAL: 'RETIRADO_TOTAL',
 };
 
 export const PURCHASE_STATUS_OPTIONS = [
@@ -79,7 +81,8 @@ export const PURCHASE_STATUS_OPTIONS = [
   { value: 'COTADO', label: 'Cotado' },
   { value: 'COMPRADO', label: 'Comprado' },
   { value: 'EM_ESTOQUE', label: 'Em estoque' },
-  { value: 'RETIRADO', label: 'Retirado' },
+  { value: 'RETIRADO_PARCIAL', label: 'Retirado Parcial' },
+  { value: 'RETIRADO', label: 'Retirado Total' },
   { value: 'REJEITADO', label: 'Rejeitado' },
 ];
 
@@ -117,10 +120,13 @@ export const BILLING_STATUS = {
 // ============================================
 export const STATUS_COLORS = {
   // Green (success/active)
-  green: ['ACTIVE', 'ATIVO', 'VALID', 'VÁLIDO', 'COMPLETED', 'CONCLUÍDO', 'PAID', 'PAGO', 'APPROVED', 'APROVADO', 'Concluído', 'Ativo', 'Aprovado', 'Faturando', 'EM ESTOQUE', 'Em estoque', 'RETIRADO', 'Retirado'],
+  green: ['ACTIVE', 'ATIVO', 'VALID', 'VÁLIDO', 'COMPLETED', 'CONCLUÍDO', 'PAID', 'PAGO', 'APPROVED', 'APROVADO', 'Concluído', 'Ativo', 'Aprovado', 'Faturando', 'EM ESTOQUE', 'Em estoque', 'RETIRADO', 'Retirado', 'Retirado Total', 'RETIRADO_TOTAL'],
 
   // Yellow/Amber (warning/pending)
   yellow: ['PENDING', 'PENDENTE', 'WARNING', 'IN_PROGRESS', 'EM ANDAMENTO', 'Em Andamento', 'Pausado', 'Em Execução'],
+
+  // Orange (partial withdrawal)
+  orange: ['Retirado Parcial', 'RETIRADO_PARCIAL'],
 
   // Red (danger/error)
   red: ['INACTIVE', 'INATIVO', 'EXPIRED', 'VENCIDO', 'REJECTED', 'REJEITADO', 'CANCELLED', 'CANCELADO', 'Vencido', 'Cancelado'],

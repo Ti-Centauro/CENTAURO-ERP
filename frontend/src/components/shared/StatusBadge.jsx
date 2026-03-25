@@ -24,6 +24,9 @@ const StatusBadge = ({ status, type = 'default' }) => {
     if (STATUS_COLORS.blue.includes(s) || STATUS_COLORS.blue.includes(sOriginal)) {
       return { bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe' }; // Blue
     }
+    if (STATUS_COLORS.orange && (STATUS_COLORS.orange.includes(s) || STATUS_COLORS.orange.includes(sOriginal))) {
+      return { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' }; // Orange
+    }
 
     // Fallback for hardcoded common statuses (in case not in constants)
     if (['ACTIVE', 'ATIVO', 'VALID', 'VÁLIDO', 'COMPLETED', 'CONCLUÍDO', 'PAID', 'PAGO', 'APPROVED', 'APROVADO'].includes(s)) {

@@ -86,6 +86,8 @@ export const deletePurchase = (id) => api.delete(`/purchases/purchases/${id}`);
 export const approvePurchase = (id, approvalType) => api.put(`/purchases/purchases/${id}/approve`, { approval_type: approvalType });
 export const rejectPurchase = (id, reason) => api.put(`/purchases/purchases/${id}/reject`, { reason });
 export const clearPurchaseRejection = (id) => api.put(`/purchases/purchases/${id}/clear-rejection`);
+export const withdrawPurchase = (id, data) => api.post(`/purchases/purchases/${id}/withdraw`, data);
+export const getWithdrawals = (id) => api.get(`/purchases/purchases/${id}/withdrawals`);
 
 // Tickets
 export const getTickets = () => api.get('/tickets/tickets');

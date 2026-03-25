@@ -11,7 +11,7 @@ const ApprovalTimeline = ({ request, onUpdate }) => {
   const [rejectReason, setRejectReason] = useState('');
 
   // Auto-collapse if already approved or later
-  const isFinalStatus = ['approved', 'quoted', 'ordered', 'received', 'bought', 'in_stock', 'delivered'].includes(request.status);
+  const isFinalStatus = ['approved', 'quoted', 'ordered', 'received', 'bought', 'in_stock', 'delivered', 'partially_withdrawn'].includes(request.status);
   const [isExpanded, setIsExpanded] = useState(!isFinalStatus);
 
   // Check user permissions from role-based approvals

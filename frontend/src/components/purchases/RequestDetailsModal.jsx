@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save } from 'lucide-react';
-import { updatePurchase, deletePurchase, createPurchase } from '../../services/api';
+import { X, Plus, Trash2, Save, PackageCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { updatePurchase, deletePurchase, createPurchase, getWithdrawals } from '../../services/api';
 import ApprovalTimeline from './ApprovalTimeline';
+import WithdrawalModal from './WithdrawalModal';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../shared/ConfirmModal';
 import './RequestDetailsModal.css';
@@ -16,7 +17,7 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
 
   // Calculate if the form should be locked (read-only)
   // If in 'projects' context and status is Approved or later, lock it.
-  const isLockedStatus = request?.status && ['approved', 'quoted', 'ordered', 'received', 'bought', 'delivered', 'in_stock'].includes(request.status);
+  const isLockedStatus = request?.status && ['approved', 'quoted', 'ordered', 'received', 'bought', 'delivered', 'in_stock', 'partially_withdrawn'].includes(request.status);
   const readOnly = propReadOnly || (isProjectsContext && isLockedStatus);
 
   const [formData, setFormData] = useState({
@@ -32,6 +33,9 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
   });
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [showWithdrawalHistory, setShowWithdrawalHistory] = useState(false);
 
   useEffect(() => {
     if (request) {
@@ -52,6 +56,22 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
       setFormData(prev => ({ ...prev, requester: user.collaborator_name || user.email }));
     }
   }, [request, user]);
+
+  // Load withdrawal history
+  useEffect(() => {
+    if (request?.id) {
+      loadWithdrawals();
+    }
+  }, [request?.id]);
+
+  const loadWithdrawals = async () => {
+    try {
+      const res = await getWithdrawals(request.id);
+      setWithdrawals(res.data);
+    } catch (err) {
+      console.error('Error loading withdrawals:', err);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -235,7 +255,8 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
                   'quoted': 'Cotado',
                   'ordered': 'Comprado',
                   'in_stock': 'Em estoque',
-                  'received': 'Retirado',
+                  'partially_withdrawn': 'Retirado Parcial',
+                  'received': 'Retirado Total',
                   'cancelled': 'Cancelado'
                 }[formData.status] || formData.status
               }
@@ -316,7 +337,8 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
                 <option value="quoted">Cotado</option>
                 <option value="ordered">Comprado</option>
                 <option value="in_stock">Em estoque</option>
-                <option value="received">Retirado</option>
+                <option value="partially_withdrawn">Retirado Parcial</option>
+                <option value="received">Retirado Total</option>
                 <option value="rejected">Rejeitado</option>
               </select>
             </div>
@@ -547,13 +569,23 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
                           value={item.status}
                           onChange={(e) => handleItemChange(index, 'status', e.target.value)}
                           className="input-cell"
-                          disabled={isProjectsContext || readOnly}
+                          disabled={isProjectsContext || readOnly || formData.status === 'pending' || item.status === 'delivered'}
+                          title={
+                            formData.status === 'pending' 
+                              ? 'Aguardando aprovação do pedido para editar itens' 
+                              : item.status === 'delivered'
+                                ? 'Status "Retirado" é bloqueado para edição manual'
+                                : undefined
+                          }
                         >
                           <option value="pending">Pendente</option>
                           <option value="quoted">Cotado</option>
                           <option value="bought">Comprado</option>
                           <option value="in_stock">Em estoque</option>
-                          <option value="delivered">Retirado</option>
+                          {/* 'delivered' (Retirado) é atribuído automaticamente pelo fluxo de retirada */}
+                          {item.status === 'delivered' && (
+                            <option value="delivered">Retirado</option>
+                          )}
                           <option value="cancelled">Cancelado</option>
                         </select>
                       </td>
@@ -576,16 +608,96 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
               </table>
             </div>
           </div>
+
+          {/* Withdrawal History - Both contexts */}
+          {request?.id && withdrawals.length > 0 && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <div
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  cursor: 'pointer', padding: '0.5rem 0',
+                }}
+                onClick={() => setShowWithdrawalHistory(!showWithdrawalHistory)}
+              >
+                <h4 style={{ margin: 0, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <PackageCheck size={18} color="#3b82f6" />
+                  Histórico de Retiradas ({withdrawals.length})
+                </h4>
+                {showWithdrawalHistory
+                  ? <ChevronUp size={20} color="#64748b" />
+                  : <ChevronDown size={20} color="#64748b" />
+                }
+              </div>
+              {showWithdrawalHistory && (
+                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {withdrawals.map(w => (
+                    <div key={w.id} style={{
+                      border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.875rem',
+                      backgroundColor: '#fafbfc',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <span style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.85rem' }}>
+                          {w.user_name || 'Usuário'}
+                        </span>
+                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                          {new Date(w.created_at).toLocaleDateString('pt-BR')} {new Date(w.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#475569' }}>
+                        {w.items.map(wi => (
+                          <div key={wi.id} style={{ marginBottom: '2px' }}>
+                            • {wi.item_description}: <strong>{wi.quantity_withdrawn}</strong> un
+                          </div>
+                        ))}
+                      </div>
+                      {w.observation && (
+                        <div style={{
+                          marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#f1f5f9',
+                          borderRadius: '6px', fontSize: '0.8rem', color: '#475569', fontStyle: 'italic',
+                        }}>
+                          Obs: {w.observation}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="request-modal-footer">
-          {isProjectsContext && !readOnly && request?.id && (
-            <button className="btn btn-danger" onClick={handleDelete} disabled={loading} style={{ marginRight: 'auto' }}>
-              <Trash2 size={18} />
-              Excluir
-            </button>
+          {/* Withdrawal button — visible in BOTH contexts when status allows */}
+          {request?.id && (
+            <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {/* Delete button (projects context only) */}
+              {isProjectsContext && !readOnly && (
+                <button className="btn btn-danger" onClick={handleDelete} disabled={loading}>
+                  <Trash2 size={18} />
+                  Excluir
+                </button>
+              )}
+              {/* Withdrawal button (both contexts) */}
+              {['approved', 'ordered', 'quoted', 'in_stock', 'partially_withdrawn'].includes(formData.status) && (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowWithdrawalModal(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#059669', borderColor: '#059669' }}
+                >
+                  <PackageCheck size={18} />
+                  Registrar Retirada
+                </button>
+              )}
+              {formData.status === 'received' && (
+                <span style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <PackageCheck size={16} /> Todos os itens retirados
+                </span>
+              )}
+            </div>
           )}
-          {(!isProjectsContext || readOnly) && <div style={{ marginRight: 'auto' }}></div>}
+          {!request?.id && isProjectsContext && !readOnly && (
+            <div style={{ marginRight: 'auto' }}></div>
+          )}
           <div className="total-summary" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666' }}>Subtotal: R$ {calculateSubtotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             <span style={{ fontSize: '0.9rem', color: '#666' }}>
@@ -611,6 +723,18 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
           title="Excluir Solicitação"
           message="Tem certeza que deseja excluir esta solicitação? Esta ação não pode ser desfeita."
         />
+
+        {showWithdrawalModal && (
+          <WithdrawalModal
+            request={request}
+            onClose={() => setShowWithdrawalModal(false)}
+            onUpdate={() => {
+              setShowWithdrawalModal(false);
+              onUpdate();
+              loadWithdrawals();
+            }}
+          />
+        )}
       </div>
     </div>
   );

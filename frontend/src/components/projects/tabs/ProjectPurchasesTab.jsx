@@ -59,7 +59,8 @@ const ProjectPurchasesTab = ({ project, purchases, canEdit, onSelectRequest, onU
                       'quoted': 'Cotado',
                       'ordered': 'Comprado',
                       'in_stock': 'Em estoque',
-                      'received': 'Retirado',
+                      'partially_withdrawn': 'Retirado Parcial',
+                      'received': 'Retirado Total',
                       'cancelled': 'Cancelado'
                     }[request.status] || request.status
                   }

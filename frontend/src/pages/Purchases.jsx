@@ -146,7 +146,8 @@ const Purchases = () => {
                 <option value="quoted">Cotado</option>
                 <option value="ordered">Comprado</option>
                 <option value="in_stock">Em estoque</option>
-                <option value="received">Retirado</option>
+                <option value="partially_withdrawn">Retirado Parcial</option>
+                <option value="received">Retirado Total</option>
                 <option value="rejected">Rejeitado</option>
                 <option value="cancelled">Cancelado</option>
               </select>
@@ -192,7 +193,8 @@ const Purchases = () => {
                   'quoted': 'Cotado',
                   'ordered': 'Comprado',
                   'in_stock': 'Em estoque',
-                  'received': 'Retirado',
+                  'partially_withdrawn': 'Retirado Parcial',
+                  'received': 'Retirado Total',
                   'cancelled': 'Cancelado'
                 };
                 return <StatusBadge status={statusLabels[row.status] || row.status} />;

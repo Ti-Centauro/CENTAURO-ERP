@@ -140,7 +140,10 @@ async def startup():
             # Material Taxes
             ("project_billings", "tax_icms", "NUMERIC(10, 2) DEFAULT 0"),
             ("project_billings", "tax_ipi", "NUMERIC(10, 2) DEFAULT 0"),
-            ("project_billings", "value_st", "NUMERIC(10, 2) DEFAULT 0")
+            ("project_billings", "value_st", "NUMERIC(10, 2) DEFAULT 0"),
+            
+            # Purchase Withdrawals
+            ("purchase_items", "quantity_withdrawn", "INTEGER DEFAULT 0"),
         ]
 
         for table, col, dtype in columns_to_add:

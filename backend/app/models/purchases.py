@@ -68,6 +68,37 @@ class PurchaseItem(Base):
     status = Column(String, default="pending") # Status individual do item
     expected_date = Column(Date, nullable=True)  # Prazo de entrega
     notes = Column(String, nullable=True)
+    quantity_withdrawn = Column(Integer, default=0)  # Acumulador de retiradas
 
     request = relationship("PurchaseRequest", back_populates="items")
+
+
+class PurchaseWithdrawal(Base):
+    """Log de retirada de materiais de um pedido de compra."""
+    __tablename__ = "purchase_withdrawals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    purchase_id = Column(Integer, ForeignKey("purchase_requests.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    observation = Column(String, nullable=True)
+    created_at = Column(DateTime, default=now_brazil)
+
+    # Relationships
+    purchase = relationship("PurchaseRequest")
+    user = relationship("app.models.users.User")
+    items = relationship("PurchaseWithdrawalItem", back_populates="withdrawal", cascade="all, delete-orphan")
+
+
+class PurchaseWithdrawalItem(Base):
+    """Itens individuais retirados em uma retirada."""
+    __tablename__ = "purchase_withdrawal_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    withdrawal_id = Column(Integer, ForeignKey("purchase_withdrawals.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("purchase_items.id"), nullable=False)
+    quantity_withdrawn = Column(Integer, nullable=False)
+
+    # Relationships
+    withdrawal = relationship("PurchaseWithdrawal", back_populates="items")
+    item = relationship("PurchaseItem")
 

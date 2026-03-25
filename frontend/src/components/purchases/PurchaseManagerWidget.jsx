@@ -319,36 +319,56 @@ const PurchaseManagerWidget = () => {
                 return (
                   <div
                     key={purchase.id}
-                    className="approval-item"
+                    className="flex justify-between items-center py-4 border-b border-slate-100 last:border-0 hover:bg-slate-50/80 cursor-pointer px-2 transition-all duration-200 group"
                     onClick={() => setSelectedRequest(purchase)}
                   >
-                    <div className="approval-item-info">
-                      <span className="approval-item-name">
-                        {itemStatus.item?.description || purchase.description || `#${purchase.id}`}
+                    {/* Lado Esquerdo (flex-1 min-w-0 pr-4) */}
+                    <div className="flex-1 min-w-0 pr-4">
+                      {/* Linha 1: Título real do pedido + Nome do Item */}
+                      <span className="text-sm font-semibold text-gray-900 truncate block">
+                        {purchase.description || `Solicitação #${purchase.id}`}
+                        {itemStatus.item?.description && itemStatus.item.description !== purchase.description && (
+                          <span className="text-gray-500 font-medium whitespace-pre"> — {itemStatus.item.description}</span>
+                        )}
                       </span>
-                      <span className="approval-item-stage" style={{ color: itemStatus.color }}>
-                        {itemStatus.label}
-                      </span>
-                    </div>
-                    <div className="tracking-item-right-container" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      {deliveryInfo.engineerDate && (
-                        <span className="tracking-date-fixed" title="Previsão do Engenheiro" style={{ color: '#64748b', fontSize: '13px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Target size={14} />
-                          {deliveryInfo.engineerDate}
+                      {/* Linha 2: Contexto (TAG, Projeto e Cliente) */}
+                      <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 truncate">
+                        <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-tight whitespace-nowrap">
+                          {purchase.project_tag || '-'}
                         </span>
-                      )}
+                        <span className="truncate">
+                          {purchase.project_name} &bull; {purchase.client_name}
+                        </span>
+                      </div>
+                    </div>
 
+                    {/* Lado Direito (flex items-center gap-4 shrink-0) */}
+                    <div className="flex items-center gap-4 shrink-0">
+                      {/* Previsão / Timer (Opcional, discreto) */}
                       {deliveryInfo.timer && (
-                        <div className={`tracking-item-date ${deliveryInfo.timer.isLate ? 'late' : ''} ${deliveryInfo.timer.isSoon ? 'soon' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {deliveryInfo.timer.isLate && <AlertCircle size={14} />}
-                          {(deliveryInfo.timer.isSoon || deliveryInfo.timer.showTruck) && <Truck size={14} />}
-                          <span style={{ color: deliveryInfo.timer.isLate || deliveryInfo.timer.isSoon ? 'inherit' : '#64748b', fontSize: '13px', fontWeight: 500 }}>
+                        <div className="hidden lg:flex flex-col items-end text-right mr-2">
+                          <span className={`text-[10px] font-bold ${deliveryInfo.timer.isLate ? 'text-rose-600' : deliveryInfo.timer.isSoon ? 'text-emerald-600' : 'text-slate-400'}`}>
                             {deliveryInfo.timer.text}
                           </span>
                         </div>
                       )}
+
+                      {/* Status: Badge com LARGURA FIXA para alinhamento perfeito */}
+                      <div className={`
+                        w-[140px] flex justify-center text-center px-2 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider border whitespace-nowrap
+                        ${itemStatus.item?.status === 'pending' ? 'bg-slate-50 text-slate-600 border-slate-200' : ''}
+                        ${itemStatus.item?.status === 'quoted' ? 'bg-amber-50 text-amber-600 border-amber-200' : ''}
+                        ${itemStatus.item?.status === 'bought' ? 'bg-blue-50 text-blue-600 border-blue-200' : ''}
+                        ${itemStatus.item?.status === 'in_stock' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : ''}
+                        ${itemStatus.item?.status === 'delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : ''}
+                        ${itemStatus.item?.status === 'cancelled' ? 'bg-rose-50 text-rose-600 border-rose-200' : ''}
+                        ${!['pending','quoted','bought','in_stock','delivered','cancelled'].includes(itemStatus.item?.status) ? 'bg-gray-50 text-gray-600 border-gray-200' : ''}
+                      `}>
+                        {itemStatus.label}
+                      </div>
+                      
+                      <ChevronRight size={14} className="text-gray-300 group-hover:text-slate-400 group-hover:translate-x-1 transition-all duration-200" />
                     </div>
-                    <ChevronRight size={18} className="chevron" />
                   </div>
                 );
               })

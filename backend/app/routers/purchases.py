@@ -139,10 +139,7 @@ def recalculate_purchase_status(purchase: models.PurchaseRequest):
         purchase.status = "pending"
         return
 
-    # 3. If approved, check items for "ordered" (Comprado) or "received" (Retirado)
-    # Status hierarchy: pending < quoted < bought < in_stock < delivered (received)
-    # item.status values: pending, quoted, bought, in_stock, delivered, cancelled
-    
+    # 3. If approved, check items and withdrawals
     if not purchase.items:
         purchase.status = "approved"
         return
@@ -150,22 +147,38 @@ def recalculate_purchase_status(purchase: models.PurchaseRequest):
     active_items = [i for i in purchase.items if i.status != 'cancelled']
     
     if not active_items:
-         purchase.status = "approved" # Or some other state? Keep approved.
+         purchase.status = "approved"
          return
 
+    # 4. Check withdrawals first (highest priority after rejection)
+    total_qty = sum(i.quantity for i in active_items)
+    total_withdrawn = sum(i.quantity_withdrawn or 0 for i in active_items)
+    
+    if total_qty > 0 and total_withdrawn >= total_qty:
+        # All items fully withdrawn
+        all_fully_withdrawn = all((i.quantity_withdrawn or 0) >= i.quantity for i in active_items)
+        if all_fully_withdrawn:
+            purchase.status = "received"  # Retirado Total
+            return
+    
+    if total_withdrawn > 0:
+        purchase.status = "partially_withdrawn"  # Retirado Parcial
+        return
+
+    # 5. Standard item status hierarchy
     all_received = all(i.status == 'delivered' for i in active_items)
     all_in_stock = all(i.status in ['in_stock', 'delivered'] for i in active_items)
     all_bought = all(i.status in ['bought', 'in_stock', 'delivered'] for i in active_items)
     all_quoted = all(i.status in ['quoted', 'bought', 'in_stock', 'delivered'] for i in active_items)
 
     if all_received:
-        purchase.status = "received" # Retirado
+        purchase.status = "received"  # Retirado Total
     elif all_in_stock:
-        purchase.status = "in_stock" # Em estoque
+        purchase.status = "in_stock"  # Em estoque
     elif all_bought:
-        purchase.status = "ordered" # Comprado
+        purchase.status = "ordered"  # Comprado
     elif all_quoted:
-        purchase.status = "quoted" # Cotado
+        purchase.status = "quoted"  # Cotado
     else:
         purchase.status = "approved"
 
@@ -394,3 +407,198 @@ async def delete_purchase_item(item_id: int, db: AsyncSession = Depends(get_db))
     await db.commit()
     return {"message": "Purchase item deleted"}
 
+# ================================
+# WITHDRAWAL ENDPOINTS
+# ================================
+
+@router.post("/purchases/{id}/withdraw", response_model=schemas.WithdrawalResponse)
+async def withdraw_purchase(
+    id: int,
+    withdrawal: schemas.WithdrawalRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Register a material withdrawal (partial or total) from a purchase request."""
+    
+    # 1. Load purchase with items
+    result = await db.execute(
+        select(models.PurchaseRequest)
+        .options(selectinload(models.PurchaseRequest.items))
+        .where(models.PurchaseRequest.id == id)
+    )
+    purchase = result.scalar_one_or_none()
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Pedido de compra não encontrado.")
+    
+    # 2. Validate status allows withdrawal
+    allowed_statuses = ['approved', 'ordered', 'quoted', 'in_stock', 'partially_withdrawn', 'received']
+    if purchase.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Não é possível registrar retirada para pedidos com status '{purchase.status}'."
+        )
+    
+    # 3. Validate items
+    if not withdrawal.items or len(withdrawal.items) == 0:
+        raise HTTPException(status_code=400, detail="Informe ao menos um item para retirada.")
+    
+    items_map = {item.id: item for item in purchase.items}
+    is_partial = False
+    
+    for wi in withdrawal.items:
+        item = items_map.get(wi.item_id)
+        if not item:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Item {wi.item_id} não pertence a este pedido."
+            )
+        if wi.quantity <= 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Quantidade deve ser maior que zero para o item '{item.description}'."
+            )
+        remaining = item.quantity - (item.quantity_withdrawn or 0)
+        if wi.quantity > remaining:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Quantidade solicitada ({wi.quantity}) excede o restante ({remaining}) do item '{item.description}'."
+            )
+    
+    # 4. Check if this is a partial withdrawal (not all items fully withdrawn after this)
+    active_items = [i for i in purchase.items if i.status != 'cancelled']
+    for item in active_items:
+        matched = next((wi for wi in withdrawal.items if wi.item_id == item.id), None)
+        qty_after = (item.quantity_withdrawn or 0) + (matched.quantity if matched else 0)
+        if qty_after < item.quantity:
+            is_partial = True
+            break
+    
+    # Also partial if not all active items are in the withdrawal
+    withdrawn_item_ids = {wi.item_id for wi in withdrawal.items}
+    for item in active_items:
+        if item.id not in withdrawn_item_ids and (item.quantity_withdrawn or 0) < item.quantity:
+            is_partial = True
+            break
+    
+    # 5. Validate observation for partial withdrawal
+    if is_partial and not (withdrawal.observation and withdrawal.observation.strip()):
+        raise HTTPException(
+            status_code=400, 
+            detail="Observação é obrigatória para retiradas parciais."
+        )
+    
+    # 6. Create withdrawal record
+    db_withdrawal = models.PurchaseWithdrawal(
+        purchase_id=id,
+        user_id=current_user.id,
+        observation=withdrawal.observation
+    )
+    db.add(db_withdrawal)
+    await db.flush()  # Get the ID
+    
+    # 7. Create withdrawal items and update accumulators
+    created_items = []
+    for wi in withdrawal.items:
+        db_wi = models.PurchaseWithdrawalItem(
+            withdrawal_id=db_withdrawal.id,
+            item_id=wi.item_id,
+            quantity_withdrawn=wi.quantity
+        )
+        db.add(db_wi)
+        created_items.append((wi, db_wi))
+        
+        # Update accumulator on the item
+        item = items_map[wi.item_id]
+        item.quantity_withdrawn = (item.quantity_withdrawn or 0) + wi.quantity
+        
+        # If fully withdrawn, update item status to 'delivered'
+        if (item.quantity_withdrawn or 0) >= item.quantity:
+            item.status = 'delivered'
+    
+    # 8. Recalculate purchase status
+    recalculate_purchase_status(purchase)
+    
+    await db.commit()
+    
+    # 9. Build response
+    for _, db_wi in created_items:
+        await db.refresh(db_wi)
+    
+    # Load user info for response
+    user_name = None
+    if current_user.collaborator:
+        user_name = current_user.collaborator.name
+    else:
+        user_name = current_user.email
+    
+    return schemas.WithdrawalResponse(
+        id=db_withdrawal.id,
+        purchase_id=db_withdrawal.purchase_id,
+        user_name=user_name,
+        observation=db_withdrawal.observation,
+        created_at=db_withdrawal.created_at,
+        items=[
+            schemas.WithdrawalItemResponse(
+                id=db_wi.id,
+                item_id=wi.item_id,
+                item_description=items_map[wi.item_id].description,
+                quantity_withdrawn=wi.quantity
+            )
+            for wi, db_wi in created_items
+        ]
+    )
+
+
+
+@router.get("/purchases/{id}/withdrawals", response_model=List[schemas.WithdrawalResponse])
+async def get_purchase_withdrawals(
+    id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get the withdrawal history for a purchase request."""
+    
+    # Verify purchase exists
+    result = await db.execute(
+        select(models.PurchaseRequest).where(models.PurchaseRequest.id == id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Pedido de compra não encontrado.")
+    
+    # Load withdrawals with items and user
+    result = await db.execute(
+        select(models.PurchaseWithdrawal)
+        .options(
+            selectinload(models.PurchaseWithdrawal.items).selectinload(models.PurchaseWithdrawalItem.item),
+            selectinload(models.PurchaseWithdrawal.user).selectinload(User.collaborator)
+        )
+        .where(models.PurchaseWithdrawal.purchase_id == id)
+        .order_by(models.PurchaseWithdrawal.created_at.desc())
+    )
+    withdrawals = result.scalars().all()
+    
+    response = []
+    for w in withdrawals:
+        user_name = None
+        if w.user and w.user.collaborator:
+            user_name = w.user.collaborator.name
+        elif w.user:
+            user_name = w.user.email
+        
+        response.append(schemas.WithdrawalResponse(
+            id=w.id,
+            purchase_id=w.purchase_id,
+            user_name=user_name,
+            observation=w.observation,
+            created_at=w.created_at,
+            items=[
+                schemas.WithdrawalItemResponse(
+                    id=wi.id,
+                    item_id=wi.item_id,
+                    item_description=wi.item.description if wi.item else None,
+                    quantity_withdrawn=wi.quantity_withdrawn
+                )
+                for wi in w.items
+            ]
+        ))
+    
+    return response
