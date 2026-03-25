@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save, PackageCheck, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react';
+import { X, Plus, Trash2, Save, PackageCheck, ChevronDown, ChevronUp, Link as LinkIcon, Maximize, Minimize } from 'lucide-react';
 import { updatePurchase, deletePurchase, createPurchase, getWithdrawals, addPurchaseObservation, getFinancialSummary } from '../../services/api';
 import ApprovalTimeline from './ApprovalTimeline';
 import WithdrawalModal from './WithdrawalModal';
@@ -43,6 +43,7 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
   const [activeTab, setActiveTab] = useState('items'); // 'items' | 'history' | 'withdrawals'
   const [financialSummary, setFinancialSummary] = useState(null);
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false);
+  const [isTableExpanded, setIsTableExpanded] = useState(false);
 
   const handleEditLink = (index, item) => {
     if (isProjectsContext) {
@@ -302,11 +303,12 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 z-[99]">
-      <div className="bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col w-[95vw] max-w-[1400px] h-[85vh] max-h-[900px]" onClick={e => e.stopPropagation()}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm z-[99] ${isTableExpanded ? 'p-0' : 'p-4'}`}>
+      <div className={`bg-white shadow-2xl overflow-hidden flex flex-col w-full h-full transition-all duration-300 ${isTableExpanded ? 'rounded-none max-w-none max-h-none' : 'w-[95vw] max-w-[1400px] h-[85vh] max-h-[900px] rounded-xl'}`} onClick={e => e.stopPropagation()}>
         
         {/* COMPACT HEADER */}
-        <div className="flex flex-col border-b border-slate-200 bg-white shrink-0">
+        {!isTableExpanded && (
+          <div className="flex flex-col border-b border-slate-200 bg-white shrink-0">
           <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
             <div>
               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 m-0 leading-none">
@@ -431,9 +433,10 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
             </div>
           </div>
         </div>
+        )}
 
         {/* FINANCIAL SUMMARY CARD */}
-        {financialSummary && formData.category === 'MATERIAL' && (
+        {financialSummary && formData.category === 'MATERIAL' && !isTableExpanded && (
           <div className="bg-slate-50 border-b border-slate-200 shrink-0 shadow-inner">
             <div 
               className="px-6 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
@@ -493,7 +496,8 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
         )}
 
         {/* TABS NAVIGATION */}
-        <div className="flex gap-8 px-8 border-b border-slate-200 shrink-0 bg-white">
+        {!isTableExpanded && (
+          <div className="flex gap-8 px-8 border-b border-slate-200 shrink-0 bg-white">
           <button
             className={`py-3 text-sm font-semibold border-b-2 transition-colors duration-200 ${
               activeTab === 'items' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -519,15 +523,26 @@ const RequestDetailsModal = ({ request, project, onClose, onUpdate, context = 'p
             Retiradas
           </button>
         </div>
+        )}
 
         {/* TAB CONTENT (Scrollable Area) */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/50 p-6">
+        <div className="flex-1 overflow-y-auto bg-slate-50/50 p-6 flex flex-col">
           
           {/* TAB 1: ITENS DO PEDIDO */}
         {activeTab === 'items' && (
-          <div className="items-section m-0 shadow-sm border border-slate-200 bg-white rounded-lg p-4">
+          <div className="items-section m-0 shadow-sm border border-slate-200 bg-white rounded-lg p-4 flex-1 flex flex-col">
             <div className="items-header">
-              <h4>Itens da Solicitação</h4>
+              <div className="flex items-center gap-3">
+                <h4>Itens da Solicitação</h4>
+                <button
+                  type="button"
+                  onClick={() => setIsTableExpanded(!isTableExpanded)}
+                  className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors"
+                  title={isTableExpanded ? "Restaurar tamanho" : "Expandir tabela para Tela Cheia"}
+                >
+                  {isTableExpanded ? <Minimize size={18} /> : <Maximize size={18} />}
+                </button>
+              </div>
               <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-slate-600">
