@@ -50,3 +50,93 @@
   margin-bottom: 0.25rem;
   color: var(--text-secondary);
 }
+
+/* Premium Tab Switcher Override */
+.collaborators-page .tab-switcher-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+  position: relative;
+  isolation: isolate;
+  width: fit-content;
+  min-width: 300px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.collaborators-page .tab-glider {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  background: white;
+  border-radius: 9px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1; /* Stay behind text but above container background */
+}
+
+.collaborators-page .tab-glider.right {
+  transform: translateX(100%);
+}
+
+.collaborators-page .tab-btn {
+  position: relative;
+  z-index: 2; /* Content above glider */
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.collaborators-page .tab-btn.active {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.collaborators-page .tab-btn:hover:not(.active) {
+  color: #334155;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.collaborators-page .tab-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.collaborators-page .tab-btn.active svg {
+  transform: scale(1.1);
+  color: var(--primary);
+}
+
+/* Header Adjustments */
+.collaborators-page .clients-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+}
+
+.collaborators-page .clients-header h1 {
+  font-size: 1.875rem;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.25rem;
+}
+
+.collaborators-page .header-actions {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}

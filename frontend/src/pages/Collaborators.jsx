@@ -161,9 +161,9 @@ const Collaborators = () => {
           <h1>Gestão de Colaboradores</h1>
           <p>Cadastro e controle de equipe</p>
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="header-actions">
           <div className="tab-switcher-container">
-            <div className={`tab-glider ${viewMode === 'collaborators' ? 'left' : 'right'}`} style={{ transform: viewMode === 'collaborators' ? 'translateX(0)' : 'translateX(100%)' }} />
+            <div className={`tab-glider ${viewMode === 'collaborators' ? 'left' : 'right'}`} />
             <button className={`tab-btn ${viewMode === 'collaborators' ? 'active' : ''}`} onClick={() => setViewMode('collaborators')}>
               <Users size={18} /> Colaboradores
             </button>
