@@ -28,8 +28,25 @@ const ProjectFinancialTab = ({ project, billings, projectDetails, canEdit, onUpd
   // "Receita Líquida" implies deducting taxes. 
   // Allow simple calculation here.
 
-  const totalImpostos = billings.reduce((acc, b) => acc + (Number(b.tax_value) || 0), 0);
-  const liquidoReal = totalFaturadoPago - totalImpostos; // Approximation
+  const totalImpostos = billings
+    .filter(b => ['PAGO'].includes(b.status))
+    .reduce((acc, b) => {
+      const gross = Number(b.gross_value || b.value) || 0;
+      const net = Number(b.net_value || b.value) || 0;
+      const nonRetained = (Number(b.tax_iss) || 0) +
+        (Number(b.tax_pis) || 0) +
+        (Number(b.tax_cofins) || 0) +
+        (Number(b.tax_irpj) || 0) +
+        (Number(b.tax_icms) || 0) +
+        (Number(b.tax_ipi) || 0) +
+        (Number(b.value_st) || 0);
+
+      // Total tax = (Gross - Net) [Retentions] + (Non-Retained Taxes)
+      const itemTax = (gross - net) + nonRetained;
+      return acc + itemTax;
+    }, 0);
+
+  const liquidoReal = totalFaturadoPago - totalImpostos;
 
   const handleAddBilling = async (e) => {
     e.preventDefault();

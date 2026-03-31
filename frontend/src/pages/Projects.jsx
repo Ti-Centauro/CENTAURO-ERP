@@ -28,6 +28,7 @@ const Projects = () => {
   const [filterClient, setFilterClient] = useState('');
   const [filterCoordinator, setFilterCoordinator] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [showDates, setShowDates] = useState(false); // Default to false to keep table clean
   const [formData, setFormData] = useState({
     tag: '',
     name: '',
@@ -258,34 +259,35 @@ const Projects = () => {
 
   // Get unique coordinators for filter
   const uniqueCoordinators = [...new Set(projects.map(p => p.coordinator).filter(Boolean))];
+  // Filter projects based on search and filters
+  const filteredProjects = projects
+    .map(p => ({
+      ...p,
+      pending: (parseFloat(p.budget) || 0) - (parseFloat(p.invoiced) || 0)
+    }))
+    .filter(project => {
+      // Search filter
+      const matchesSearch = !searchTerm ||
+        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.tag?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-  // Filter projects based on search and filters
-  const filteredProjects = projects.filter(project => {
-    // Search filter
-    const matchesSearch = !searchTerm ||
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.tag?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      // Client filter
+      const matchesClient = !filterClient || project.client_id === parseInt(filterClient);
 
-    // Client filter
-    const matchesClient = !filterClient || project.client_id === parseInt(filterClient);
+      // Coordinator filter
+      const matchesCoordinator = !filterCoordinator || project.coordinator === filterCoordinator;
 
-    // Coordinator filter
-    const matchesCoordinator = !filterCoordinator || project.coordinator === filterCoordinator;
+      // Status filter
+      let matchesStatus = true;
+      if (filterStatus === 'em_andamento') {
+        matchesStatus = project.status !== PROJECT_STATUS.CONCLUIDO && project.status !== PROJECT_STATUS.CANCELADO;
+      } else if (filterStatus) {
+        matchesStatus = project.status === filterStatus;
+      }
 
-    // Status filter
-    let matchesStatus = true;    if (filterStatus === 'em_andamento') {
-      matchesStatus = project.status !== PROJECT_STATUS.CONCLUIDO && project.status !== PROJECT_STATUS.CANCELADO;
-    } else if (filterStatus === 'concluido') {
-      matchesStatus = project.status === PROJECT_STATUS.CONCLUIDO;
-    } else if (filterStatus === 'pausado') {
-      matchesStatus = project.status === PROJECT_STATUS.PAUSADO;
-    } else if (filterStatus === 'cancelado') {
-      matchesStatus = project.status === PROJECT_STATUS.CANCELADO;
-    }
-
-    return matchesSearch && matchesClient && matchesCoordinator && matchesStatus;
-  });
+      return matchesSearch && matchesClient && matchesCoordinator && matchesStatus;
+    });;
 
   // Filter contracts based on selected client in form
   const filteredContracts = formData.client_id
@@ -334,9 +336,11 @@ const Projects = () => {
     { header: 'Coordenador', accessor: 'coordinator', render: row => row.coordinator || '-' },
     { header: 'Orçamento', accessor: 'budget', render: row => formatCurrency(row.budget) },
     { header: 'Faturado', accessor: 'invoiced', render: row => formatCurrency(row.invoiced) },
-    { header: 'A Faturar', accessor: 'pending', render: row => formatCurrency((row.budget || 0) - (row.invoiced || 0)) },
-    { header: 'Início', accessor: 'start_date', render: row => row.start_date ? new Date(row.start_date).toLocaleDateString('pt-BR') : '-' },
-    { header: 'Fim', accessor: 'end_date', render: row => row.end_date ? new Date(row.end_date).toLocaleDateString('pt-BR') : '-' },
+    { header: 'A Faturar', accessor: 'pending', render: row => formatCurrency(row.pending) },
+    ...(showDates ? [
+      { header: 'Início', accessor: 'start_date', render: row => row.start_date ? new Date(row.start_date).toLocaleDateString('pt-BR') : '-' },
+      { header: 'Fim', accessor: 'end_date', render: row => row.end_date ? new Date(row.end_date).toLocaleDateString('pt-BR') : '-' },
+    ] : []),
     {
       header: 'Status', accessor: 'status', render: row => (
         <StatusBadge status={row.status || PROJECT_STATUS.APROVADO} />
@@ -694,12 +698,27 @@ const Projects = () => {
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
-                <option value="">Todos</option>
-                <option value="em_andamento">Ativos</option>
-                <option value="concluido">Concluídos</option>
-                <option value="pausado">Pausados</option>
-                <option value="cancelado">Cancelados</option>
+                <option value="">Todos os status</option>
+                <optgroup label="Visão Geral">
+                  <option value="em_andamento">Ativos (Em andamento)</option>
+                </optgroup>
+                <optgroup label="Status Específicos">
+                  {PROJECT_STATUS_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </optgroup>
               </select>
+            </div>
+            <div className="filter-group" style={{ display: 'flex', alignItems: 'center', height: '100%', paddingTop: '1.25rem' }}>
+              <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: '#475569', fontWeight: '500' }}>
+                <input
+                  type="checkbox"
+                  checked={showDates}
+                  onChange={(e) => setShowDates(e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                Exibir Datas
+              </label>
             </div>
           </div>
         </div>
