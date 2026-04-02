@@ -1,18 +1,14 @@
 import pandas as pd
-import os
+import numpy as np
 
-files = [
-    r"c:\Users\LUCAS\Meu Canto\MEUS PROJETOS\CENTAURO ERP 2\IMP. SERV. PREST. Contabilidade.xlsx",
-    r"c:\Users\LUCAS\Meu Canto\MEUS PROJETOS\CENTAURO ERP 2\IMP. DANF. PREST. Contabilidade.xlsx"
-]
-
-for file_path in files:
-    print(f"--- Analyzing: {os.path.basename(file_path)} ---")
-    try:
-        # Read header=None to see all data
-        df = pd.read_excel(file_path, header=None, nrows=10)
-        print("First 10 rows dump:")
-        print(df.to_string())
-    except Exception as e:
-        print(f"Error reading {file_path}: {e}")
-    print("\n" + "="*30 + "\n")
+try:
+    # Read without headers first to see what row the real headers are on
+    df_raw = pd.read_excel(r"c:\Users\Centauro\Meu Canto\GitHub\Centauro\CENTAURO-ERP\Controle de Treinamentos - Centauro.xlsx", header=None)
+    print("Raw headers (first 5 rows):")
+    for i in range(5):
+        print(f"Row {i}:", df_raw.iloc[i].tolist())
+    
+    # Try to find the person names column
+    # Usually it's the one with most strings that look like names
+except Exception as e:
+    print(f"Error: {e}")

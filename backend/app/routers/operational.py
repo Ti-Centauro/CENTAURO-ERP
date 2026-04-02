@@ -656,6 +656,13 @@ async def create_certification(certification: schemas.CertificationCreate, db: A
     await db.refresh(db_certification)
     return db_certification
 
+@router.delete("/certifications/{certification_id}")
+async def delete_certification(certification_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Certification).where(models.Certification.id == certification_id))
+    db_certification = result.scalar_one_or_none()
+    if not db_certification:
+        raise HTTPException(status_code=404, detail="Certification not found")
+    
     await db.delete(db_certification)
     await db.commit()
     return {"message": "Certification deleted"}
