@@ -13,17 +13,17 @@ scheduler = AsyncIOScheduler(timezone=BRAZIL_TZ)
 async def send_scheduled_daily_briefing():
     """
     Job function to send daily briefing emails.
-    Sends one for Engineering (company_id=1) and one for others (Comercial).
+    Sends one for Engineering CRM and one for Commercial CRM.
     """
     now = datetime.now(BRAZIL_TZ)
     print(f"[Scheduler] Starting daily briefing job at {now.strftime('%d/%m/%Y %H:%M:%S')} (Brasilia Time)")
     try:
         # 1. Commercial Briefing (Default)
-        res_com = await email_service.send_daily_briefing(company_id=None)
+        res_com = await email_service.send_daily_briefing(department="COMERCIAL")
         print(f"[Scheduler] Commercial briefing: {res_com}")
         
-        # 2. Engineering Briefing (company_id=1)
-        res_eng = await email_service.send_daily_briefing(company_id=1)
+        # 2. Engineering Briefing (ENGENHARIA)
+        res_eng = await email_service.send_daily_briefing(department="ENGENHARIA")
         print(f"[Scheduler] Engineering briefing: {res_eng}")
         
     except Exception as e:

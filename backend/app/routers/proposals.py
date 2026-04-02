@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, or_
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from datetime import date, datetime, timedelta
@@ -27,7 +27,7 @@ async def get_proposals(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     company_id: Optional[int] = Query(None),
-    exclude_company_id: Optional[int] = Query(None),
+    department: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     stmt = select(models.CommercialProposal)
@@ -38,8 +38,17 @@ async def get_proposals(
     if company_id is not None:
         stmt = stmt.where(models.CommercialProposal.company_id == company_id)
 
-    if exclude_company_id is not None:
-        stmt = stmt.where(models.CommercialProposal.company_id != exclude_company_id)
+    if department:
+        # Filter by department. If department is COMERCIAL, show 'COMERCIAL' or NULLs (old records)
+        if department == "COMERCIAL":
+            stmt = stmt.where(
+                or_(
+                    models.CommercialProposal.crm_department == "COMERCIAL",
+                    models.CommercialProposal.crm_department.is_(None)
+                )
+            )
+        else:
+            stmt = stmt.where(models.CommercialProposal.crm_department == department)
 
     if start_date or end_date:
         # Check if the filtering is strictly for GANHA/PERDIDA to use decision_date

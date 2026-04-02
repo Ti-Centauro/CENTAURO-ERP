@@ -86,7 +86,7 @@ import {
 import ConfirmModal from '../shared/ConfirmModal';
 import Modal from '../shared/Modal';
 
-const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = [], defaultCompanyId = '' }) => {
+const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = [], defaultCrmDepartment = 'COMERCIAL' }) => {
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'tasks'
   const [formData, setFormData] = useState({
     internal_id: '',
@@ -142,7 +142,8 @@ const ProposalModal = ({ isOpen, onClose, proposal, onSuccess, initialClients = 
           labor_value: '0.00',
           material_value: '0.00',
           proposal_type: '',
-          company_id: defaultCompanyId || '',
+          company_id: '',
+          crm_department: defaultCrmDepartment,
           description: '',
           status: 'LEAD'
         });

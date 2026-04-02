@@ -38,6 +38,8 @@ class CommercialProposal(Base):
     proposal_type = Column(String, nullable=True)  # "RECORRENTE", "LPU", "AVULSA"
     company_id = Column(Integer, nullable=True)  # 1, 2, 3, 4 (CNPJ ID)
     
+    crm_department = Column(String, default="COMERCIAL", index=True, nullable=False) # 'COMERCIAL' or 'ENGENHARIA'
+    
     history = Column(Text, nullable=True)  # JSON string or simple text log
     
     # Campo de perda - obrigatório quando status = PERDIDA

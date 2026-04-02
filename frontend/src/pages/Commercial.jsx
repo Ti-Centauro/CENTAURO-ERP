@@ -137,8 +137,8 @@ const Commercial = () => {
       if (filterStartDate) queryParams.append('start_date', filterStartDate);
       if (filterEndDate) queryParams.append('end_date', filterEndDate);
       
-      // Exclude Engineering from Commercial CRM
-      queryParams.append('exclude_company_id', '1');
+      // Commercial CRM Filter
+      queryParams.append('department', 'COMERCIAL');
 
       const [propRes, cliRes, colRes] = await Promise.all([
         getProposals(queryParams),
@@ -514,6 +514,7 @@ const Commercial = () => {
         proposal={selectedProposal}
         onSuccess={loadData}
         initialClients={clients}
+        defaultCrmDepartment="COMERCIAL"
         maxWidth="1000px"
       />
 

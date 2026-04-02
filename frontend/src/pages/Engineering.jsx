@@ -137,8 +137,8 @@ const Engineering = () => {
       if (filterStartDate) queryParams.append('start_date', filterStartDate);
       if (filterEndDate) queryParams.append('end_date', filterEndDate);
       
-      // Hardcoded filter for Engineering
-      queryParams.append('company_id', '1');
+      // Engineering CRM Filter
+      queryParams.append('department', 'ENGENHARIA');
 
       const [propRes, cliRes, colRes] = await Promise.all([
         getProposals(queryParams),
@@ -514,7 +514,7 @@ const Engineering = () => {
         proposal={selectedProposal}
         onSuccess={loadData}
         initialClients={clients}
-        defaultCompanyId="1"
+        defaultCrmDepartment="ENGENHARIA"
         maxWidth="1000px"
       />
 
